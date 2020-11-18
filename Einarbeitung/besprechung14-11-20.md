@@ -14,6 +14,9 @@
 - Straßensperren? Also unterwartete Ereignisse -> Replanning
     -> Nein
 
+# Geaenderter Modus
+- erste Wochen: einwöchiger unbenotete Sprints
+
 # Erste Backlog-Ideen:
 - Ros Bridge
 - Carla Bridge
