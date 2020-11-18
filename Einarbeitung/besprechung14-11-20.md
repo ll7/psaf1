@@ -25,11 +25,12 @@
 - Library durchforsten
 - Architektur-Entwurf: https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7535402		
 - Erkennung von Ampeln und Schilder 
-- Simons Lösung
+   - Simons Lösung
 - Sensoren: Auswahl und Anbindungsmöglichkeiten
 - ROS: Ackermann Steuerung?
 - Trajektoren bzw local-Planning
 - Ggf Sensorfusion
+
 
 # Interessante links
 - https://github.com/Minali24/Traffic-Sign-Recognition-and-Detection-Using-YOLO
