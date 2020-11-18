@@ -5,19 +5,19 @@
 * Manuelle Steuerung des Fahrzeugs aus eigenem Projekt
 * Architektur des Projekts festgelegt
 
-## Autonomes Fahren **light**
+## Trajectory Based Driving
 * Kartenzugriff, Trajektorie aus Zielvorgabe generiert
 * Planung des kürzesten Wegs
 * Fahrzeug folgt autonom Trajektorie in Karte
 * Trajektorie ohne Geschwindigkeitsvorgabe
 * ohne Verkehrszeichen, Ampeln, Verkehrsteilnehmer, Spurhalten
 
-## Autonomes Fahren (mit dynamischen Objekten)
+## Autonomous Driving light (dyn. Objects)
 * Trajektorie mit Geschwindigkeitsvorgabe
 * dynamische Objekte ohne prediction
 * mit anderen Verkehrsteilnehmern
 
-## Autonomes Fahren **plus** (mit Verkehrsregeln)
+## Autonomous Driving (traffic rules)
 * mit anderen Verkehrsteilnehmern
 * Erkennung von Verkehrszeichen, Ampeln, Spurhalten
 * Trajektorie bezieht Verkehrsregeln ein
