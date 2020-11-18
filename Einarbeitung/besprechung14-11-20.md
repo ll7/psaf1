@@ -1,11 +1,18 @@
 # Themen und Fragen
 - Andere Verkehrsteilnehmer?
+   - Fußgaenger und Autos ja
 - Statische Hindernisse
+   - Kein Replanning
 - Wetter/ Tageszeit
+   - Nur Schoenwetterfahrten
 - Welche verkehrschilder:		https://www.pyimagesearch.com/2019/11/04/traffic-sign-classification-with-keras-and-deep-learning/
+   - Alle Verkehrsschilder in Szenario zwei, ggf abwaegen
 - Reicht die HD Map -> Fusion mit Sensordaten
+   - Es gibt keine HD Maps im direkten Sinn
+   - Jedoch sind in den Carla Karten Trajektorien enthalten und somit auch alle gültigen Pfade abgebildet
 - Welche Maps? Amerikanische oder Deutsche?
 - Straßensperren? Also unterwartete Ereignisse -> Replanning
+    -> Nein
 
 # Erste Backlog-Ideen:
 - Ros Bridge
@@ -26,3 +33,4 @@
 - https://github.com/martisaju/CARLA-Speed-Traffic-Sign-Detection-Using-Yolo
 - https://sites.google.com/view/precog
 - https://github.com/Amin-Tgz/awesome-CARLA#detection---
+- https://bitbucket.org/carla-simulator/autoware-contents/src/master/  -> Alle bekannten statischen Hindernisse drin
