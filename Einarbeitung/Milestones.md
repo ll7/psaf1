@@ -24,7 +24,7 @@
 
 ## Optional
 * dynamische Objekte predicten
-* etc.
+* schnellster Weg
 
 
 
