@@ -2,7 +2,7 @@
 
 import rospy
 from std_msgs.msg import String
-from carla_msgs.msg import CarlaEgoVehicleControl
+# from carla_msgs.msg import CarlaEgoVehicleControl
 
 def talker():
     pub = rospy.Publisher('chatter', String, queue_size=10)
