@@ -1,5 +1,5 @@
 import rospy
-from sensor_msgs.msg import NavSatFix, Image, PointCloud2
+from sensor_msgs.msg import NavSatFix
 
 
 class GPS_Position:
@@ -32,9 +32,9 @@ class GPS_Sensor:
         """
         self.position = GPS_Position()
 
-        self.subscriber = rospy.Subscriber("/carla/{}/gnss/gnss1/fix".format(role_name), NavSatFix, self.__update_position)
+        self.__subscriber = rospy.Subscriber("/carla/{}/gnss/gnss1/fix".format(role_name), NavSatFix, self.__update_position)
 
-        self.listener = None
+        self.__listener = None
 
     def __update_position(self, navSatFixMessage: NavSatFix):
         """
@@ -43,8 +43,8 @@ class GPS_Sensor:
         :return: None
         """
         self.position = GPS_Position(navSatFixMessage.latitude, navSatFixMessage.longitude, navSatFixMessage.altitude)
-        if self.listener != None:
-            self.listener(self.position)
+        if self.__listener != None:
+            self.__listener(self.position)
 
     def get_position(self) -> GPS_Position:
         """
@@ -59,6 +59,6 @@ class GPS_Sensor:
         :param func: the function
         :return: None
         """
-        self.listener = func;
+        self.__listener = func;
 
 
