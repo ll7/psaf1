@@ -1,5 +1,9 @@
 <!-- -->
 <launch>
-  <node pkg="psaf_steering" type="hello.py" name="psaf_steering" output="screen">
+  <node pkg="psaf_steering" type="hello.py" name="psaf_steering" output="screen" />
+
+  <node pkg="move_base" type="move_base" name="move_base" repsawn="false" output="screen">
+    
   </node>
+
 </launch>
