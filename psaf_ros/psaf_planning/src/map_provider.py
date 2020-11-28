@@ -20,13 +20,13 @@ import tempfile
 
 class MapProvider:
 
-    def __init__(self):
+    def __init__(self, init_rospy: bool = False):
         self.osm_file = tempfile.NamedTemporaryFile(suffix=".osm")
         self.map: str = None
         self.map_ready: bool = False
         self.map_name: str = None
-
-        rospy.init_node('mapProvider', anonymous=True)
+        if init_rospy:
+            rospy.init_node('mapProvider', anonymous=True)
 
         self._world_info_subscriber = rospy.Subscriber(
             "/carla/world_info", CarlaWorldInfo, self.update_world)
