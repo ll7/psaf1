@@ -107,7 +107,7 @@ class MapProvider:
 
 
 def main():
-    provider = MapProvider()
+    provider = MapProvider(True)
     while not provider.map_ready:
         rospy.loginfo("Waiting")
     provider.generate_osm_file()
