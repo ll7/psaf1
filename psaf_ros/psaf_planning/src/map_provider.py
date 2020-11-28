@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+import os
 
 from io import BytesIO
 from lxml import etree
@@ -14,10 +15,13 @@ from commonroad.planning.planning_problem import PlanningProblemSet
 from commonroad.scenario.scenario import Tag
 from commonroad.scenario.scenario import Scenario
 
+import tempfile
+
 
 class MapProvider:
 
     def __init__(self):
+        self.osm_file = tempfile.NamedTemporaryFile(suffix=".osm")
         self.map: str = None
         self.map_ready: bool = False
         self.map_name: str = None
@@ -26,6 +30,9 @@ class MapProvider:
 
         self._world_info_subscriber = rospy.Subscriber(
             "/carla/world_info", CarlaWorldInfo, self.update_world)
+
+    def __del__(self):
+        self.osm_file.close()
 
     def update_world(self, world_info: CarlaWorldInfo):
         """
@@ -41,9 +48,22 @@ class MapProvider:
             self.map_ready = True
             rospy.loginfo("Received: " + self.map_name)
 
+    def convert_to_osm(self) -> str:
+        """
+        Create a temporary OpenStreetMap file that can be used to generate a lanelet2 LaneletMap
+        """
+        lanelet = self.convert_od_to_lanelet()
+        if lanelet is not None:
+            l2osm = L2OSMConverter(
+                "+proj=omerc +lat_0=49 +lonc=8 +alpha=0 +k=1 +x_0=0 +y_0=0 +gamma=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0")
+            openstreetmap = etree.tostring(l2osm(lanelet), xml_declaration=True, encoding="UTF-8", pretty_print=True)
+            self.osm_file.write(openstreetmap)
+
+        return os.path.abspath(self.osm_file.name)
+
     def convert_od_to_lanelet(self) -> Scenario:
         """
-        Creat a CommonRoad scenario from the OpenDrive received OpenDrive map
+        Create a CommonRoad scenario from the OpenDrive received OpenDrive map
         """
         lanelet: Scenario = None
         if self.map_ready:
@@ -54,6 +74,7 @@ class MapProvider:
             lanelet = roadNetwork.export_commonroad_scenario()
             rospy.loginfo("Conversion done!")
         return lanelet
+
 
     def generate_osm_file(self):
         lanelet = self.convert_od_to_lanelet()
