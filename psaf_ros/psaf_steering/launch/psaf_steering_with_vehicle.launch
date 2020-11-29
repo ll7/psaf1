@@ -42,7 +42,12 @@
     <arg name='role_name' value='$(arg role_name)'/>
   </include>
 
-  <include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch" />
+  <include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
+    <arg name='role_name' value='$(arg role_name)'/>
+  </include>
+  <include file="$(find psaf_steering)/launch/cmd_vel_to_ackermann_drive.launch" />
+  <include file="$(find psaf_steering)/launch/move_base.launch" />
+
 
   <!--<include file="$(find psaf_steering)/launch/psaf_steering.launch">
   </include>-->

@@ -3,6 +3,6 @@
     <param name="twist_cmd_topic" value="/cmd_vel" />
     <param name="ackermann_cmd_topic" value="/carla/ego_vehicle/ackermann_cmd" />
     <param name="frame_id" value="ego_vehicle" />
-    <param name="wheelbase" value="2.0" />    
+    <param name="wheelbase" value="1.0" />    
  </node>
 </launch> 
