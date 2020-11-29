@@ -2,7 +2,13 @@ TebLocalPlannerROS:
 
  odom_topic: /carla/ego_vehicle/odometry
  map_frame: map
-    
+
+
+
+
+ #Viapoints
+ global_plan_viapoint_sep: 0.5
+
  # Trajectory
   
  teb_autosize: True
