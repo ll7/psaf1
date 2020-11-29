@@ -76,6 +76,9 @@
   <build_export_depend>map_server</build_export_depend>
   <exec_depend>map_server</exec_depend>
   
+  <build_depend>teb_local_planner</build_depend>
+  <build_export_depend>teb_local_planner</build_export_depend>
+  <exec_depend>teb_local_planner</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

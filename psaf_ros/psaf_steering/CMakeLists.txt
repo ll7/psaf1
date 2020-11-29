@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   move_base
   costmap_2d
   map_server
+  teb_local_planner
 )
 
 ## System dependencies are found with CMake's conventions
