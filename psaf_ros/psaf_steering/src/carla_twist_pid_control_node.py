@@ -38,7 +38,7 @@ class CarlaAckermannControl(object):
         Constructor
 
         """
-        self.control_loop_rate = rospy.Rate(10)  # 10Hz
+        self.control_loop_rate = rospy.Rate(20)  # 10Hz
         self.lastAckermannMsgReceived = datetime.datetime(datetime.MINYEAR, 1, 1)
         self.vehicle_status = CarlaEgoVehicleStatus()
         self.vehicle_info = CarlaEgoVehicleInfo()
@@ -325,11 +325,11 @@ class CarlaAckermannControl(object):
         if not self.info.output.hand_brake:
             self.update_drive_vehicle_control_command()
 
-            # only send out the Carla Control Command if AckermannDrive messages are
+            # only send out the Carla Control Command if AckermannDrive messages are -> Attention: this breaks the controlling somehow, prefer always sending
             # received in the last second (e.g. to allows manually controlling the vehicle)
-            if (self.lastAckermannMsgReceived + datetime.timedelta(0, 1)) > \
-                    datetime.datetime.now():
-                self.carla_control_publisher.publish(self.info.output)
+            #if (self.lastAckermannMsgReceived + datetime.timedelta(0, 1)) > \
+            #        datetime.datetime.now():
+            self.carla_control_publisher.publish(self.info.output)
 
     def control_steering(self):
         """
