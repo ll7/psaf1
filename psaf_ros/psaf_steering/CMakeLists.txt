@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   costmap_2d
   map_server
   teb_local_planner
+  ackermann_msgs
 )
 
 ## System dependencies are found with CMake's conventions
