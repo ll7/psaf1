@@ -54,7 +54,7 @@
 
 
 
-  <include file="$(find psaf_steering)/launch/cmd_vel_to_ackermann_drive.launch" />
+  <!--<include file="$(find psaf_steering)/launch/cmd_vel_to_ackermann_drive.launch" />-->
   <include file="$(find psaf_steering)/launch/move_base.launch" />
 
 
