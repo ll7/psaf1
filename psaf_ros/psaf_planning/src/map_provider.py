@@ -40,7 +40,6 @@ class MapProvider:
     def __del__(self):
         # closing the TemporaryFile deletes it
         self.osm_file.close()
-        rospy.loginfo("MapProvider: Cleanup done")
 
     def update_world(self, world_info: CarlaWorldInfo):
         """
