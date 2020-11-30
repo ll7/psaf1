@@ -26,7 +26,7 @@ class MapProvider:
         self.map: str = None
         # name of the map received from the _world_info_subscriber
         self.map_name: str = None
-        # boolean that represents the availability of the opendrive map -> the if the map was received by the subscriber
+        # boolean that represents the availability of the opendrive map -> true if the map was received by the subscriber
         self.map_ready: bool = False
 
         # starts the logging node , normally only needed if the module is used independently
@@ -99,7 +99,7 @@ class MapProvider:
         lanelet = self.convert_od_to_lanelet()
         if lanelet is not None:
             l2osm = L2OSMConverter(
-                "+proj=omerc +lat_0=49 +lonc=8 +alpha=0 +k=1 +x_0=0 +y_0=0 +gamma=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0")
+                "+proj=omerc +lat_0=0 +lonc=0 +alpha=0 +k=1 +x_0=0 +y_0=0 +gamma=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0")
             openstreetmap = etree.tostring(l2osm(lanelet), xml_declaration=True, encoding="UTF-8", pretty_print=True)
 
             # write osm file
