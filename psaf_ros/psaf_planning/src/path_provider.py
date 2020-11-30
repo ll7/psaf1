@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from psaf_ros.psaf_planning.src.map_provider import MapProvider, GPS_Position
 import lanelet2
 from lanelet2 import traffic_rules, routing, core, geometry
 from lanelet2.projection import UtmProjector
@@ -11,25 +10,40 @@ import rospy
 
 class PathProvider:
 
-    def __init__(self):
-        # initialize node
-        rospy.init_node('pathProvider', anonymous=True)
-        self.origin = Origin(49.463075, 10.86966)
+    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10):
+        """
+        Class PathProvider provides a feasible path from a starting point A to a target Point B by computing
+        the nearest lanelets and performing a dijkstra graph search on a provided .osm map.
+        :param init_rospy: Initialize a rospy node?
+        :param polling_rate: Polling Rate in [Hz]
+        :param timeout_iter: Number of polling iterations until timeout occurs
+        """
+        if init_rospy:
+            # initialize node
+            rospy.init_node('pathProvider', anonymous=True)
+
+        self.origin = Origin(0, 0)
         self.projector = UtmProjector(self.origin)
+        self.map_provider = MapProvider()
+        self.map_path = self._get_map_path(polling_rate, timeout_iter)
+        if not self.map_path:
+            rospy.logerr("PathProvider: No Map received!")
+            self.lanelet_map = None
+            self.path = None
+        else:
+            self.lanelet_map = lanelet2.io.load(self.map_path, self.projector)
+            self.path = None
 
-        # self.map_provider = MapProvider()
-        # self.map_path = self.get_map_path()
-        self.lanelet_map = lanelet2.io.load("/home/tobi/psaf1/psaf_ros/psaf_planning/src/map(1).osm", self.projector)
-        self.path = None
-
-    def get_path_from_a_to_b(self, from_a, to_b):
+    def get_path_from_a_to_b(self, from_a: GPS_Position, to_b: GPS_Position):
         """
         Returns the shortest path from a to be
         :param  from_a: Start point [GPS Coord]
         :param  to_b:   End point [GPS Coord]
-        :return: Path or None if no path was found at all
+        :return: Path or None if no path was found at all, or no map information is received
         """
-        self.compute_route(from_a, to_b)
+        if not self.lanelet_map:
+            return self.path  # which is None, because no map was received
+        self._compute_route(from_a, to_b)
         return self.path
 
     def get_path(self):
@@ -39,71 +53,77 @@ class PathProvider:
         """
         return self.path
 
-    def get_map_path(self):
-        while not self.map_provider.map_ready:
-            rospy.loginfo("Waiting for map information")
-        rospy.loginfo("Map information received")
-        return self.map_provider.convert_od_to_lanelet()
+    def _get_map_path(self, polling_rate: int, timeout_iter: int):
+        """
+        Gets the path of the converted .osm map
+        :param polling_rate: Polling Rate in [Hz]
+        :param timeout_iter: Number of polling iterations until timeout occurs
+        :return: absolute path of temporary map file
+        """
+        iter_cnt = 0  # counts the number of polling iterations
+        r = rospy.Rate(polling_rate)  # 1Hz -> Try once a second
+        map_path = ""
+        while not rospy.is_shutdown() and not map_path and iter_cnt < timeout_iter:
+            rospy.loginfo("PathProvider: Waiting for map information")
+            map_path = self.map_provider.convert_to_osm()
+            r.sleep()
+            iter_cnt += 1
 
-    def compute_route(self, from_a, to_b):
+        return map_path
+
+    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position):
         """
         Compute shortest path
-        :param from_a:  Start point -- GPS Coord in float: latitude, longitude, altitude
-        :param to_b:    End point   -- GPS Coord in float: latitude, longitude, altitude
+        :param from_a: Start point -- GPS Coord in float: latitude, longitude, altitude
+        :param to_b: End point   -- GPS Coord in float: latitude, longitude, altitude
         """""
-        rospy.loginfo("Computing feasible route from a to b")
+        rospy.loginfo("PathProvider: Computing feasible path from a to b")
 
         # generate traffic_rules based on participant type and location
         traffic_rules_ger = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
-                                                      lanelet2.traffic_rules.Participants.Vehicle)
+                                                          lanelet2.traffic_rules.Participants.Vehicle)
+        # generate routing_graph which represents the given map
         routing_graph = lanelet2.routing.RoutingGraph(self.lanelet_map, traffic_rules_ger)
-        routing_graph.exportGraphML("graph.graphml")
 
         # step1: get nearest lanelet to start point
-        gps_point = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
-        p_local = self.projector.forward(gps_point)
-        pp_local = lanelet2.core.BasicPoint2d(p_local.x, p_local.y)
-        close_from_lanelets = lanelet2.geometry.findNearest(self.lanelet_map.laneletLayer, pp_local, 1)
+        gps_point_start = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
+        start_local_3d = self.projector.forward(gps_point_start)
+        start_local_2d = lanelet2.core.BasicPoint2d(start_local_3d.x, start_local_3d.y)
+        close_from_lanelets = lanelet2.geometry.findNearest(self.lanelet_map.laneletLayer, start_local_2d, 1)
         from_lanelet = close_from_lanelets[0][1]
 
         # step2: nearest lanelet to end point
-        gps_point = GPSPoint(to_b.latitude, to_b.longitude, to_b.altitude)
-        p_local = self.projector.forward(gps_point)
-        pp_local = lanelet2.core.BasicPoint2d(p_local.x, p_local.y)
-        close_to_lanelets = lanelet2.geometry.findNearest(self.lanelet_map.laneletLayer, pp_local, 1)
+        gps_point_target = GPSPoint(to_b.latitude, to_b.longitude, to_b.altitude)
+        target_local_3d = self.projector.forward(gps_point_target)
+        target_local_2d = lanelet2.core.BasicPoint2d(target_local_3d.x, target_local_3d.y)
+        close_to_lanelets = lanelet2.geometry.findNearest(self.lanelet_map.laneletLayer, target_local_2d, 1)
         to_lanelet = close_to_lanelets[0][1]
 
-        # step3: compute paths from a to b
-        all_paths = routing_graph.getRoute(from_lanelet, to_lanelet)
-        self.path = all_paths # only testing purposes
+        # step3: compute shortest path
+        self.path = []
+        shortest_path = routing_graph.shortestPath(from_lanelet, to_lanelet)
+        for lane in shortest_path:
+            for pos in lane.centerline:
+                point = self._WayPoint(pos.x, pos.y, pos.z)
+                self.path.append(point)
 
-        # step4: compute shortest path
-        #self.path = []
-        #for lane in all_paths.shortestPath():
-        #    for pos in lane.centerline:
-        #        point = self._WayPoint(pos.x, pos.y, pos.z)
-        #        self.path.append(point)
-
-    def export(self, path):
-        if path is not None:
-            laneletSubmap = path.laneletSubmap()
-            lanelet2.io.write("route2.osm", laneletSubmap.laneletMap(), self.origin)
+        rospy.loginfo("PathProvider: Computation of feasible path done")
 
     class _WayPoint:
 
         def __init__(self, x, y, z):
             self.x = x
-            self.y = y
+            self.y = -y
             self.z = z
 
 
 if __name__ == "__main__":
     try:
-        provider = PathProvider()
-        start = GPS_Position(49.46460, 10.86083, 0)
-        end = GPS_Position(49.46268, 10.85927, 0)
+        provider = PathProvider(init_rospy=True)
+        start = GPS_Position(0.000719, -0.001346, 0)
+        end = GPS_Position(0.001844, 0.001209, 0)
         path = provider.get_path_from_a_to_b(start, end)
-        provider.export(path)
+        print("Main finished")
 
     except rospy.ROSInterruptException:
         pass
