@@ -6,7 +6,7 @@ TebLocalPlannerROS:
  map_frame: map
  controller_frequency: 2.0
 
- cmd_angle_instead_rotvel: True
+ #cmd_angle_instead_rotvel: True
  wheelbase: 2
 
 
