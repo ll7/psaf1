@@ -4,10 +4,10 @@ TebLocalPlannerROS:
 
  odom_topic: /carla/ego_vehicle/odometry
  map_frame: map
- controller_frequency: 2.0
+ controller_frequency: 5.0
 
- #cmd_angle_instead_rotvel: True
- wheelbase: 2
+ cmd_angle_instead_rotvel: True
+ wheelbase: 2.5
 
 
  #Viapoints
@@ -25,11 +25,11 @@ TebLocalPlannerROS:
  # Robot
          
  max_vel_x: 5 # 0.4
- max_vel_x_backwards: 5 # 0.2 
+ max_vel_x_backwards: 3 # 0.2 
  max_vel_theta: 3 #0.3
- acc_lim_x: 1 #0.5
- acc_lim_theta: 1 #0.5
- min_turning_radius: 20
+ acc_lim_x: 2 #0.5
+ acc_lim_theta: 2 #0.5
+ min_turning_radius: 10
  footprint_model: # types: "point", "circular", "two_circles", "line", "polygon"
    type: "polygon"
    vertices: [[-2, -1], [-2, 1], [2, 1], [2, -1]] # for type "polygon"
@@ -46,10 +46,11 @@ TebLocalPlannerROS:
  include_costmap_obstacles: True
  costmap_obstacles_behind_robot_dist: 1.0
  obstacle_poses_affected: 20 # 5 Lowered for performance
- costmap_converter_plugin: "costmap_converter::CostmapToPolygonsDBSMCCH"
+ # Moved to own file:
+ # costmap_converter_plugin: "costmap_converter::CostmapToPolygonsDBSMCCH" 
  # costmap_converter_plugin: ""
- costmap_converter_spin_thread: True
- costmap_converter_rate: 5
+ # costmap_converter_spin_thread: True
+ # costmap_converter_rate: 5
 
  # Optimization
     

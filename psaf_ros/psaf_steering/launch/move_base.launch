@@ -17,6 +17,9 @@
     <rosparam file="$(find psaf_steering)/config/base_local_planner_params.yaml" command="load" />
 
     <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
+
+    <rosparam file="$(find psaf_steering)/config/costmap_converter_params.yaml" command="load" />
+
     <param name="controller_frequency" value="10.0" />
  </node>
 
