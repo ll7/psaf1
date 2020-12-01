@@ -112,8 +112,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 4.189938545227051
-        Min Value: -6.369168281555176
+        Max Value: 4.509026050567627
+        Min Value: -9.5367431640625e-07
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -295,6 +295,20 @@ Visualization Manager:
       Topic: /move_base/TebLocalPlannerROS/teb_poses
       Unreliable: false
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /move_base/TebLocalPlannerROS/teb_markers
+      Name: TebMarker
+      Namespaces:
+        InfeasibleRobotPoses: true
+        LineObstacles: true
+        PointObstacles: true
+        PolyObstacles: true
+        RobotFootprintModel: true
+        TebContainer: true
+        ViaPoints: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -323,7 +337,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 35.74341583251953
+      Distance: 42.5286750793457
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -331,17 +345,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 13.185159683227539
-        Y: 17.457103729248047
-        Z: 20.118389129638672
+        X: 14.08277416229248
+        Y: 5.660373210906982
+        Z: 23.77599334716797
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0997984409332275
+      Pitch: 0.9997984170913696
       Target Frame: ego_vehicle
-      Yaw: 0.5922787189483643
+      Yaw: 0.9722787141799927
     Saved: ~
 Window Geometry:
   CarlaControl:
