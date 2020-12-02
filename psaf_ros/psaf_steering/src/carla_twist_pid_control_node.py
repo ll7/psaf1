@@ -335,8 +335,7 @@ class CarlaAckermannControl(object):
         """
         Basic steering control
         """
-        self.info.output.steer = self.info.target.steering_angle / \
-            self.info.restrictions.max_steering_angle
+        self.info.output.steer = self.info.target.steering_angle / self.info.restrictions.max_steering_angle
 
     def control_stop_and_reverse(self):
         """

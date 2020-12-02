@@ -11,10 +11,10 @@ TebLocalPlannerROS:
  
 
   costmap_converter/CostmapToPolygonsDBSMCCH:
-    cluster_max_distance: 2.0
+    cluster_max_distance: 3.0
     cluster_min_pts: 2
-    cluster_max_pts: 30
-    convex_hull_min_pt_separation: 0.5
+    cluster_max_pts: 300
+    convex_hull_min_pt_separation: 0.2
 
   ## Configure plugins (namespace move_base/TebLocalPlannerROS/PLUGINNAME)
   ## The parameters must be added for each plugin separately
