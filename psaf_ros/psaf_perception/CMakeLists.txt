@@ -10,6 +10,8 @@ project(psaf_perception)
 find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
+  psaf_abstraction_layer
+  cv_bridge
 )
 
 ## System dependencies are found with CMake's conventions
