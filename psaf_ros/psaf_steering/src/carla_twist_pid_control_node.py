@@ -546,7 +546,7 @@ class CarlaAckermannControl(object):
         delta_time = current_time_sec - self.info.current.time_sec
         current_speed = self.vehicle_status.velocity  * (-1 if self.vehicle_status.control.reverse else 1)
         if delta_time > 0:
-            delta_speed = current_speed - self.info.current.speed
+            delta_speed = abs(current_speed) - abs(self.info.current.speed)
             current_accel = delta_speed / delta_time
             # average filter
             self.info.current.accel = (self.info.current.accel * 4 + current_accel) / 5
