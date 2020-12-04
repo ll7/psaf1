@@ -173,14 +173,23 @@ class PathProvider:
                     path_long_list.append(self._get_Pose_Stamped(point, prev_point))
                     prev_point = point
 
+            # Path was found!
             # Prune path
             real_start_index = path_long_list.index(min(path_long_list, key=lambda
                 obj_list: self._euclidean_2d_distance_from_to_position(obj_list, start_local_2d)))
             real_end_index = path_long_list.index(min(path_long_list, key=lambda
                 obj_list: self._euclidean_2d_distance_from_to_position(obj_list, target_local_2d)))
 
+            # create self.path messages
             self.path.poses = path_long_list[real_start_index: real_end_index]
+            self.path.header.frame_id = "map"
+            self.path.header.seq = 1
+            self.path.header.stamp = rospy.Time.now()
+            # create self.path_long messages
             self.path_long.poses = path_long_list
+            self.path_long.header.frame_id = "map"
+            self.path_long.header.seq = 1
+            self.path_long.header.stamp = rospy.Time.now()
 
         else:
             # no path was found
@@ -196,6 +205,12 @@ def main():
     end = GPS_Position(-0.001155, -0.001037, 0)  # in x,y,z: -114,5/128,6
     path = provider.get_path_from_a_to_b(start, end)
     print("Main finished")
+
+    pub = rospy.Publisher("/path", Path, queue_size=10)
+    r = rospy.Rate(1)  # 1 Hz - once a second
+    while not rospy.is_shutdown():
+        pub.publish(path)
+        r.sleep()
 
 
 if __name__ == "__main__":
