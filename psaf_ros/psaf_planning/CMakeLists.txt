@@ -216,3 +216,6 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+add_executable(plugin_global_planner src/psaf_planning/plugin_global_planner.cpp)
+target_link_libraries(plugin_global_planner ${catkin_LIBRARIES})
+add_dependencies(plugin_global_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
