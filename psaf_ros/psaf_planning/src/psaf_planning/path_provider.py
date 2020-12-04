@@ -103,7 +103,7 @@ class PathProvider:
         :param objB: BasicPoint2D provided by the lanelet package
         :return: The calculated distance
         """
-        return ((objA.pose.position.x - objB.x) ** 2 + (objA.pose.position.y + objB.y) ** 2) ** 0.5
+        return ((objA.pose.position.x - objB.x) ** 2 + (objA.pose.position.y - objB.y) ** 2) ** 0.5
 
     def _get_Pose_Stamped(self, pos: Point, prev_pos: Point):
         """
@@ -120,13 +120,10 @@ class PathProvider:
         p.pose.position.y = pos.y
         p.pose.position.z = pos.z
 
-        if pos.x == prev_pos.x:
-            euler_angle_alpha = 0.0
-        else:
-            euler_angle_alpha = math.tan((pos.y - prev_pos.y)/(pos.x - prev_pos.x))
+        euler_angle_alpha = math.atan2(abs(pos.y - prev_pos.y), abs(pos.x - prev_pos.x))
 
         # only 2D space is relevant, therefore angles beta and gamma can be set to zero
-        q = quaternion_from_euler(euler_angle_alpha, 0.0, 0.0)
+        q = quaternion_from_euler(0.0, 0.0, euler_angle_alpha)
         p.pose.orientation = Quaternion(*q)
 
         return p
@@ -149,7 +146,7 @@ class PathProvider:
         gps_point_start = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
         start_local_3d = self.projector.forward(gps_point_start)
         start_local_2d = lanelet2.core.BasicPoint2d(start_local_3d.x, start_local_3d.y)
-        close_from_lanelets = lanelet2.geometry.findNearest(self.lanelet_map.laneletLayer, start_local_2d, 2)
+        close_from_lanelets = lanelet2.geometry.findNearest(self.lanelet_map.laneletLayer, start_local_2d, 1)
         from_lanelet = close_from_lanelets[0][1]
 
         # step2: nearest lanelet to end point
@@ -167,7 +164,7 @@ class PathProvider:
             # long path
             for lane in shortest_path:
                 for pos in lane.centerline:
-                    point = Point(pos.x, -pos.y, pos.z)
+                    point = Point(pos.x, pos.y, pos.z)
                     if prev_point is None:
                         prev_point = point
                     path_long_list.append(self._get_Pose_Stamped(point, prev_point))
@@ -201,9 +198,10 @@ class PathProvider:
 
 def main():
     provider = PathProvider(init_rospy=True)
-    start = GPS_Position(0.001352, -0.000790, 0)  # in x,y,z: -87,9/-151,5
-    end = GPS_Position(-0.001155, -0.001037, 0)  # in x,y,z: -114,5/128,6
+    start = GPS_Position(0.001198, -0.000908, 0)  # in x,y,z: -102.1/-133.5
+    end = GPS_Position(-0.001162, -0.001037, 0)  # in x,y,z: -114,5/129,5
     path = provider.get_path_from_a_to_b(start, end)
+    long_path = provider.get_path_long()
     print("Main finished")
 
     pub = rospy.Publisher("/path", Path, queue_size=10)
