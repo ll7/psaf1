@@ -9,7 +9,9 @@ import rospy
 from psaf_planning.map_provider import MapProvider
 from psaf_abstraction_layer.GPS import GPS_Position
 from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseStamped, Point, Quaternion, Pose
+from geometry_msgs.msg import PoseStamped, Point, Quaternion
+from tf.transformations import quaternion_from_euler
+import math
 
 
 class PathProvider:
@@ -35,8 +37,8 @@ class PathProvider:
             self.lanelet_map = None
         else:
             self.lanelet_map = lanelet2.io.load(self.map_path, self.projector)
-        self.path = None
-        self.path_long = None
+        self.path = Path()
+        self.path_long = Path()
 
     def get_path_from_a_to_b(self, from_a: GPS_Position, to_b: GPS_Position):
         """
@@ -94,24 +96,40 @@ class PathProvider:
 
         return map_path
 
-    def _append_points_to_path(self, lane):
-        for pos in lane.centerline:
-            point = Point(pos.x, -pos.y, pos.z)
-            self.path.append(point)
-
-    def _append_points_to_path_long(self, lane):
-        for pos in lane.centerline:
-            point = Point(pos.x, -pos.y, pos.z)
-            self.path_long.append(point)
-
-    def _euclidean_2d_distance_from_to_position(self, objA, objB):
+    def _euclidean_2d_distance_from_to_position(self, objA: PoseStamped, objB: lanelet2.core.BasicPoint2d):
         """
-        #TODO
-        :param objA: HAS! to be the path_long entry
-        :param objB:
-        :return:
+        This helper function calculates the euclidean distance between 2 Points
+        :param objA: HAS! to be the path_long entry, thus a PoseStamped Object
+        :param objB: BasicPoint2D provided by the lanelet package
+        :return: The calculated distance
         """
-        return ((objA.x - objB.x) ** 2 + (objA.y + objB.y) ** 2) ** 0.5
+        return ((objA.pose.position.x - objB.x) ** 2 + (objA.pose.position.y + objB.y) ** 2) ** 0.5
+
+    def _get_Pose_Stamped(self, pos: Point, prev_pos: Point):
+        """
+        This function calculates the euler angle alpha acoording to the direction vector of two given points.
+        Thereafter this information is transformed to the Quaternion representation
+         and the PoseStamped Object is generated
+        :param pos: Position in x,y,z
+        :param prev_pos: Previous Position in x,y,z
+        :return: PoseStamped
+        """
+        p = PoseStamped()
+
+        p.pose.position.x = pos.x
+        p.pose.position.y = pos.y
+        p.pose.position.z = pos.z
+
+        if pos.x == prev_pos.x:
+            euler_angle_alpha = 0.0
+        else:
+            euler_angle_alpha = math.tan((pos.y - prev_pos.y)/(pos.x - prev_pos.x))
+
+        # only 2D space is relevant, therefore angles beta and gamma can be set to zero
+        q = quaternion_from_euler(euler_angle_alpha, 0.0, 0.0)
+        p.pose.orientation = Quaternion(*q)
+
+        return p
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position):
         """
@@ -142,27 +160,32 @@ class PathProvider:
         to_lanelet = close_to_lanelets[0][1]
 
         # step3: compute shortest path, do not prune for path_long
-        self.path = []
-        self.path_long = []
+        path_long_list = []
         shortest_path = routing_graph.shortestPath(from_lanelet, to_lanelet)
+        prev_point = None
         if shortest_path is not None:
             # long path
             for lane in shortest_path:
                 for pos in lane.centerline:
                     point = Point(pos.x, -pos.y, pos.z)
-                    self.path_long.append(point)
+                    if prev_point is None:
+                        prev_point = point
+                    path_long_list.append(self._get_Pose_Stamped(point, prev_point))
+                    prev_point = point
 
             # Prune path
-            real_start_index = self.path_long.index(min(self.path_long, key=lambda
+            real_start_index = path_long_list.index(min(path_long_list, key=lambda
                 obj_list: self._euclidean_2d_distance_from_to_position(obj_list, start_local_2d)))
-            real_end_index = self.path_long.index(min(self.path_long, key=lambda
+            real_end_index = path_long_list.index(min(path_long_list, key=lambda
                 obj_list: self._euclidean_2d_distance_from_to_position(obj_list, target_local_2d)))
-            self.path = self.path_long[real_start_index: real_end_index]
+
+            self.path.poses = path_long_list[real_start_index: real_end_index]
+            self.path_long.poses = path_long_list
 
         else:
             # no path was found
-            self.path = None
-            self.path_long = None
+            self.path = Path()
+            self.path_long = Path()
 
         rospy.loginfo("PathProvider: Computation of feasible path done")
 
