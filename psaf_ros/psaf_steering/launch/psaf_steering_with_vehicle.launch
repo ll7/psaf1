@@ -44,9 +44,9 @@
 
 
   <remap from="/cmd_vel" to="/carla/$(arg role_name)/twist_pid"/>
-  <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch">
+  <!--<include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch">
     <arg name='role_name' value='$(arg role_name)'/>
-  </include>
+  </include>-->
 
   <!--<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
     <arg name='role_name' value='$(arg role_name)'/>
