@@ -40,28 +40,36 @@ class PathProvider:
         self.path = Path()
         self.path_long = Path()
 
-    def get_path_from_a_to_b(self, from_a: GPS_Position, to_b: GPS_Position):
+    def get_path_from_a_to_b(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
         Returns the shortest path from a to be
         :param  from_a: Start point [GPS Coord]
         :param  to_b:   End point [GPS Coord]
+        :param debug: Default value = False ; Generate Debug output
         :return: Pruned Path or None if no path was found at all, or no map information is received
         """
         if not self.lanelet_map:
             return self.path  # which is None, because no map was received
-        self._compute_route(from_a, to_b)
+        if not debug:
+            self._compute_route(from_a, to_b)
+        else:
+            self._compute_route(from_a, to_b, debug=True)
         return self.path
 
-    def get_path_from_a_to_b_long(self, from_a: GPS_Position, to_b: GPS_Position):
+    def get_path_from_a_to_b_long(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
         Returns the shortest path from a to be
         :param  from_a: Start point [GPS Coord]
         :param  to_b:   End point [GPS Coord]
+        :param debug: Default value = False ; Generate Debug output
         :return: Long Path or None if no path was found at all, or no map information is received
         """
         if not self.lanelet_map:
             return self.path_long  # which is None, because no map was received
-        self._compute_route(from_a, to_b)
+        if not debug:
+            self._compute_route(from_a, to_b)
+        else:
+            self._compute_route(from_a, to_b, debug=True)
         return self.path_long
 
     def get_path_long(self):
@@ -96,6 +104,15 @@ class PathProvider:
 
         return map_path
 
+    def _load_costum_map_path(self, path, origin):
+        """
+        Only used for testing puposes
+        :return: Updates the map
+        :param path: path to the map
+        :param origin: origin of the provided map
+        """
+        self.lanelet_map = lanelet2.io.load(path, UtmProjector(origin))
+
     def _euclidean_2d_distance_from_to_position(self, objA: PoseStamped, objB: lanelet2.core.BasicPoint2d):
         """
         This helper function calculates the euclidean distance between 2 Points
@@ -128,19 +145,23 @@ class PathProvider:
 
         return p
 
-    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position):
+    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
         Compute shortest path
         :param from_a: Start point -- GPS Coord in float: latitude, longitude, altitude
         :param to_b: End point   -- GPS Coord in float: latitude, longitude, altitude
+        :param debug: Default value = False ; Generate Debug output
         """""
         rospy.loginfo("PathProvider: Computing feasible path from a to b")
 
         # generate traffic_rules based on participant type and location
         traffic_rules_ger = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
                                                           lanelet2.traffic_rules.Participants.Vehicle)
+
         # generate routing_graph which represents the given map
         routing_graph = lanelet2.routing.RoutingGraph(self.lanelet_map, traffic_rules_ger)
+        if debug:
+            lanelet2.io.write("debuggraph.osm", routing_graph.getDebugLaneletMap(0))
 
         # step1: get nearest lanelet to start point
         gps_point_start = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
@@ -158,7 +179,14 @@ class PathProvider:
 
         # step3: compute shortest path, do not prune for path_long
         path_long_list = []
-        shortest_path = routing_graph.shortestPath(from_lanelet, to_lanelet)
+        route = routing_graph.getRoute(from_lanelet, to_lanelet, 0)
+
+        if debug:
+            laneletSubmap = route.laneletSubmap()
+            lanelet2.io.write("route.osm", laneletSubmap.laneletMap())
+
+        shortest_path = route.shortestPath()
+        # shortest_path = routing_graph.shortestPath(from_lanelet, to_lanelet)
         prev_point = None
         if shortest_path is not None:
             # long path
@@ -198,9 +226,10 @@ class PathProvider:
 
 def main():
     provider = PathProvider(init_rospy=True)
-    start = GPS_Position(0.001198, -0.000908, 0)  # in x,y,z: -102.1/-133.5
-    end = GPS_Position(-0.001162, -0.001037, 0)  # in x,y,z: -114,5/129,5
-    path = provider.get_path_from_a_to_b(start, end)
+    #provider._load_costum_map_path("src/psaf_planning/map.osm", Origin(49, 8))
+    start = GPS_Position(0.000334, 0.000701, 0)  # in x,y,z: 78,1/-38,5
+    end = GPS_Position(-0.000042, 0.000818, 0)  # in x,y,z: 90/4,7
+    path = provider.get_path_from_a_to_b(start, end, debug=True)
     long_path = provider.get_path_long()
     print("Main finished")
 
