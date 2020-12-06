@@ -6,11 +6,13 @@
 #include <nav_core/base_global_planner.h>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <nav_msgs/Path.h>
 #include <angles/angles.h>
 #include <tf/tf.h>
 #include <tf/transform_datatypes.h>
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
+#include <std_msgs/String.h>
 
 using std::string;
 
@@ -21,7 +23,6 @@ namespace psaf_global_planner {
 
     class GlobalPlanner : public nav_core::BaseGlobalPlanner {
     public:
-
         GlobalPlanner();
         GlobalPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
 
@@ -32,6 +33,10 @@ namespace psaf_global_planner {
                       std::vector<geometry_msgs::PoseStamped>& plan
         );
     private:
+        void pathCallback(const std_msgs::String::ConstPtr& msg);
+        ros::Subscriber pathSubscriber;
+        std::vector<geometry_msgs::PoseStamped> path;
+        ros::NodeHandle nodeHandle;
         costmap_2d::Costmap2DROS* costmap_ros;
         bool init = false;
     };
