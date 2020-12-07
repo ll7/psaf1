@@ -11,10 +11,13 @@ Control Carla ego vehicle by using AckermannDrive messages
 """
 import sys
 import datetime
+from collections import deque
+
 import numpy
 import rospy
 
 from simple_pid import PID
+import matplotlib.pyplot as plt
 
 from dynamic_reconfigure.server import Server
 from ackermann_msgs.msg import AckermannDrive
@@ -26,12 +29,14 @@ from carla_ackermann_control.cfg import EgoVehicleControlParameterConfig
 from geometry_msgs.msg import Twist
 import carla_control_physics as phys
 
+plot = False  # plot target and current vel
 
 class CarlaAckermannControl(object):
 
     """
     Convert ackermann_drive messages to carla VehicleCommand with a PID controller
     """
+
 
     def __init__(self):
         """
@@ -82,6 +87,12 @@ class CarlaAckermannControl(object):
         # input parameters
         self.input_speed = 0.
         self.input_accel = 0.
+
+
+
+        self.data_plot_target = deque(maxlen=200)
+        self.data_plot_current = deque(maxlen=200)
+        self.data_plot_out = deque(maxlen=200)
 
 
         # PID controller
@@ -530,7 +541,21 @@ class CarlaAckermannControl(object):
         :return:
         """
         self.info.output.header = self.info.header
+        self.info.output.header.stamp = rospy.Time.now()
         self.control_info_publisher.publish(self.info)
+
+        if plot:
+            self.data_plot_target.append(self.info.target.speed)
+            self.data_plot_current.append(self.info.current.speed)
+            self.data_plot_out.append(self.info.output.throttle)
+            plt.clf()
+            plt.plot(self.data_plot_target)
+            plt.plot(self.data_plot_current)
+            plt.plot(self.data_plot_out)
+            plt.legend(['speed_target', 'speed_current', 'throttle_out'])
+            plt.pause(0.01)
+            plt.draw()
+
 
     def update_current_values(self):
         """
