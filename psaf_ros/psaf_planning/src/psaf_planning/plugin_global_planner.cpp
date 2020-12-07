@@ -1,5 +1,10 @@
 #include <pluginlib/class_list_macros.h>
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
 #include "plugin_global_planner.h"
+
+#include <boost/foreach.hpp>
+#define foreach BOOST_FOREACH
 
 //register this planner as a BaseGlobalPlanner plugin
 PLUGINLIB_EXPORT_CLASS(psaf_global_planner::GlobalPlanner, nav_core::BaseGlobalPlanner)
@@ -24,25 +29,24 @@ namespace psaf_global_planner {
             ROS_WARN("This planner has already been initialized... doing nothing");
     }
 
-    void GlobalPlanner::loadPath(const std::string& filename) {
+    bool GlobalPlanner::loadPath(const std::string& filename) {
         // Read from File to pathMsg
         ROS_INFO("Loading path from: %s", filename.c_str());
         nav_msgs::Path pathMsg;
+        rosbag::Bag bag;
+        bag.open(filename, rosbag::bagmode::Read);
 
-        std::ifstream ifs(filename, std::ios::in|std::ios::binary);
-        ifs.seekg (0, std::ios::end);
-        std::streampos end = ifs.tellg();
-        ifs.seekg (0, std::ios::beg);
-        std::streampos begin = ifs.tellg();
+        std::vector<std::string> topics;
+        topics.push_back(std::string("Path"));
 
-        uint32_t file_size = end-begin;
-        boost::shared_array<uint8_t> ibuffer(new uint8_t[file_size]);
-        ifs.read((char*) ibuffer.get(), file_size);
-        ros::serialization::IStream istream(ibuffer.get(), file_size);
-        ros::serialization::deserialize(istream, pathMsg);
-        path = pathMsg.poses;
-        ROS_INFO("Path loaded with length: %d", (int)path.size());
-        ifs.close();
+        rosbag::View view(bag, rosbag::TopicQuery(topics));
+        foreach(rosbag::MessageInstance const m, view)
+        {
+            nav_msgs::PathPtr s = m.instantiate<nav_msgs::Path>();
+            if (s != NULL)
+                path = s->poses;
+        }
+        bag.close();
     }
 
     bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan) {
@@ -55,9 +59,10 @@ namespace psaf_global_planner {
                 }
             loadPath(filename); //get path from file
             if(path.size() > 0) {
-                if(path.at(0) == start && path.back() == goal) {
+                if(true) {
                     plan = path; //move the path to the plan vector witch is used by the move_base to follow the path
-                    ROS_INFO("Global planner was successful");
+                    ROS_INFO("Path size: %d vs %d(msg)", plan.size(), path.size());
+                    ROS_ERROR("Global planner was successful");
                     return true;
                 } else {
                     plan.push_back(start);

@@ -25,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   nav_core
   sensor_msgs
+  rosbag
 )
 catkin_package()
 include_directories(${catkin_INCLUDE_DIRS})
@@ -43,6 +44,7 @@ catkin_python_setup()
 add_library(psaf_global_planner_lib src/psaf_planning/plugin_global_planner.cpp) #global planner
 add_library(psaf_panel_goal_lib src/psaf_planning/panel_goal.cpp)                #goal panel
 target_link_libraries(psaf_panel_goal_lib ${QT_LIBRARIES} ${catkin_LIBRARIES})   #link goal panel with qt
+target_link_libraries(psaf_global_planner_lib ${catkin_LIBRARIES})   #link goal panel with qt
 
 ################################################
 ## Declare ROS messages, services and actions ##

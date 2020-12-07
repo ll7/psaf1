@@ -12,7 +12,12 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   carla_msgs
-  psaf_abstraction_layer
+  move_base
+  costmap_2d
+  map_server
+  teb_local_planner
+  ackermann_msgs
+  costmap_converter
 )
 
 ## System dependencies are found with CMake's conventions

@@ -1,0 +1,9 @@
+<!-- -->
+<launch>
+  <arg name="role_name" default="ego_vehicle" />
+  <rosparam file="$(find psaf_steering)/config/settings.yaml" command="load" />
+
+  <node pkg="psaf_steering" type="carla_twist_pid_control_node.py" name="carla_twist_pid_control_$(arg role_name)" output="screen">
+    <param name="role_name" value="$(arg role_name)" />
+  </node>
+</launch>

@@ -25,7 +25,7 @@ namespace psaf_global_planner {
                       std::vector<geometry_msgs::PoseStamped>& plan
         );
     private:
-        void loadPath(const std::string& filename);
+        bool loadPath(const std::string& filename);
         std::vector<geometry_msgs::PoseStamped> path;
         costmap_2d::Costmap2DROS* costmap_ros;
         bool init = false;
