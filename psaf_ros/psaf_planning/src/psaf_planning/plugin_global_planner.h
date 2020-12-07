@@ -10,6 +10,7 @@
 #include <base_local_planner/costmap_model.h>
 #include <nav_msgs/Path.h>
 #include <string>
+#include <filesystem>
 
 namespace psaf_global_planner {
     class GlobalPlanner : public nav_core::BaseGlobalPlanner {

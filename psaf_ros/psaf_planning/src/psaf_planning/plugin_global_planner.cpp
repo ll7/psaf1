@@ -26,10 +26,10 @@ namespace psaf_global_planner {
 
     void GlobalPlanner::loadPath(const std::string& filename) {
         // Read from File to pathMsg
-        ROS_INFO("Loading path from: /tmp/%s", filename.c_str());
+        ROS_INFO("Loading path from: %s", filename.c_str());
         nav_msgs::Path pathMsg;
 
-        std::ifstream ifs("/tmp/"+filename, std::ios::in|std::ios::binary);
+        std::ifstream ifs(filename, std::ios::in|std::ios::binary);
         ifs.seekg (0, std::ios::end);
         std::streampos end = ifs.tellg();
         ifs.seekg (0, std::ios::beg);
@@ -47,7 +47,13 @@ namespace psaf_global_planner {
 
     bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan) {
         if(init && ros::ok()){
-            loadPath("path.path"); //get path from file
+            std::string filename;
+            for (const auto & entry : std::filesystem::directory_iterator("/tmp"))
+                if(entry.path().string().find(".path") != std::string::npos) {
+                    filename = entry.path().string();
+                    break;
+                }
+            loadPath(filename); //get path from file
             if(path.size() > 0) {
                 if(path.at(0) == start && path.back() == goal) {
                     plan = path; //move the path to the plan vector witch is used by the move_base to follow the path
