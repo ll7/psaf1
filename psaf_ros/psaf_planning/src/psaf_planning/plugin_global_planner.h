@@ -1,26 +1,17 @@
-/** include the libraries you need in your planner here */
-/** for global path planner interface */
+#pragma once
+
 #include <ros/ros.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <costmap_2d/costmap_2d.h>
 #include <nav_core/base_global_planner.h>
-
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Path.h>
-#include <angles/angles.h>
-#include <tf/tf.h>
-#include <tf/transform_datatypes.h>
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
-#include <std_msgs/String.h>
-
-using std::string;
-
-#ifndef PSAF_PLANNING_PLUGIN_GLOBAL_PLANNER_H
-#define PSAF_PLANNING_PLUGIN_GLOBAL_PLANNER_H
+#include <nav_msgs/Path.h>
+#include <string>
 
 namespace psaf_global_planner {
-
     class GlobalPlanner : public nav_core::BaseGlobalPlanner {
     public:
         GlobalPlanner();
@@ -33,12 +24,9 @@ namespace psaf_global_planner {
                       std::vector<geometry_msgs::PoseStamped>& plan
         );
     private:
-        void pathCallback(const std_msgs::String::ConstPtr& msg);
-        ros::Subscriber pathSubscriber;
+        void loadPath(const std::string& filename);
         std::vector<geometry_msgs::PoseStamped> path;
-        ros::NodeHandle nodeHandle;
         costmap_2d::Costmap2DROS* costmap_ros;
         bool init = false;
     };
 };
-#endif //PSAF_PLANNING_PLUGIN_GLOBAL_PLANNER_H

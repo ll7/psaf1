@@ -15,7 +15,7 @@ namespace psaf_goal {
 
     private:
         void setGoal(float latitude, float longitude, float altitude);
-        QPushButton *bPubish;
+        QPushButton *bPublish;
         QLineEdit *leLongitude;
         QLineEdit *leLatitude;
         QLineEdit *leAltitude;
@@ -23,8 +23,8 @@ namespace psaf_goal {
 
         ros::NodeHandle nodeHandle;
         //gps coordinates: current goal
-        float latitude{0.0};
-        float longitude{0.0};
-        float altitude{0.0};
+        double latitude{0.0};
+        double longitude{0.0};
+        double altitude{0.0};
     };
 } // end namespace psaf_goal
