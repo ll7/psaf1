@@ -257,7 +257,7 @@ class PathProvider:
         client.wait_for_server()
 
         goal = MoveBaseGoal()
-        goal.target_pose = target.pose
+        goal.target_pose = target
 
         client.send_goal(goal)
         wait = client.wait_for_result()
