@@ -37,7 +37,6 @@ class CarlaAckermannControl(object):
     Convert ackermann_drive messages to carla VehicleCommand with a PID controller
     """
 
-
     def __init__(self):
         """
         Constructor
@@ -88,12 +87,9 @@ class CarlaAckermannControl(object):
         self.input_speed = 0.
         self.input_accel = 0.
 
-
-
         self.data_plot_target = deque(maxlen=200)
         self.data_plot_current = deque(maxlen=200)
         self.data_plot_out = deque(maxlen=200)
-
 
         # PID controller
         # the controller has to run with the simulation time, not with real-time
@@ -291,13 +287,9 @@ class CarlaAckermannControl(object):
         self.input_speed = ros_twist.linear.x
         self.input_accel = 0.
 
-
-        rospy.loginfo("[ACKERMANN] twist updated " + str(self.info.target.speed))
-
     def reload_input_params(self):
         self.set_target_speed(self.input_speed)
         self.set_target_accel(self.input_accel)
-
 
     def set_target_steering_angle(self, target_steering_angle):
         """
@@ -315,7 +307,6 @@ class CarlaAckermannControl(object):
         """
         set target speed
         """
-        # rospy.loginfo("[ACKERMANN] set target speed " + str(target_speed))
         if abs(target_speed) > self.info.restrictions.max_speed:
             rospy.logerr("Max speed reached, clipping value")
             self.info.target.speed = numpy.clip(
@@ -352,7 +343,6 @@ class CarlaAckermannControl(object):
         # perform actual control
         self.control_steering()
         self.control_stop_and_reverse()
-        rospy.loginfo("Target Vel is: " + str(self.info.target.speed))
         self.run_speed_control_loop()
         self.run_accel_control_loop()
         if not self.info.output.hand_brake:
@@ -381,7 +371,6 @@ class CarlaAckermannControl(object):
 
         # auto-control of hand-brake and reverse gear
         self.info.output.hand_brake = False
-        rospy.loginfo("current abs: " + str(self.info.current.speed_abs))
         if self.info.current.speed_abs < standing_still_epsilon:
             # standing still, change of driving direction allowed
             self.info.status.status = "standing"
@@ -555,7 +544,6 @@ class CarlaAckermannControl(object):
             plt.legend(['speed_target', 'speed_current', 'throttle_out'])
             plt.pause(0.01)
             plt.draw()
-
 
     def update_current_values(self):
         """

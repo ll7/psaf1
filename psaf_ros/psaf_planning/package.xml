@@ -61,7 +61,8 @@
   <build_depend>lanelet2_python</build_depend>
   <build_depend>lanelet2_maps</build_depend>
   <build_depend>lanelet2_validation</build_depend>
-
+  <build_depend>nav_core</build_depend>
+  <build_depend>rviz</build_depend>
 
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
@@ -75,7 +76,8 @@
   <build_export_depend>lanelet2_python</build_export_depend>
   <build_export_depend>lanelet2_maps</build_export_depend>
   <build_export_depend>lanelet2_validation</build_export_depend>
-
+  <build_export_depend>nav_core</build_export_depend>
+  <build_export_depend>rviz</build_export_depend>
 
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
@@ -89,12 +91,15 @@
   <exec_depend>lanelet2_python</exec_depend>
   <exec_depend>lanelet2_maps</exec_depend>
   <exec_depend>lanelet2_validation</exec_depend>
+  <exec_depend>nav_core</exec_depend>
+  <exec_depend>rviz</exec_depend>
   
 
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
-
+    <nav_core plugin="${prefix}/plugin_description.xml"/>
+    <rviz plugin="${prefix}/panel_description.xml"/>
   </export>
 </package>

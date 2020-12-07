@@ -6,7 +6,7 @@ TebLocalPlannerROS:
  map_frame: map
  controller_frequency: 8.0
 
- cmd_angle_instead_rotvel: True # Somehow works better without this param even tho we have ackermann car
+ cmd_angle_instead_rotvel: False # Somehow False works better without this param even tho we have ackermann car
  wheelbase: 2.5
 
 
