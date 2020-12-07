@@ -238,7 +238,6 @@ class PathProvider:
             self.path_long = Path()
             rospy.logerr("PathProvider: No possible path was found")
 
-
     def _serialize_message(self, path: Path):
         """
         Serialize path message and write to bag file
@@ -271,12 +270,12 @@ class PathProvider:
         goal.target_pose = target
 
         client.send_goal(goal)
-        wait = client.wait_for_result()
-        if not wait:
-            rospy.logerr("PathProvider: Action server not available!")
-            rospy.signal_shutdown("PathProvider: Action server not available!")
-        else:
-            rospy.loginfo(client.get_result())
+        # wait = client.wait_for_result()
+        # if not wait:
+        #     rospy.logerr("PathProvider: Action server not available!")
+        #     rospy.signal_shutdown("PathProvider: Action server not available!")
+        # else:
+        #     rospy.loginfo(client.get_result())
 
 
 def test():
