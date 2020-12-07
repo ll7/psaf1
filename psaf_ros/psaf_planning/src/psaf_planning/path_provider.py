@@ -296,6 +296,6 @@ def main():
 
 if __name__ == "__main__":
     try:
-        test()
+        main()
     except rospy.ROSInterruptException:
         pass
