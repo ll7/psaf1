@@ -1,5 +1,4 @@
 <!-- -->
 <launch>
-  <node pkg="psaf_steering" type="hello.py" name="psaf_steering" output="screen">
-  </node>
+  <node pkg="psaf_steering" type="seminatic_lidar_processor.py" name="seminatic_lidar_processor" output="screen" />    
 </launch>

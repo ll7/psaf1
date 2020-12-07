@@ -11,10 +11,13 @@ Control Carla ego vehicle by using AckermannDrive messages
 """
 import sys
 import datetime
+from collections import deque
+
 import numpy
 import rospy
 
 from simple_pid import PID
+import matplotlib.pyplot as plt
 
 from dynamic_reconfigure.server import Server
 from ackermann_msgs.msg import AckermannDrive
@@ -26,6 +29,7 @@ from carla_ackermann_control.cfg import EgoVehicleControlParameterConfig
 from geometry_msgs.msg import Twist
 import carla_control_physics as phys
 
+plot = False  # plot target and current vel
 
 class CarlaAckermannControl(object):
 
@@ -78,6 +82,14 @@ class CarlaAckermannControl(object):
         self.info.output.steer = 0.
         self.info.output.reverse = False
         self.info.output.hand_brake = True
+
+        # input parameters
+        self.input_speed = 0.
+        self.input_accel = 0.
+
+        self.data_plot_target = deque(maxlen=200)
+        self.data_plot_current = deque(maxlen=200)
+        self.data_plot_out = deque(maxlen=200)
 
         # PID controller
         # the controller has to run with the simulation time, not with real-time
@@ -254,6 +266,9 @@ class CarlaAckermannControl(object):
         self.set_target_accel(ros_ackermann_drive.acceleration)
         self.set_target_jerk(ros_ackermann_drive.jerk)
 
+        self.input_speed = ros_ackermann_drive.speed
+        self.input_accel = ros_ackermann_drive.acceleration
+
     def twist_command_updated(self, ros_twist: Twist):
         """
         Stores the twist  message for the next controller calculation
@@ -269,7 +284,12 @@ class CarlaAckermannControl(object):
         self.set_target_accel(0)
         self.set_target_jerk(0)
 
+        self.input_speed = ros_twist.linear.x
+        self.input_accel = 0.
 
+    def reload_input_params(self):
+        self.set_target_speed(self.input_speed)
+        self.set_target_accel(self.input_accel)
 
     def set_target_steering_angle(self, target_steering_angle):
         """
@@ -317,6 +337,9 @@ class CarlaAckermannControl(object):
         """
         Perform a vehicle control cycle and sends out CarlaEgoVehicleControl message
         """
+        # reload the input parameters if the other node doesn't publish fast enough
+        self.reload_input_params()
+
         # perform actual control
         self.control_steering()
         self.control_stop_and_reverse()
@@ -382,6 +405,7 @@ class CarlaAckermannControl(object):
                           " Set desired speed to 0".format(self.info.current.speed,
                                                            self.info.target.speed))
             self.set_target_speed(0.)
+            self.set_target_accel(0.)
 
     def run_speed_control_loop(self):
         """
@@ -506,7 +530,20 @@ class CarlaAckermannControl(object):
         :return:
         """
         self.info.output.header = self.info.header
+        self.info.output.header.stamp = rospy.Time.now()
         self.control_info_publisher.publish(self.info)
+
+        if plot:
+            self.data_plot_target.append(self.info.target.speed)
+            self.data_plot_current.append(self.info.current.speed)
+            self.data_plot_out.append(self.info.output.throttle)
+            plt.clf()
+            plt.plot(self.data_plot_target)
+            plt.plot(self.data_plot_current)
+            plt.plot(self.data_plot_out)
+            plt.legend(['speed_target', 'speed_current', 'throttle_out'])
+            plt.pause(0.01)
+            plt.draw()
 
     def update_current_values(self):
         """
@@ -520,9 +557,9 @@ class CarlaAckermannControl(object):
         """
         current_time_sec = rospy.get_rostime().to_sec()
         delta_time = current_time_sec - self.info.current.time_sec
-        current_speed = self.vehicle_status.velocity
+        current_speed = self.vehicle_status.velocity  * (-1 if self.vehicle_status.control.reverse else 1)
         if delta_time > 0:
-            delta_speed = current_speed - self.info.current.speed
+            delta_speed = abs(current_speed) - abs(self.info.current.speed)
             current_accel = delta_speed / delta_time
             # average filter
             self.info.current.accel = (self.info.current.accel * 4 + current_accel) / 5
