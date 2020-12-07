@@ -7,8 +7,9 @@ from lanelet2.core import GPSPoint
 from lanelet2.io import Origin
 import rospy
 from psaf_planning.map_provider import MapProvider
-from psaf_abstraction_layer.GPS import GPS_Position
+from psaf_abstraction_layer.GPS import GPS_Position, GPS_Sensor
 from nav_msgs.msg import Path
+from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped, Point, Quaternion
 from tf.transformations import quaternion_from_euler
 import math
@@ -16,7 +17,7 @@ import math
 
 class PathProvider:
 
-    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10):
+    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10, role_name: str = "ego_vehicle"):
         """
         Class PathProvider provides a feasible path from a starting point A to a target Point B by computing
         the nearest lanelets and performing a dijkstra graph search on a provided .osm map.
@@ -27,7 +28,9 @@ class PathProvider:
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
-
+        self.role_name = role_name
+        self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
+        rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
         self.origin = Origin(0, 0)
         self.projector = UtmProjector(self.origin)
         self.map_provider = MapProvider()
