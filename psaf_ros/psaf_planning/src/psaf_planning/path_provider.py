@@ -154,6 +154,7 @@ class PathProvider:
         # only 2D space is relevant, therefore angles beta and gamma can be set to zero
         q = quaternion_from_euler(0.0, 0.0, euler_angle_alpha)
         p.pose.orientation = Quaternion(*q)
+        p.header.frame_id = "map"
 
         return p
 
