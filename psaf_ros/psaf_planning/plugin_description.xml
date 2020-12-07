@@ -1,0 +1,5 @@
+<library path="lib/libpsaf_global_planner_lib">
+    <class name="psaf_planning/GlobalPlanner" type="psaf_global_planner::GlobalPlanner" base_class_type="nav_core::BaseGlobalPlanner">
+        <description>This is a global planner plugin by psaf1 project.</description>
+    </class>
+</library>

@@ -1,50 +1,28 @@
-cmake_minimum_required(VERSION 3.1)
-project(psaf_planning)
+cmake_minimum_required(VERSION 3.0.2)
+project(psaf_abstraction_layer)
 
-set(CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 17)
-
-find_package(mrt_cmake_modules REQUIRED NO_MODULE)
+## Compile as C++11, supported in ROS Kinetic and newer
+# add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  rviz
-  mrt_cmake_modules
-  lanelet2_core
-  lanelet2_io
-  lanelet2_traffic_rules
-  lanelet2_routing
-  lanelet2_projection
-  lanelet2_python
-  lanelet2_maps
-  lanelet2_validation
   roscpp
   rospy
   std_msgs
-  nav_core
-  sensor_msgs
-  rosbag
 )
-catkin_package()
-include_directories(${catkin_INCLUDE_DIRS})
-link_directories(${catkin_LIBRARY_DIRS})
 
-set(CMAKE_AUTOMOC ON)
+## System dependencies are found with CMake's conventions
+# find_package(Boost REQUIRED COMPONENTS system)
 
-#Add Qt
-message(STATUS "Using Qt5 based on the rviz_QT_VERSION: ${rviz_QT_VERSION}")
-find_package(Qt5 ${rviz_QT_VERSION} EXACT REQUIRED Core Widgets)
-set(QT_LIBRARIES Qt5::Widgets)
-qt5_add_resources(SRC_FILES panel_goal.qrc)
+
 ## Uncomment this if the package has a setup.py. This macro ensures
+## modules and global scripts declared therein get installed
+## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 catkin_python_setup()
-#build libraries
-add_library(psaf_global_planner_lib src/psaf_planning/plugin_global_planner.cpp) #global planner
-add_library(psaf_panel_goal_lib src/psaf_planning/panel_goal.cpp)                #goal panel
-target_link_libraries(psaf_panel_goal_lib ${QT_LIBRARIES} ${catkin_LIBRARIES})   #link goal panel with qt
-target_link_libraries(psaf_global_planner_lib ${catkin_LIBRARIES})   #link goal panel with qt
+
+catkin_package()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -126,12 +104,12 @@ target_link_libraries(psaf_global_planner_lib ${catkin_LIBRARIES})   #link goal 
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-#catkin_package(
+catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES psaf_planning
-#  CATKIN_DEPENDS lanelet2 roscpp rospy std_msgs
+#  LIBRARIES psaf_abstraction_layer
+#  CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
-#)
+)
 
 ###########
 ## Build ##
@@ -139,14 +117,14 @@ target_link_libraries(psaf_global_planner_lib ${catkin_LIBRARIES})   #link goal 
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-#include_directories(
+include_directories(
 # include
-#  ${catkin_INCLUDE_DIRS}
-#)
+  ${catkin_INCLUDE_DIRS}
+)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/psaf_planning.cpp
+#   src/${PROJECT_NAME}/psaf_abstraction_layer.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -157,7 +135,7 @@ target_link_libraries(psaf_global_planner_lib ${catkin_LIBRARIES})   #link goal 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/psaf_planning_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/psaf_abstraction_layer_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -183,10 +161,10 @@ target_link_libraries(psaf_global_planner_lib ${catkin_LIBRARIES})   #link goal 
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
+#catkin_install_python(PROGRAMS
+#   src/CarlaCar.py
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+#)
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
@@ -216,4 +194,15 @@ target_link_libraries(psaf_global_planner_lib ${catkin_LIBRARIES})   #link goal 
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
 
+#############
+## Testing ##
+#############
 
+## Add gtest based cpp test target and link libraries
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_psaf_abstraction_layer.cpp)
+# if(TARGET ${PROJECT_NAME}-test)
+#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+# endif()
+
+## Add folders to be run by python nosetests
+# catkin_add_nosetests(test)
