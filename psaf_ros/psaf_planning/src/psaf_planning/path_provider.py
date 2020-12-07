@@ -13,6 +13,10 @@ from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped, Point, Quaternion
 from tf.transformations import quaternion_from_euler
 import math
+import tempfile
+import os
+import actionlib
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 
 class PathProvider:
@@ -42,52 +46,56 @@ class PathProvider:
             self.lanelet_map = lanelet2.io.load(self.map_path, self.projector)
         self.path = Path()
         self.path_long = Path()
+        self.start = None
+        self.goal = None
+        self.tmp_file = self._create_temp_file(suf=".path")
 
-    def get_path_from_a_to_b(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
+    def __del__(self):
+        # closing the TemporaryFile deletes it
+        self.tmp_file.close()
+
+    def _create_temp_file(self, suf: str):
         """
-        Returns the shortest path from a to be
-        :param  from_a: Start point [GPS Coord]
-        :param  to_b:   End point [GPS Coord]
+        Creates a temporary file object and deletes previous potentially not deleted files with the same suffix
+        :param suf: String suffix
+        :return: temporary file object
+        """
+        # first delete
+        item_list = os.listdir("/tmp")
+        for item in item_list:
+            if item.endswith(suf):
+                os.remove(os.path.join("/tmp", item))
+        return tempfile.NamedTemporaryFile(suffix=suf)
+
+    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, debug=False, long: bool = False):
+        """
+        Returns the shortest path from start to goal
+        :param  from_a: Start point [GPS Coord] optional
+        :param  to_b:   End point [GPS Coord] optional
         :param debug: Default value = False ; Generate Debug output
-        :return: Pruned Path or None if no path was found at all, or no map information is received
+        :param long: boolean weather the long path should be returned
+        :return: Pruned or long Path or None if no path was found at all, or no map information is received
         """
+        start = self.start
+        goal = self.goal
+
         if not self.lanelet_map:
             return self.path  # which is None, because no map was received
+
+        if from_a is not None and to_b is not None:
+            start = from_a
+            goal = to_b
+
         if not debug:
-            self._compute_route(from_a, to_b)
+            self._compute_route(start, goal)
         else:
-            self._compute_route(from_a, to_b, debug=True)
-        return self.path
+            self._compute_route(start, goal, debug=True)
 
-    def get_path_from_a_to_b_long(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
-        """
-        Returns the shortest path from a to be
-        :param  from_a: Start point [GPS Coord]
-        :param  to_b:   End point [GPS Coord]
-        :param debug: Default value = False ; Generate Debug output
-        :return: Long Path or None if no path was found at all, or no map information is received
-        """
-        if not self.lanelet_map:
-            return self.path_long  # which is None, because no map was received
-        if not debug:
-            self._compute_route(from_a, to_b)
+        if long:
+            return self.path_long
         else:
-            self._compute_route(from_a, to_b, debug=True)
-        return self.path_long
-
-    def get_path_long(self):
-        """
-        Returns the current path
-        :return: Long Path or None
-        """
-        return self.path_long
-
-    def get_path(self):
-        """
-        Returns the current path
-        :return: Pruned Path or None
-        """
-        return self.path
+            # return pruned path
+            return self.path
 
     def _get_map_path(self, polling_rate: int, timeout_iter: int):
         """
@@ -226,14 +234,52 @@ class PathProvider:
 
         rospy.loginfo("PathProvider: Computation of feasible path done")
 
+    def _serialize_message(self, path: Path):
+        """
+        Serialize path message and write to temporary file
+        :return:
+        """
+        if path is not None:
+            path.serialize(self.tmp_file)
 
-def main():
+    def _callback_goal(self, data):
+        self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
+        self.start = self.GPS_Sensor.get_position()
+        self._serialize_message(self.get_path_from_a_to_b())
+        self._trigger_move_base(self.path.poses[-1])
+
+    def _trigger_move_base(self, target: PoseStamped):
+        """
+        This function triggers the move_base by publishing the goal, which is later used for sanity checking
+        :return:
+        """
+        client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        client.wait_for_server()
+
+        goal = MoveBaseGoal()
+        goal.target_pose = target.pose
+
+        client.send_goal(goal)
+        wait = client.wait_for_result()
+        if not wait:
+            rospy.logerr("Action server not available!")
+            rospy.signal_shutdown("Action server not available!")
+        else:
+            rospy.loginfo(client.get_result())
+
+
+def test():
+    """
+    Provide a simple standalone test scenario
+    """
     provider = PathProvider(init_rospy=True)
     #provider._load_costum_map_path("src/psaf_planning/map.osm", Origin(49, 8))
     start = GPS_Position(0.000334, 0.000701, 0)  # in x,y,z: 78,1/-38,5
     end = GPS_Position(-0.000042, 0.000818, 0)  # in x,y,z: 90/4,7
     path = provider.get_path_from_a_to_b(start, end, debug=True)
-    long_path = provider.get_path_long()
+    # get long path anyway
+    long_path = provider.path_long
+    provider._serialize_message(path)
     print("Main finished")
 
     pub = rospy.Publisher("/path", Path, queue_size=10)
@@ -243,8 +289,13 @@ def main():
         r.sleep()
 
 
+def main():
+    provider = PathProvider(init_rospy=True)
+    rospy.spin()
+
+
 if __name__ == "__main__":
     try:
-        main()
+        test()
     except rospy.ROSInterruptException:
         pass
