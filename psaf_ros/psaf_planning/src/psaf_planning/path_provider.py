@@ -13,10 +13,10 @@ from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped, Point, Quaternion
 from tf.transformations import quaternion_from_euler
 import math
-import tempfile
 import os
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+import rosbag
 
 
 class PathProvider:
@@ -48,24 +48,25 @@ class PathProvider:
         self.path_long = Path()
         self.start = None
         self.goal = None
-        self.tmp_file = self._create_temp_file(suf=".path")
 
     def __del__(self):
-        # closing the TemporaryFile deletes it
-        self.tmp_file.close()
-
-    def _create_temp_file(self, suf: str):
-        """
-        Creates a temporary file object and deletes previous potentially not deleted files with the same suffix
-        :param suf: String suffix
-        :return: temporary file object
-        """
-        # first delete
+        # delete path bag files
         item_list = os.listdir("/tmp")
         for item in item_list:
-            if item.endswith(suf):
+            if item.endswith(".path"):
                 os.remove(os.path.join("/tmp", item))
-        return tempfile.NamedTemporaryFile(suffix=suf)
+
+    def _create_bag_file(self, filename: str):
+        """
+        Creates a bag file object
+        :param filename: filename of bag file
+        :return: bag file object
+        """
+        # suffix set to be .path
+        suffix = ".path"
+        # directory
+        dir = "/tmp/"
+        return rosbag.Bag(str(dir + filename + suffix), "w")
 
     def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, debug=False, long: bool = False):
         """
@@ -236,11 +237,11 @@ class PathProvider:
 
     def _serialize_message(self, path: Path):
         """
-        Serialize path message and write to temporary file
-        :return:
+        Serialize path message and write to bag file
         """
-        if path is not None:
-            path.serialize(self.tmp_file)
+        bag_file = self._create_bag_file(filename="path")
+        bag_file.write('Path', path)
+        bag_file.close()
 
     def _callback_goal(self, data):
         self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
@@ -251,7 +252,6 @@ class PathProvider:
     def _trigger_move_base(self, target: PoseStamped):
         """
         This function triggers the move_base by publishing the goal, which is later used for sanity checking
-        :return:
         """
         client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         client.wait_for_server()
