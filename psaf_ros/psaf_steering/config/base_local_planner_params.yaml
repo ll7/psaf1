@@ -6,7 +6,7 @@ TebLocalPlannerROS:
  map_frame: map
  controller_frequency: 8.0
 
- cmd_angle_instead_rotvel: False # Somehow works better without this param even tho we have ackermann car
+ cmd_angle_instead_rotvel: True # Somehow works better without this param even tho we have ackermann car
  wheelbase: 2.5
 
 
@@ -29,7 +29,7 @@ TebLocalPlannerROS:
  max_vel_theta: 0.5 #0.3
  acc_lim_x: 2 #0.5
  acc_lim_theta: 0.5 #0.5
- min_turning_radius: 2
+ min_turning_radius: 5.5
  footprint_model: # types: "point", "circular", "two_circles", "line", "polygon"
    type: "polygon"
    vertices: [[-2, -1], [-2, 1], [2, 1], [2, -1]] # for type "polygon"
@@ -64,7 +64,7 @@ TebLocalPlannerROS:
  weight_acc_lim_x: 1
  weight_acc_lim_theta: 1
  weight_kinematics_nh: 1000
- weight_kinematics_forward_drive: 1
+ weight_kinematics_forward_drive: 400
  weight_kinematics_turning_radius: 1
  weight_optimaltime: 1
  weight_obstacle: 50
