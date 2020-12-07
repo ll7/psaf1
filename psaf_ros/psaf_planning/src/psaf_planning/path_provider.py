@@ -174,6 +174,7 @@ class PathProvider:
         routing_graph = lanelet2.routing.RoutingGraph(self.lanelet_map, traffic_rules_ger)
         if debug:
             lanelet2.io.write("debuggraph.osm", routing_graph.getDebugLaneletMap(0))
+            rospy.loginfo("PathProvider: :DEBUG==TRUE: routing_graph written to 'debuggraph.osm'")
 
         # step1: get nearest lanelet to start point
         gps_point_start = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
@@ -196,11 +197,12 @@ class PathProvider:
         if debug:
             laneletSubmap = route.laneletSubmap()
             lanelet2.io.write("route.osm", laneletSubmap.laneletMap())
+            rospy.loginfo("PathProvider: :DEBUG==TRUE: route written to 'route.osm'")
 
-        shortest_path = route.shortestPath()
-        # shortest_path = routing_graph.shortestPath(from_lanelet, to_lanelet)
-        prev_point = None
-        if shortest_path is not None:
+        if route is not None:
+            shortest_path = route.shortestPath()
+            prev_point = None
+
             # long path
             for lane in shortest_path:
                 for pos in lane.centerline:
@@ -227,13 +229,14 @@ class PathProvider:
             self.path_long.header.frame_id = "map"
             self.path_long.header.seq = 1
             self.path_long.header.stamp = rospy.Time.now()
+            rospy.loginfo("PathProvider: Computation of feasible path done")
 
         else:
             # no path was found
             self.path = Path()
             self.path_long = Path()
+            rospy.logerr("PathProvider: No possible path was found")
 
-        rospy.loginfo("PathProvider: Computation of feasible path done")
 
     def _serialize_message(self, path: Path):
         """
@@ -242,12 +245,19 @@ class PathProvider:
         bag_file = self._create_bag_file(filename="path")
         bag_file.write('Path', path)
         bag_file.close()
+        rospy.loginfo("PathProvider: Created bag file with path. /tmp/path.path")
 
     def _callback_goal(self, data):
+        """
+        Callback function of psaf goal set subscriber
+        :param data: data received
+        """
         self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
         self.start = self.GPS_Sensor.get_position()
+        rospy.loginfo("PathProvider: Received start and goal position")
         self._serialize_message(self.get_path_from_a_to_b())
         self._trigger_move_base(self.path.poses[-1])
+        rospy.loginfo("PathProvider: global planner plugin triggered")
 
     def _trigger_move_base(self, target: PoseStamped):
         """
@@ -262,8 +272,8 @@ class PathProvider:
         client.send_goal(goal)
         wait = client.wait_for_result()
         if not wait:
-            rospy.logerr("Action server not available!")
-            rospy.signal_shutdown("Action server not available!")
+            rospy.logerr("PathProvider: Action server not available!")
+            rospy.signal_shutdown("PathProvider: Action server not available!")
         else:
             rospy.loginfo(client.get_result())
 
