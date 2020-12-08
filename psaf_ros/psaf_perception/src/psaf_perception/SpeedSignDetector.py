@@ -12,7 +12,7 @@ class SpeedSignDetector(AbstractDetector):
     def __init__(self, role_name: str = "ego_vehicle"):
         super().__init__()
 
-        self.confidence_min = 0.5
+        self.confidence_min = 0.6
         self.threshold = 0.7
         print("[INFO] init device")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
@@ -95,9 +95,24 @@ class SpeedSignDetector(AbstractDetector):
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                detected.append(
-                    DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], self.labels[classIDs[i]],
-                                   confidences[0]))
+                # Ask the model again
+                x = boxes[i][0] - 100
+                y= boxes[i][1] - 100
+                w = boxes[i][2] + 200
+                h=  boxes[i][3] + 200
+                input_detected_area = cv2.cvtColor(cv2.getRectSubPix(image,(w,h),(x+w/2,y+h/2)), cv2.COLOR_BGR2RGB)
+                cv2.imshow("crop", cv2.cvtColor(input_detected_area,cv2.COLOR_RGB2BGR))
+                cv2.waitKey(1)
+                layerOutputs = self.net.forward(input_detected_area)
+                if len(layerOutputs.xyxy) >= 1:
+                    found = layerOutputs.xywhn[0].cpu().numpy()
+                    if len(found) >= 1:
+                        classID = int(found[0, 5])
+                        confidences[i] = found[0,4]
+                        if confidences[i]  > self.confidence_min:
+                            detected.append(
+                                DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], self.labels[classID],
+                                               confidences[i]))
 
         self.inform_listener(detected)
 
