@@ -3,9 +3,13 @@ import rospy
 import time
 import numpy as np
 import os
+
+from docutils.nodes import image
+
 from psaf_abstraction_layer.DepthCamera import DepthCamera
 from psaf_abstraction_layer.RGBCamera import RGBCamera
-
+import torch
+from torchvision.transforms import transforms
 
 class DetectedObject:
     """
@@ -38,19 +42,21 @@ class SpeedSignDetector:
 
         self.confidence_min = 0.5
         self.threshold = 0.7
-
-        self.labels = ("speed_30", "speed_60", "speed_90")
-
-        # derive the paths to the YOLO weights and model configuration
-        weightsPath = os.path.abspath("../../models/yolov3-tiny-obj_5000.weights")
-        configPath = os.path.abspath("../../models/yolov3-tiny.cfg")
-        # load our YOLO object detector trained on COCO dataset (80 classes)W
+        print("[INFO] init device")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
+        print("[INFO] Device:" + str(self.device))
+        # load our YOLO object detector trained on COCO dataset (3 classes)
+        print("[INFO] loading basic YOLO from torch hub...")
+        model = torch.hub.load('ultralytics/yolov5', 'yolov5m', classes=3)
         print("[INFO] loading YOLO from disk...")
-        self.net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
-
-        # determine only the *output* layer names that we need from YOLO
-        ln = self.net.getLayerNames()
-        self.ln = [ln[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
+        ckpt = torch.load('../../models/yolov5m.pt')['model']  # load checkpoint
+        model.load_state_dict(ckpt.state_dict())  # load state_dict
+        model.names = ckpt.names  # define class names
+        self.labels = ckpt.names # copy labels
+        model.to(self.device)
+        self.net = model.autoshape() # Handles arleady to device, but must be called after to device
+        self.net.eval()
+        torch.no_grad() # reduce memory consumption and improve speed
 
         self.depth_camera = DepthCamera(role_name)
         # self.depth_camera.set_on_image_listener(self.__on_depth_image)
@@ -73,27 +79,23 @@ class SpeedSignDetector:
     def __on_rgb_image_update(self, image):
         (H, W) = image.shape[:2]
 
-        blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416),
-                                     swapRB=True, crop=False)
-        self.net.setInput(blob)
-        layerOutputs = self.net.forward(self.ln)
+        input = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        layerOutputs = self.net.forward(input)
         # initialize our lists of detected bounding boxes, confidences, and
         # class IDs, respectively
         boxes = []
         confidences = []
         classIDs = []
-        # loop over each of the layer outputs
-        for output in layerOutputs:
+        for output in layerOutputs.xywhn:
             # loop over each of the detections
-            for detection in output:
+            for detection in output.cpu().numpy():
                 # extract the class ID and confidence (i.e., probability) of
                 # the current object detection
-                scores = detection[5:]
-                classID = np.argmax(scores)
-                confidence = scores[classID]
+                classID = int(detection[5])
+                score = detection[4]
                 # filter out weak predictions by ensuring the detected
                 # probability is greater than the minimum probability
-                if confidence > self.confidence_min:
+                if score > self.confidence_min:
                     # scale the bounding box coordinates back relative to the
                     # size of the image, keeping in mind that YOLO actually
                     # returns the center (x, y)-coordinates of the bounding
@@ -107,14 +109,14 @@ class SpeedSignDetector:
                     # update our list of bounding box coordinates, confidences,
                     # and class IDs
                     boxes.append([x, y, int(width), int(height)])
-                    confidences.append(float(confidence))
+                    confidences.append(float(score))
                     classIDs.append(classID)
 
         # List oif detected elements
         detected = []
         # apply non-maxima suppression to suppress weak, overlapping bounding
         # boxes
-        idxs = cv2.dnn.NMSBoxes(boxes, confidences, confidence, self.threshold)
+        idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_min, self.threshold)
 
         # ensure at least one detection exists
         if len(idxs) > 0:
