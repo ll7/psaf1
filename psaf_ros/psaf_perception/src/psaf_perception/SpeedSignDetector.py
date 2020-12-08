@@ -1,44 +1,16 @@
 import cv2
-import rospy
-import time
 import numpy as np
-import os
-
-from docutils.nodes import image
+import rospy
+import torch
 
 from psaf_abstraction_layer.DepthCamera import DepthCamera
 from psaf_abstraction_layer.RGBCamera import RGBCamera
-import torch
-from torchvision.transforms import transforms
-
-class DetectedObject:
-    """
-    Data class for detected elements
-    """
-
-    def __init__(self, x: int = 0, y: int = 0, w: int = 0, h: int = 0, label: str = "UNKNOWN",
-                 confidence: float = 0.01):
-        """
-
-        :param x: x coord in image
-        :param y: y coord in image
-        :param h: height of bounding box
-        :param w: weight of bounding box
-        :param label: the class label name
-        :param confidence: the confidence value
-        """
-        self.x = x
-        self.y = y
-        self.h = h
-        self.w = w
-        self.label = label
-        self.confidence = confidence
-
-        self.__listener = None
+from psaf_perception.AbstractDetector import DetectedObject, AbstractDetector
 
 
-class SpeedSignDetector:
+class SpeedSignDetector(AbstractDetector):
     def __init__(self, role_name: str = "ego_vehicle"):
+        super().__init__()
 
         self.confidence_min = 0.5
         self.threshold = 0.7
@@ -49,14 +21,14 @@ class SpeedSignDetector:
         print("[INFO] loading basic YOLO from torch hub...")
         model = torch.hub.load('ultralytics/yolov5', 'yolov5m', classes=3)
         print("[INFO] loading YOLO from disk...")
-        ckpt = torch.load('../../models/yolov5m.pt')['model']  # load checkpoint
+        ckpt = torch.load('../../models/yolov5m-e250-frozen_backbone/weights/best.pt')['model']  # load checkpoint
         model.load_state_dict(ckpt.state_dict())  # load state_dict
         model.names = ckpt.names  # define class names
-        self.labels = ckpt.names # copy labels
+        self.labels = ckpt.names  # copy labels
         model.to(self.device)
-        self.net = model.autoshape() # Handles arleady to device, but must be called after to device
+        self.net = model.autoshape()  # Handles arleady to device, but must be called after to device
         self.net.eval()
-        torch.no_grad() # reduce memory consumption and improve speed
+        torch.no_grad()  # reduce memory consumption and improve speed
 
         self.depth_camera = DepthCamera(role_name)
         # self.depth_camera.set_on_image_listener(self.__on_depth_image)
@@ -100,6 +72,7 @@ class SpeedSignDetector:
                     # size of the image, keeping in mind that YOLO actually
                     # returns the center (x, y)-coordinates of the bounding
                     # box followed by the boxes' width and height
+                    # TODO keep relative coordinates
                     box = detection[0:4] * np.array([W, H, W, H])
                     (centerX, centerY, width, height) = box.astype("int")
                     # use the center (x, y)-coordinates to derive the top and
@@ -126,19 +99,10 @@ class SpeedSignDetector:
                     DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], self.labels[classIDs[i]],
                                    confidences[0]))
 
-            # inform listener
-            if self.__listener != None:
-                self.__listener(detected)
-
-    def set_on_detection_listener(self, func):
-        """
-        Set function to be called with detected bounding boxes
-        :param func: the function
-        :return: None
-        """
-        self.__listener = func;
+        self.inform_listener(detected)
 
 
+# Show case code
 if __name__ == "__main__":
     rospy.init_node("DetectionTest")
 
