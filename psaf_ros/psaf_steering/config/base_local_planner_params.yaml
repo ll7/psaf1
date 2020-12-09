@@ -4,34 +4,38 @@ TebLocalPlannerROS:
 
  odom_topic: /carla/ego_vehicle/odometry
  map_frame: map
- controller_frequency: 15.0
+ controller_frequency: 10.0
 
  cmd_angle_instead_rotvel: False # Somehow False works better without this param even tho we have ackermann car
  wheelbase: 2.5
 
  oscillation_recovery: False
  #Viapoints
- global_plan_viapoint_sep: 5
+ global_plan_viapoint_sep: 2
 
  # Trajectory
   
  teb_autosize: True
- dt_ref: 0.3 # 0.3 incresed for performance
- dt_hysteresis: 0.2
+ dt_ref: 0.5 # 0.3 increased for performance
+ dt_hysteresis: 0.25
  global_plan_overwrite_orientation: True
- max_global_plan_lookahead_dist: 50.0
+ max_global_plan_lookahead_dist: 40.0
  feasibility_check_no_poses: 5
     
  # Robot
          
  max_vel_x: 10 # 0.4
  max_vel_x_backwards: 4 # 0.2 
- max_vel_theta: 1.0 #0.3
- acc_lim_x: 3 #0.5
- acc_lim_theta: 1.0 #0.5
+ max_vel_theta: 0.8 #0.3
+ acc_lim_x: 2.5 #0.5
+ acc_lim_theta: 0.8 #0.5
  min_turning_radius: 3
  footprint_model: # types: "point", "circular", "two_circles", "line", "polygon"
-   type: "polygon"
+   type: "two_circles"
+   front_offset: 1 # for type "two_circles"
+   front_radius: 1 # for type "two_circles"
+   rear_offset: 1 # for type "two_circles"
+   rear_radius: 1 # for type "two_circles"
    vertices: [[-2, -1], [-2, 1], [2, 1], [2, -1]] # for type "polygon"
 
  # GoalTolerance
@@ -45,7 +49,7 @@ TebLocalPlannerROS:
  min_obstacle_dist: 1.0
  include_costmap_obstacles: True
  costmap_obstacles_behind_robot_dist: 1.0
- obstacle_poses_affected: 30 # 5 Lowered for performance
+ obstacle_poses_affected: 20 # 5 Lowered for performance
  # Moved to own file:
  # costmap_converter_plugin: "costmap_converter::CostmapToPolygonsDBSMCCH" 
  # costmap_converter_plugin: ""
@@ -62,12 +66,13 @@ TebLocalPlannerROS:
  weight_max_vel_x: 5
  weight_max_vel_theta: 1
  weight_acc_lim_x: 3
- weight_acc_lim_theta: 1
+ weight_acc_lim_theta: 50
  weight_kinematics_nh: 1000
  weight_kinematics_forward_drive: 400
  weight_kinematics_turning_radius: 1
  weight_optimaltime: 2
  weight_obstacle: 50
+ weight_viapoint: 5
  weight_dynamic_obstacle: 10 # not in use yet
  alternative_time_cost: False # not in use yet
 
@@ -76,7 +81,7 @@ TebLocalPlannerROS:
  enable_homotopy_class_planning: True
  enable_multithreading: True
  simple_exploration: False
- max_number_classes: 6
+ max_number_classes: 5
  roadmap_graph_no_samples: 15
  roadmap_graph_area_width: 5
  h_signature_prescaler: 0.5
