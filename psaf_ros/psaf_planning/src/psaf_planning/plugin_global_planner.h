@@ -25,6 +25,8 @@ namespace psaf_global_planner {
                       std::vector<geometry_msgs::PoseStamped>& plan
         );
     private:
+        bool nearly_equal(float a, float b, float epsilon = 128 * FLT_EPSILON, float relth = FLT_MIN);
+        bool comparePosition(geometry_msgs::Pose a, geometry_msgs::Pose b);
         bool loadPath(const std::string& filename);
         std::vector<geometry_msgs::PoseStamped> path;
         costmap_2d::Costmap2DROS* costmap_ros;

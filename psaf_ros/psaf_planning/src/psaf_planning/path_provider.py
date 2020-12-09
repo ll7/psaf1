@@ -192,6 +192,11 @@ class PathProvider:
         to_lanelet = close_to_lanelets[0][1]
 
         # step3: compute shortest path, do not prune for path_long
+
+        # first clear potential previous messages
+        self.path = Path()
+        self.path_long = Path()
+
         path_long_list = []
         route = routing_graph.getRoute(from_lanelet, to_lanelet, 0)
 
@@ -233,9 +238,14 @@ class PathProvider:
             rospy.loginfo("PathProvider: Computation of feasible path done")
 
         else:
-            # no path was found
-            self.path = Path()
-            self.path_long = Path()
+            # no path was found, only put start point in path
+            start_point = Point(from_lanelet.centerline.x, from_lanelet.centerline.y, from_lanelet.centerline.z)
+            # create self.path and self.path_long messages
+            self.path.poses = [self._get_Pose_Stamped(start_point, start_point)]
+            self.path.header.frame_id = "map"
+            self.path.header.seq = 1
+            self.path.header.stamp = rospy.Time.now()
+            self.path_long = self.path
             rospy.logerr("PathProvider: No possible path was found")
 
     def _serialize_message(self, path: Path):
@@ -261,7 +271,8 @@ class PathProvider:
 
     def _trigger_move_base(self, target: PoseStamped):
         """
-        This function triggers the move_base by publishing the goal, which is later used for sanity checking
+        This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
+        The last entry can be the goal if a path was found or the starting point if no path was found
         """
         client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         client.wait_for_server()

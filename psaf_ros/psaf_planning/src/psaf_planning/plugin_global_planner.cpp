@@ -2,6 +2,7 @@
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include "plugin_global_planner.h"
+#include <math.h>
 
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
@@ -49,6 +50,20 @@ namespace psaf_global_planner {
         bag.close();
     }
 
+    bool GlobalPlanner::nearly_equal( float a, float b, float epsilon, float relth) {
+        assert(std::numeric_limits<float>::epsilon() <= epsilon);
+        assert(epsilon < 1.f);
+
+        if (a == b) return true;
+
+        auto diff = std::abs(a-b);
+        auto norm = std::min((std::abs(a) + std::abs(b)), std::numeric_limits<float>::max());
+        return diff < std::max(relth, epsilon * norm);
+    }
+    bool GlobalPlanner::comparePosition(geometry_msgs::Pose a, geometry_msgs::Pose b) {
+        return a.position.x == b.position.x && a.position.y == b.position.y && a.position.z == b.position.z;
+    }
+
     bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan) {
         if(init && ros::ok()){
             std::string filename;
@@ -59,10 +74,10 @@ namespace psaf_global_planner {
                 }
             loadPath(filename); //get path from file
             if(path.size() > 0) {
-                if(true) {
+                if(comparePosition(path.back().pose, goal.pose) && goal.header == path.back().header) {
                     plan = path; //move the path to the plan vector witch is used by the move_base to follow the path
                     ROS_INFO("Path size: %d vs %d(msg)", plan.size(), path.size());
-                    ROS_ERROR("Global planner was successful");
+                    ROS_INFO("Global planner was successful");
                     return true;
                 } else {
                     plan.push_back(start);
