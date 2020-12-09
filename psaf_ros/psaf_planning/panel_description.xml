@@ -1,0 +1,9 @@
+<library path="lib/libpsaf_panel_goal_lib">
+    <class name="psaf_planning/GoalPanel"
+           type="psaf_goal::GoalPanel"
+           base_class_type="rviz::Panel">
+        <description>
+            A panel widget for setting the global goal
+        </description>
+    </class>
+</library>

@@ -12,6 +12,12 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   carla_msgs
+  move_base
+  costmap_2d
+  map_server
+  teb_local_planner
+  ackermann_msgs
+  costmap_converter
   psaf_abstraction_layer
 )
 
