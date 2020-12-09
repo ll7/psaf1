@@ -1,0 +1,183 @@
+#!/usr/bin/env python
+
+from abc import abstractmethod
+import rospy
+from psaf_planning.map_provider import MapProvider
+from psaf_abstraction_layer.GPS import GPS_Position, GPS_Sensor
+from nav_msgs.msg import Path
+from sensor_msgs.msg import NavSatFix
+from geometry_msgs.msg import PoseStamped, Point, Quaternion
+from tf.transformations import quaternion_from_euler
+import math
+import os
+import actionlib
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+import rosbag
+
+
+class PathProviderAbstract:
+
+    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10,
+                 role_name: str = "ego_vehicle"):
+        """
+        Class PathProvider provides a feasible path from a starting point A to a target Point B by computing
+        the nearest lanelets and performing a dijkstra graph search on a provided .osm map.
+        :param init_rospy: Initialize a rospy node?
+        :param polling_rate: Polling Rate in [Hz]
+        :param timeout_iter: Number of polling iterations until timeout occurs
+        """
+        if init_rospy:
+            # initialize node
+            rospy.init_node('pathProvider', anonymous=True)
+        self.role_name = role_name
+        self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
+        rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
+        self.map_provider = MapProvider()
+        self.map_path = self._get_map_path(polling_rate, timeout_iter)
+        if not self.map_path:
+            rospy.logerr("PathProvider: No Map received!")
+            self.map = None
+        else:
+            self.map = self._load_map(self.map_path)
+        self.path = Path()
+        self.path_long = Path()
+        self.start = None
+        self.goal = None
+
+    def __del__(self):
+        # delete path bag files
+        item_list = os.listdir("/tmp")
+        for item in item_list:
+            if item.endswith(".path"):
+                os.remove(os.path.join("/tmp", item))
+
+    @abstractmethod
+    def _load_map(self, path):
+        ...
+
+    def _create_bag_file(self, filename: str):
+        """
+        Creates a bag file object
+        :param filename: filename of bag file
+        :return: bag file object
+        """
+        # suffix set to be .path
+        suffix = ".path"
+        # directory
+        dir = "/tmp/"
+        return rosbag.Bag(str(dir + filename + suffix), "w")
+
+    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, debug=False,
+                             long: bool = False):
+        """
+        Returns the shortest path from start to goal
+        :param  from_a: Start point [GPS Coord] optional
+        :param  to_b:   End point [GPS Coord] optional
+        :param debug: Default value = False ; Generate Debug output
+        :param long: boolean weather the long path should be returned
+        :return: Pruned or long Path or None if no path was found at all, or no map information is received
+        """
+        start = self.start
+        goal = self.goal
+
+        if not self.map:
+            return self.path  # which is None, because no map was received
+
+        if from_a is not None and to_b is not None:
+            start = from_a
+            goal = to_b
+
+        if not debug:
+            self._compute_route(start, goal)
+        else:
+            self._compute_route(start, goal, debug=True)
+
+        if long:
+            return self.path_long
+        else:
+            # return pruned path
+            return self.path
+
+    @abstractmethod
+    def _get_map_path(self, polling_rate: int, timeout_iter: int):
+        """
+        Gets the path of the converted .osm map
+        :param polling_rate: Polling Rate in [Hz]
+        :param timeout_iter: Number of polling iterations until timeout occurs
+        :return: absolute path of temporary map file
+        """
+        ...
+
+    def _get_Pose_Stamped(self, pos: Point, prev_pos: Point):
+        """
+        This function calculates the euler angle alpha acoording to the direction vector of two given points.
+        Thereafter this information is transformed to the Quaternion representation
+         and the PoseStamped Object is generated
+        :param pos: Position in x,y,z
+        :param prev_pos: Previous Position in x,y,z
+        :return: PoseStamped
+        """
+        p = PoseStamped()
+
+        p.pose.position.x = pos.x
+        p.pose.position.y = pos.y
+        p.pose.position.z = pos.z
+
+        euler_angle_alpha = math.atan2(abs(pos.y - prev_pos.y), abs(pos.x - prev_pos.x))
+
+        # only 2D space is relevant, therefore angles beta and gamma can be set to zero
+        q = quaternion_from_euler(0.0, 0.0, euler_angle_alpha)
+        p.pose.orientation = Quaternion(*q)
+        p.header.frame_id = "map"
+
+        return p
+
+    @abstractmethod
+    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
+        """
+        Compute shortest path
+        :param from_a: Start point -- GPS Coord in float: latitude, longitude, altitude
+        :param to_b: End point   -- GPS Coord in float: latitude, longitude, altitude
+        :param debug: Default value = False ; Generate Debug output
+        """""
+        ...
+
+    def _serialize_message(self, path: Path):
+        """
+        Serialize path message and write to bag file
+        """
+        bag_file = self._create_bag_file(filename="path")
+        bag_file.write('Path', path)
+        bag_file.close()
+        rospy.loginfo("PathProvider: Created bag file with path. /tmp/path.path")
+
+    def _callback_goal(self, data):
+        """
+        Callback function of psaf goal set subscriber
+        :param data: data received
+        """
+        self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
+        self.start = self.GPS_Sensor.get_position()
+        rospy.loginfo("PathProvider: Received start and goal position")
+        self._serialize_message(self.get_path_from_a_to_b())
+        self._trigger_move_base(self.path.poses[-1])
+        rospy.loginfo("PathProvider: global planner plugin triggered")
+
+    def _trigger_move_base(self, target: PoseStamped):
+        """
+        This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
+        The last entry can be the goal if a path was found or the starting point if no path was found
+        """
+        client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        client.wait_for_server()
+
+        goal = MoveBaseGoal()
+        goal.target_pose = target
+
+        client.send_goal(goal)
+        # wait = client.wait_for_result()
+        # if not wait:
+        #     rospy.logerr("PathProvider: Action server not available!")
+        #     rospy.signal_shutdown("PathProvider: Action server not available!")
+        # else:
+        #     rospy.loginfo(client.get_result())
