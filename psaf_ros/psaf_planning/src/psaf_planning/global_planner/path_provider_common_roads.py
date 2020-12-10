@@ -87,9 +87,14 @@ class PathProviderCommonRoads(PathProviderAbstract):
         :param target:
         :return:
         """
-        # a state with position [2.0, 3.0] m and uncertain velocity from 5.4 to 7.0 m/s
-        # can be created as follows:
-        start_state: State = State(position=np.array([start.x, start.y]), velocity=0,time_step=0,slip_angle=0,yaw_rate=0, orientation=0)
+        # get nearest lanelet to start
+        start: Lanelet = self.find_nearest_lanlet(start)
+        start_center_lane = [start.center_vertices[len(start.center_vertices)//2][0], start.center_vertices[
+            len(start.center_vertices)//2][1]]
+        start_state: State = State(position=np.array([start_center_lane[0], start_center_lane[1]]), velocity=0,
+                                   time_step=0, slip_angle=0, yaw_rate=0, orientation=0)
+
+        # get nearest lanelet to target
         goal: Lanelet = self.find_nearest_lanlet(target)
         # goal.center_vertice = [[x0, x1, ..., xn], [y0, y1, ..., yn]]
         circle = Circle(10, center=np.array([goal.center_vertices[len(goal.center_vertices)//2][0],
@@ -120,7 +125,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         return self.path
 
-    def _visualization(self, route):
+    def _visualization(self, route, num):
         plot_limits = get_plot_limits_from_reference_path(route)
         # option 2: plot limits from lanelets in the route
         # plot_limits = get_plot_limits_from_routes(route)
@@ -132,6 +137,21 @@ class PathProviderCommonRoads(PathProviderAbstract):
         fig.gca().axis('equal')
 
         draw_route(route, draw_route_lanelets=True, draw_reference_path=True, plot_limits=plot_limits)
+        plt.savefig("test"+str(num)+".png")
+
+    def _get_shortest_route(self, routes_list: list):
+        """
+        get shortest route among all routes in route_list
+        :param routes_list: list, which contains every generated route
+        :return: shortest route
+        """
+        min_length = len(routes_list[0].reference_path)
+        min_index = 0
+        for index, route in enumerate(routes_list):
+            if len(route.reference_path) < min_length:
+                min_length = len(route.reference_path)
+                min_index = index
+        return routes_list[min_index]
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
@@ -159,11 +179,16 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         # plan routes, and save the found routes in a route candidate holder
         candidate_holder = route_planner.plan_routes()
-        # get first route in the candidate list
-        route = candidate_holder.retrieve_first_route()
-        self._visualization(route)
+        all_routes, num_routes = candidate_holder.retrieve_all_routes()
+
+        if debug:
+            # if debug: show results in .png
+            for i in range(0, num_routes):
+                self._visualization(all_routes[i], i)
+
         path_poses = []
-        if route is not None:
+        if num_routes >= 1:
+            route = self._get_shortest_route(all_routes)
             # first clear potential previous messages
             self.path = Path()
             prev_local_point = None
