@@ -1,0 +1,14 @@
+## PyCharm project:
+.idea
+
+## Byte-compiled / optimized / DLL files
+__pycache__
+.ipynb_checkpoints
+*.py[cod]
+*.cache
+*pytest_cache/
+*.egg-info
+
+
+
+

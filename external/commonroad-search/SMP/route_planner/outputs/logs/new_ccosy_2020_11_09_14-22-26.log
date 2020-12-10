@@ -1,0 +1,12 @@
+2020-11-09 14:22:26,923	Batch processor	DEBUG	Config file loaded and logger created
+2020-11-09 14:22:26,923	Batch processor	INFO	Run on all scenarios
+2020-11-09 14:22:27,562	Batch processor	INFO	Found route candidates: 1
+2020-11-09 14:22:27,566	Batch processor	DEBUG	  1/1	[DEU_Gar-3_2_T-1     ]	 search took	   61.2980	ms		path FOUND to goal lanelet: [54502]
+2020-11-09 14:22:27,911	Batch processor	INFO	============================== RESULTS ==============================
+2020-11-09 14:22:27,911	Batch processor	DEBUG	Successfully SOLVED scenarios   1/1:
+2020-11-09 14:22:27,911	Batch processor	DEBUG		DEU_Gar-3_2_T-1
+2020-11-09 14:22:27,912	Batch processor	WARNING	Scenarios with path NOT FOUND   0/1:
+2020-11-09 14:22:27,912	Batch processor	CRITICAL	Scenarios with EXCEPTION in path finding   0/1:
+2020-11-09 14:22:27,912	Batch processor	INFO	============================== OTHER WARNINGS ==============================
+2020-11-09 14:22:27,912	Batch processor	WARNING	Scenarios with different name and benchmark ID   0/1:
+2020-11-09 14:22:27,912	Batch processor	WARNING	Scenarios with initial state assertion   0/1:

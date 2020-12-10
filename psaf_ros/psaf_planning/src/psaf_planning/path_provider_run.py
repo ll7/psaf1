@@ -2,11 +2,12 @@
 
 from psaf_planning.global_planner.path_provider_lanelet2 import PathProviderLanelet2
 from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
+from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads
 import rospy
 
 
 def main():
-    provider: PathProviderAbstract = PathProviderLanelet2(init_rospy=True)
+    provider: PathProviderAbstract = PathProviderCommonRoads(init_rospy=True)
     rospy.spin()
 
 

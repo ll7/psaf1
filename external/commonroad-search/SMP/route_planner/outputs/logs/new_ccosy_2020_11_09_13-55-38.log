@@ -1,0 +1,27 @@
+2020-11-09 13:55:38,594	Batch processor	DEBUG	Config file loaded and logger created
+2020-11-09 13:55:38,594	Batch processor	INFO	Run on all scenarios
+2020-11-09 13:55:39,242	Batch processor	INFO	Found route candidates: 1
+2020-11-09 13:55:39,245	Batch processor	DEBUG	  1/6	[DEU_Gar-3_2_T-1     ]	 search took	   55.9510	ms		path FOUND to goal lanelet: [54502]
+2020-11-09 13:55:39,859	Batch processor	INFO	Found route candidates: 1
+2020-11-09 13:55:39,859	Batch processor	DEBUG	  2/6	[DEU_Muc-1_2_T-1     ]	 search took	   40.6445	ms		path FOUND to goal lanelet: [3490]
+2020-11-09 13:55:40,492	Batch processor	INFO	Found route candidates: 3
+2020-11-09 13:55:40,494	Batch processor	DEBUG	  3/6	[USA_Lanker-2_18_T-1 ]	 search took	   25.4980	ms		path FOUND to goal lanelet: [3468]
+2020-11-09 13:55:41,083	Batch processor	INFO	Found route candidates: 3
+2020-11-09 13:55:41,085	Batch processor	DEBUG	  4/6	[USA_Lanker-2_26_T-1 ]	 search took	   32.0094	ms		path FOUND to goal lanelet: [3519]
+2020-11-09 13:55:41,475	Batch processor	INFO	Found route candidates: 2
+2020-11-09 13:55:41,477	Batch processor	DEBUG	  5/6	[USA_Peach-2_1_T-1   ]	 search took	   23.3884	ms		path FOUND to goal lanelet: [53902]
+2020-11-09 13:55:41,822	Batch processor	INFO	Found route candidates: 2
+2020-11-09 13:55:41,823	Batch processor	DEBUG	  6/6	[USA_US101-32_1_T-1  ]	 search took	    7.6518	ms		path FOUND to goal lanelet: [20]
+2020-11-09 13:55:42,068	Batch processor	INFO	============================== RESULTS ==============================
+2020-11-09 13:55:42,068	Batch processor	DEBUG	Successfully SOLVED scenarios   6/6:
+2020-11-09 13:55:42,068	Batch processor	DEBUG		DEU_Gar-3_2_T-1
+2020-11-09 13:55:42,068	Batch processor	DEBUG		DEU_Muc-1_2_T-1
+2020-11-09 13:55:42,068	Batch processor	DEBUG		USA_Lanker-2_18_T-1
+2020-11-09 13:55:42,068	Batch processor	DEBUG		USA_Lanker-2_26_T-1
+2020-11-09 13:55:42,068	Batch processor	DEBUG		USA_Peach-2_1_T-1
+2020-11-09 13:55:42,068	Batch processor	DEBUG		USA_US101-32_1_T-1
+2020-11-09 13:55:42,068	Batch processor	WARNING	Scenarios with path NOT FOUND   0/6:
+2020-11-09 13:55:42,068	Batch processor	CRITICAL	Scenarios with EXCEPTION in path finding   0/6:
+2020-11-09 13:55:42,068	Batch processor	INFO	============================== OTHER WARNINGS ==============================
+2020-11-09 13:55:42,068	Batch processor	WARNING	Scenarios with different name and benchmark ID   0/6:
+2020-11-09 13:55:42,068	Batch processor	WARNING	Scenarios with initial state assertion   0/6:

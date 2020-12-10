@@ -13,6 +13,8 @@ import os
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import rosbag
+from lanelet2.projection import UtmProjector
+from lanelet2.io import Origin
 
 
 class PathProviderAbstract:
@@ -29,18 +31,13 @@ class PathProviderAbstract:
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
+        self.origin = Origin(0, 0)
+        self.projector = UtmProjector(self.origin)
         self.role_name = role_name
         self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
         rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
         self.map_provider = MapProvider()
-        self.map_path = self._get_map_path(polling_rate, timeout_iter)
-        if not self.map_path:
-            rospy.logerr("PathProvider: No Map received!")
-            self.map = None
-        else:
-            self.map = self._load_map(self.map_path)
         self.path = Path()
-        self.path_long = Path()
         self.start = None
         self.goal = None
 
@@ -50,10 +47,6 @@ class PathProviderAbstract:
         for item in item_list:
             if item.endswith(".path"):
                 os.remove(os.path.join("/tmp", item))
-
-    @abstractmethod
-    def _load_map(self, path):
-        ...
 
     def _create_bag_file(self, filename: str):
         """
@@ -67,44 +60,14 @@ class PathProviderAbstract:
         dir = "/tmp/"
         return rosbag.Bag(str(dir + filename + suffix), "w")
 
-    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, debug=False,
-                             long: bool = False):
+    @abstractmethod
+    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, debug=False):
         """
         Returns the shortest path from start to goal
         :param  from_a: Start point [GPS Coord] optional
         :param  to_b:   End point [GPS Coord] optional
         :param debug: Default value = False ; Generate Debug output
-        :param long: boolean weather the long path should be returned
-        :return: Pruned or long Path or None if no path was found at all, or no map information is received
-        """
-        start = self.start
-        goal = self.goal
-
-        if not self.map:
-            return self.path  # which is None, because no map was received
-
-        if from_a is not None and to_b is not None:
-            start = from_a
-            goal = to_b
-
-        if not debug:
-            self._compute_route(start, goal)
-        else:
-            self._compute_route(start, goal, debug=True)
-
-        if long:
-            return self.path_long
-        else:
-            # return pruned path
-            return self.path
-
-    @abstractmethod
-    def _get_map_path(self, polling_rate: int, timeout_iter: int):
-        """
-        Gets the path of the converted .osm map
-        :param polling_rate: Polling Rate in [Hz]
-        :param timeout_iter: Number of polling iterations until timeout occurs
-        :return: absolute path of temporary map file
+        :return: Path or only start if no path was found at all, or no map information is received
         """
         ...
 

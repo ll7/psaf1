@@ -22,9 +22,14 @@ class PathProviderLanelet2(PathProviderAbstract):
         :param polling_rate: Polling Rate in [Hz]
         :param timeout_iter: Number of polling iterations until timeout occurs
         """
-        self.origin = Origin(0, 0)
-        self.projector = UtmProjector(self.origin)
         super(PathProviderLanelet2, self).__init__(init_rospy, polling_rate, timeout_iter, role_name)
+        self.path_long = Path()
+        self.map_path = self._get_map_path(polling_rate, timeout_iter)
+        if not self.map_path:
+            rospy.logerr("PathProvider: No Map received!")
+            self.map = None
+        else:
+            self.map = self._load_map(self.map_path)
 
     def _load_map(self, path):
         return lanelet2.io.load(path, self.projector)
@@ -64,6 +69,37 @@ class PathProviderLanelet2(PathProviderAbstract):
         :return: The calculated distance
         """
         return ((objA.pose.position.x - objB.x) ** 2 + (objA.pose.position.y - objB.y) ** 2) ** 0.5
+
+    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, debug=False,
+                             long: bool = False):
+        """
+        Returns the shortest path from start to goal
+        :param  from_a: Start point [GPS Coord] optional
+        :param  to_b:   End point [GPS Coord] optional
+        :param debug: Default value = False ; Generate Debug output
+        :param long: boolean weather the long path should be returned
+        :return: Pruned or long Path or only start if no path was found at all, or no map information is received
+        """
+        start = self.start
+        goal = self.goal
+
+        if not self.map:
+            return self.path  # which is None, because no map was received
+
+        if from_a is not None and to_b is not None:
+            start = from_a
+            goal = to_b
+
+        if not debug:
+            self._compute_route(start, goal)
+        else:
+            self._compute_route(start, goal, debug=True)
+
+        if long:
+            return self.path_long
+        else:
+            # return pruned path
+            return self.path
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
@@ -146,7 +182,7 @@ class PathProviderLanelet2(PathProviderAbstract):
 
         else:
             # no path was found, only put start point in path
-            start_point = Point(from_lanelet.centerline.x, from_lanelet.centerline.y, from_lanelet.centerline.z)
+            start_point = Point(start_local_3d.x, start_local_3d.y, start_local_3d.z)
             # create self.path and self.path_long messages
             self.path.poses = [self._get_Pose_Stamped(start_point, start_point)]
             self.path.header.frame_id = "map"
