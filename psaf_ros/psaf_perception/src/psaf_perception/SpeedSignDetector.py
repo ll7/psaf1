@@ -26,7 +26,8 @@ class SpeedSignDetector(AbstractDetector):
         model.names = ckpt.names  # define class names
         self.labels = ckpt.names  # copy labels
         model.to(self.device)
-        self.net = model.autoshape()  # Handles arleady to device, but must be called after to device
+        # Autoshape wraps model and send data already to device, but must be called after model to device
+        self.net = model.autoshape()
         self.net.eval()
         torch.no_grad()  # reduce memory consumption and improve speed
 
@@ -95,24 +96,8 @@ class SpeedSignDetector(AbstractDetector):
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                if boxes[i][2] * boxes[i][3] > (450): # Ignore signs that are too small to be recognised reliably TODO Remove magic numbers
-                    if boxes[i][2]<40:
-                        # Ask the model again
-                        x = boxes[i][0] - 100
-                        y= boxes[i][1] - 100
-                        w = boxes[i][2] + 200
-                        h=  boxes[i][3] + 200
-                        input_detected_area = cv2.cvtColor(cv2.getRectSubPix(image,(w,h),(x+w/2,y+h/2)), cv2.COLOR_BGR2RGB)
-                        layerOutputs = self.net.forward(input_detected_area)
-                        if len(layerOutputs.xyxy) >= 1:
-                            found = layerOutputs.xywhn[0].cpu().numpy()
-                            if len(found) >= 1:
-                                im_show = cv2.cvtColor(input_detected_area, cv2.COLOR_RGB2BGR)
-                                cv2.imshow("crop", im_show)
-                                cv2.waitKey(1)
-                                if found[0,4]  > self.confidence_min:
-                                    classIDs[i] = int(found[0, 5])
-                                    confidences[i] = found[0, 4]
+                if boxes[i][2] * boxes[i][3] > (
+                450):
                     detected.append(
                         DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], self.labels[classIDs[i]],
                                        confidences[i]))
@@ -139,8 +124,9 @@ if __name__ == "__main__":
                 color = (0, 255, 0)
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
                 text = "{}: {:.4f}".format(element.label, element.confidence)
-                cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
+        image = cv2.resize(image, (1000, 300), interpolation=cv2.INTER_AREA)
         # show the output image
         cv2.imshow("RGB", image)
         cv2.waitKey(1)
