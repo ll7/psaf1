@@ -1,12 +1,9 @@
 #!/usr/bin/env python
-import os
 
 import cv2
 import rospy
-import time
-import numpy as np
 
-from psaf_abstraction_layer.DepthCamera import DepthCamera
+from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
 
 labels = None
 net = None

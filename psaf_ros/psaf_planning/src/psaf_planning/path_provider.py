@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 import lanelet2
-from lanelet2 import traffic_rules, routing, core, geometry
+from lanelet2 import core
 from lanelet2.projection import UtmProjector
 from lanelet2.core import GPSPoint
 from lanelet2.io import Origin
 import rospy
 from psaf_planning.map_provider import MapProvider
-from psaf_abstraction_layer.GPS import GPS_Position, GPS_Sensor
+from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
 from nav_msgs.msg import Path
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped, Point, Quaternion

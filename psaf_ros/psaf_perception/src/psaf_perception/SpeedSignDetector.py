@@ -3,8 +3,8 @@ import numpy as np
 import rospy
 import torch
 
-from psaf_abstraction_layer.DepthCamera import DepthCamera
-from psaf_abstraction_layer.RGBCamera import RGBCamera
+from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
+from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 from psaf_perception.AbstractDetector import DetectedObject, AbstractDetector
 
 
