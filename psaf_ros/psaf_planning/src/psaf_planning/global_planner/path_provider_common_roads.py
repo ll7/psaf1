@@ -19,7 +19,6 @@ from SMP.route_planner.route_planner.utils_visualization import draw_route, get_
 from psaf_abstraction_layer.GPS import GPS_Position
 from geometry_msgs.msg import Point
 
-from nav_msgs.msg import Path
 import rospy
 
 
@@ -52,7 +51,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         return scenario
 
-    def find_nearest_lanlet(self, goal: Point) -> Lanelet:
+    def _find_nearest_lanlet(self, goal: Point) -> Lanelet:
         """
         Given a Point (x,y,z) -> find nearest lanelet
         :param goal: point to which the nearest lanelet should be searched
@@ -69,7 +68,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 return nearest[0]
         return None
 
-    def visualize_scenario(self, sce: Scenario, prob: PlanningProblem = None):
+    def _visualize_scenario(self, sce: Scenario, prob: PlanningProblem = None):
         plt.figure(figsize=(10, 10))
         draw_object(sce, draw_params={'time_begin': 0})
         if prob is not None:
@@ -85,9 +84,9 @@ class PathProviderCommonRoads(PathProviderAbstract):
         :return:
         """
         # get nearest lanelet to start
-        start: Lanelet = self.find_nearest_lanlet(start)
+        start: Lanelet = self._find_nearest_lanlet(start)
         # get nearest lanelet to target
-        goal: Lanelet = self.find_nearest_lanlet(target)
+        goal: Lanelet = self._find_nearest_lanlet(target)
 
         if start is None or goal is None:
             return None
@@ -100,9 +99,9 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         circle = Circle(10, center=np.array([goal.center_vertices[len(goal.center_vertices)//2][0],
                                              goal.center_vertices[len(goal.center_vertices)//2][1]]))
-        goal_state: State = State(position=circle,time_step=Interval(0, 10000.0) )
+        goal_state: State = State(position=circle, time_step=Interval(0, 10000.0) )
 
-        goal_region: GoalRegion = GoalRegion(np.array([goal_state]), None)
+        goal_region: GoalRegion = GoalRegion([goal_state], None)
 
         # return planning problem with start_state and goal_region
         return PlanningProblem(0, start_state, goal_region)
