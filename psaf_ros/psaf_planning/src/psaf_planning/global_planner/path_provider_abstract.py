@@ -86,7 +86,11 @@ class PathProviderAbstract:
         p.pose.position.y = pos.y
         p.pose.position.z = pos.z
 
-        euler_angle_alpha = math.atan2(abs(pos.y - prev_pos.y), abs(pos.x - prev_pos.x))
+        # describes the relativ position of the pos to the prev pos
+        rel_x = 1 if (pos.x - prev_pos.x) >= 0 else -1
+        rel_y = 1 if (pos.y - prev_pos.y) >= 0 else -1
+
+        euler_angle_alpha = math.atan2(rel_y*abs(pos.y - prev_pos.y), rel_x*abs(pos.x - prev_pos.x))
 
         # only 2D space is relevant, therefore angles beta and gamma can be set to zero
         q = quaternion_from_euler(0.0, 0.0, euler_angle_alpha)
