@@ -144,3 +144,17 @@ class PathProviderAbstract:
         #     rospy.signal_shutdown("PathProvider: Action server not available!")
         # else:
         #     rospy.loginfo(client.get_result())
+
+    def _create_path_message(self, path_poses: list):
+        """
+        Creates the path message
+        :param path_poses: List of PoseStamped poses
+        """
+        # clear potential previous messages, because it would be invalid now
+        self.path = Path()
+        # create self.path messages
+        self.path.poses = path_poses
+        self.path.header.frame_id = "map"
+        self.path.header.seq = 1
+        self.path.header.stamp = rospy.Time.now()
+        rospy.loginfo("PathProvider: Path message created")

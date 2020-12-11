@@ -101,6 +101,20 @@ class PathProviderLanelet2(PathProviderAbstract):
             # return pruned path
             return self.path
 
+    def _create_path_long_message(self, path_poses: list):
+        """
+        Creates the path message
+        :param path_poses: List of PoseStamped poses
+        """
+        # clear potential previous messages, because it would be invalid now
+        self.path_long = Path()
+        # create self.path messages
+        self.path_long.poses = path_poses
+        self.path_long.header.frame_id = "map"
+        self.path_long.header.seq = 1
+        self.path_long.header.stamp = rospy.Time.now()
+        rospy.loginfo("PathProvider: Path message created")
+
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
         Compute shortest path
@@ -136,11 +150,8 @@ class PathProviderLanelet2(PathProviderAbstract):
 
         # step3: compute shortest path, do not prune for path_long
 
-        # first clear potential previous messages
-        self.path = Path()
-        self.path_long = Path()
-
         path_long_list = []
+        path_short_list = []
         route = routing_graph.getRoute(from_lanelet, to_lanelet, 0)
 
         if debug:
@@ -169,24 +180,16 @@ class PathProviderLanelet2(PathProviderAbstract):
                 obj_list: self._euclidean_2d_distance_from_to_position(obj_list, target_local_2d)))
 
             # create self.path messages
-            self.path.poses = path_long_list[real_start_index: real_end_index]
-            self.path.header.frame_id = "map"
-            self.path.header.seq = 1
-            self.path.header.stamp = rospy.Time.now()
-            # create self.path_long messages
-            self.path_long.poses = path_long_list
-            self.path_long.header.frame_id = "map"
-            self.path_long.header.seq = 1
-            self.path_long.header.stamp = rospy.Time.now()
+            path_short_list = path_long_list[real_start_index: real_end_index]
             rospy.loginfo("PathProvider: Computation of feasible path done")
 
         else:
-            # no path was found, only put start point in path
+            # Creates a empty path message, which is by consent filled with, and only with the starting_point
             start_point = Point(start_local_3d.x, start_local_3d.y, start_local_3d.z)
-            # create self.path and self.path_long messages
-            self.path.poses = [self._get_Pose_Stamped(start_point, start_point)]
-            self.path.header.frame_id = "map"
-            self.path.header.seq = 1
-            self.path.header.stamp = rospy.Time.now()
-            self.path_long = self.path
+            path_long_list.append(self._get_Pose_Stamped(start_point, start_point))
+            path_short_list = path_long_list
             rospy.logerr("PathProvider: No possible path was found")
+
+        # create self.path messages
+        self._create_path_message(path_short_list)
+        self._create_path_long_message(path_long_list)
