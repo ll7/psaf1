@@ -17,7 +17,7 @@ from SMP.route_planner.route_planner.route_planner import RoutePlanner
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
 from psaf_abstraction_layer.GPS import GPS_Position
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, PoseStamped
 
 import rospy
 
@@ -26,12 +26,13 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
     def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10,
                  role_name: str = "ego_vehicle",
-                 initial_search_radius: float = 1.0, step_size: float = 1.0, max_radius: float = 100):
-        super(PathProviderCommonRoads, self).__init__(init_rospy, polling_rate, timeout_iter, role_name)
+                 initial_search_radius: float = 1.0, step_size: float = 1.0,
+                 max_radius: float = 100, enable_debug: bool = False):
+        super(PathProviderCommonRoads, self).__init__(init_rospy, polling_rate, timeout_iter, role_name, enable_debug=enable_debug)
         self.radius = initial_search_radius
         self.step_size = step_size
         self.max_radius = max_radius
-        self.scenario = self._load_scenario(polling_rate, timeout_iter)
+        self.map = self._load_scenario(polling_rate, timeout_iter)
 
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
@@ -60,12 +61,13 @@ class PathProviderCommonRoads(PathProviderAbstract):
         nearest = None
         curr_radius = self.radius
         while curr_radius < self.max_radius or nearest is not None:
-            nearest = self.scenario.lanelet_network.lanelets_in_proximity(np.array([goal.x, goal.y]), curr_radius)
+            nearest = self.map.lanelet_network.lanelets_in_proximity(np.array([goal.x, goal.y]), curr_radius)
             if len(nearest) == 0:
                 nearest = None
                 curr_radius += self.step_size
             else:
                 return nearest[0]
+        self.status_pub.publish("Couldn't find lanlet for point" + str(goal.x)+", " + str(goal.y))
         return None
 
     def _visualize_scenario(self, sce: Scenario, prob: PlanningProblem = None):
@@ -83,23 +85,37 @@ class PathProviderCommonRoads(PathProviderAbstract):
         :param target:
         :return:
         """
-        # get nearest lanelet to start
-        start: Lanelet = self._find_nearest_lanlet(start)
-        # get nearest lanelet to target
-        goal: Lanelet = self._find_nearest_lanlet(target)
+        if self.map is None:
+            # No map -> generating of planning problem not possible
+            self.status_pub.publish("No map -> Planning aborted")
+            return None
 
-        if start is None or goal is None:
+        # check if the car is already on a lanelet, if not get nearest lanelet to start
+        start_lanelet: Lanelet
+        matching_lanelet = self.map.lanelet_network.find_lanelet_by_position([np.array([start.x, start.y])])
+        if len(matching_lanelet[0]) == 0:
+            start_lanelet = self._find_nearest_lanlet(start)
+        else:
+            start_lanelet = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
+        # get nearest lanelet to target
+        goal_lanelet: Lanelet = self._find_nearest_lanlet(target)
+
+        if start_lanelet is None or goal_lanelet is None:
             return None
 
         # create start and goal state for planning problem
-        start_center_lane = [start.center_vertices[len(start.center_vertices)//2][0], start.center_vertices[
-            len(start.center_vertices)//2][1]]
-        start_state: State = State(position=np.array([start_center_lane[0], start_center_lane[1]]), velocity=0,
-                                   time_step=0, slip_angle=0, yaw_rate=0, orientation=0)
+        start_position = []
+        if len(matching_lanelet[0]) == 0:
+            start_position = [start_lanelet.center_vertices[len(start_lanelet.center_vertices)//2][0],
+                              start_lanelet.center_vertices[len(start_lanelet.center_vertices)//2][1]]
+        else:
+            start_position = [start.x, start.y]
+        start_state: State = State(position=np.array([start_position[0], start_position[1]]), velocity=0,
+                                   time_step=0, slip_angle=0, yaw_rate=0, orientation=self.start_orientation[2])
 
-        circle = Circle(10, center=np.array([goal.center_vertices[len(goal.center_vertices)//2][0],
-                                             goal.center_vertices[len(goal.center_vertices)//2][1]]))
-        goal_state: State = State(position=circle, time_step=Interval(0, 10000.0) )
+        circle = Circle(5, center=np.array([goal_lanelet.center_vertices[len(goal_lanelet.center_vertices)//2][0],
+                                             goal_lanelet.center_vertices[len(goal_lanelet.center_vertices)//2][1]]))
+        goal_state: State = State(position=circle, time_step=Interval(0, 10000.0))
 
         goal_region: GoalRegion = GoalRegion([goal_state], None)
 
@@ -140,13 +156,24 @@ class PathProviderCommonRoads(PathProviderAbstract):
         fig.gca().axis('equal')
 
         draw_route(route, draw_route_lanelets=True, draw_reference_path=True, plot_limits=plot_limits)
-        plt.savefig("test"+str(num)+".png")
+        plt.savefig("route_"+str(num)+".png")
+        plt.close()
+
+    def _euclidean_2d_distance_from_to_position(self, route_point: PoseStamped, compare_point: Point):
+        """
+        This helper function calculates the euclidean distance between 2 Points
+        :param route_point: Has to be the point entry in path. -> PoseStamped
+        :param compare_point: Point to compare the route_point -> Type Point
+        :return:
+        """
+        return ((route_point.pose.position.x - compare_point.x) ** 2 +
+                (route_point.pose.position.y - compare_point.y) ** 2) ** 0.5
 
     def _get_shortest_route(self, routes_list: list):
         """
-        get shortest route among all routes in route_list
+        Heuristik to get the shortest route among all routes in route_list
         :param routes_list: list, which contains every generated route
-        :return: shortest route
+        :return: shortest route determined by the number of points in the path
         """
         min_length = len(routes_list[0].reference_path)
         min_index = 0
@@ -179,13 +206,13 @@ class PathProviderCommonRoads(PathProviderAbstract):
         if planning_problem is None:
             # planning_problem is None if e.g. start or goal position has not been found
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
-            self._create_path_message([self._get_Pose_Stamped(start_point, start_point)])
-            rospy.logerr("PathProvider: No possible path was found")
+            rospy.logerr("PathProvider: Path computation aborted, insufficient information (start, target or map)")
+            self._create_path_message([self._get_pose_stamped(start_point, start_point)])
             return
 
         # COMPUTE SHORTEST ROUTE
         # instantiate a route planner
-        route_planner = RoutePlanner(self.scenario, planning_problem, backend=RoutePlanner.Backend.PRIORITY_QUEUE)
+        route_planner = RoutePlanner(self.map, planning_problem, backend=RoutePlanner.Backend.PRIORITY_QUEUE)
 
         # plan routes, and save the found routes in a route candidate holder
         candidate_holder = route_planner.plan_routes()
@@ -196,6 +223,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
             for i in range(0, num_routes):
                 self._visualization(all_routes[i], i)
 
+        rospy.loginfo("PathProvider: Computing feasible path from a to b")
         path_poses = []
         if num_routes >= 1:
             route = self._get_shortest_route(all_routes)
@@ -205,15 +233,22 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 if prev_local_point is None:
                     prev_local_point = local_point
 
-                path_poses.append(self._get_Pose_Stamped(local_point, prev_local_point))
+                path_poses.append(self._get_pose_stamped(local_point, prev_local_point))
                 prev_local_point = local_point
 
+            # Path was found!
+            # Prune path to get exact start and end points
+            real_start_index = path_poses.index(min(path_poses, key=lambda
+                pos: self._euclidean_2d_distance_from_to_position(pos, start_point)))
+            real_end_index = path_poses.index(min(path_poses, key=lambda
+                pos: self._euclidean_2d_distance_from_to_position(pos, target_point)))
+            path_poses = path_poses[real_start_index:real_end_index]
             rospy.loginfo("PathProvider: Computation of feasible path done")
 
         else:
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
-            path_poses.append(self._get_Pose_Stamped(start_point, start_point))
+            path_poses.append(self._get_pose_stamped(start_point, start_point))
             rospy.logerr("PathProvider: No possible path was found")
 
         # create self.path messages
-        self._create_path_message(path_poses)
+        self._create_path_message(path_poses, debug)

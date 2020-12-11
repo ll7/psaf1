@@ -14,7 +14,8 @@ from psaf_planning.global_planner.path_provider_abstract import PathProviderAbst
 
 class PathProviderLanelet2(PathProviderAbstract):
 
-    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10, role_name: str = "ego_vehicle"):
+    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10,
+                 role_name: str = "ego_vehicle", enable_debug: bool = False):
         """
         Class PathProvider provides a feasible path from a starting point A to a target Point B by computing
         the nearest lanelets and performing a dijkstra graph search on a provided .osm map.
@@ -22,7 +23,7 @@ class PathProviderLanelet2(PathProviderAbstract):
         :param polling_rate: Polling Rate in [Hz]
         :param timeout_iter: Number of polling iterations until timeout occurs
         """
-        super(PathProviderLanelet2, self).__init__(init_rospy, polling_rate, timeout_iter, role_name)
+        super(PathProviderLanelet2, self).__init__(init_rospy, polling_rate, timeout_iter, role_name, enable_debug=enable_debug)
         self.path_long = Path()
         self.map_path = self._get_map_path(polling_rate, timeout_iter)
         if not self.map_path:
@@ -83,9 +84,6 @@ class PathProviderLanelet2(PathProviderAbstract):
         start = self.start
         goal = self.goal
 
-        if not self.map:
-            return self.path  # which is None, because no map was received
-
         if from_a is not None and to_b is not None:
             start = from_a
             goal = to_b
@@ -101,7 +99,7 @@ class PathProviderLanelet2(PathProviderAbstract):
             # return pruned path
             return self.path
 
-    def _create_path_long_message(self, path_poses: list):
+    def _create_path_long_message(self, path_poses: list, debug: bool = False):
         """
         Creates the path message
         :param path_poses: List of PoseStamped poses
@@ -113,7 +111,8 @@ class PathProviderLanelet2(PathProviderAbstract):
         self.path_long.header.frame_id = "map"
         self.path_long.header.seq = 1
         self.path_long.header.stamp = rospy.Time.now()
-        rospy.loginfo("PathProvider: Path message created")
+        rospy.loginfo("PathProvider: Path long message created")
+        self._serialize_message(self.path, debug)
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
@@ -122,7 +121,29 @@ class PathProviderLanelet2(PathProviderAbstract):
         :param to_b: End point   -- GPS Coord in float: latitude, longitude, altitude
         :param debug: Default value = False ; Generate Debug output
         """""
-        rospy.loginfo("PathProvider: Computing feasible path from a to b")
+
+        # step1: transform GPS Data (for starting point)
+        gps_point_start = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
+        start_local_3d = self.projector.forward(gps_point_start)
+        start_local_2d = lanelet2.core.BasicPoint2d(start_local_3d.x, start_local_3d.y)
+        # transform GPS Data for target point
+        gps_point_target = GPSPoint(to_b.latitude, to_b.longitude, to_b.altitude)
+        target_local_3d = self.projector.forward(gps_point_target)
+        target_local_2d = lanelet2.core.BasicPoint2d(target_local_3d.x, target_local_3d.y)
+
+        if self.map is None:
+            # Creates a empty path message, which is by consent filled with, and only with the starting_point
+            start_point = Point(start_local_3d.x, start_local_3d.y, start_local_3d.z)
+            rospy.logerr("PathProvider: Path computation aborted, no map available")
+            self._create_path_long_message([self._get_pose_stamped(start_point, start_point)])
+            self._create_path_message([self._get_pose_stamped(start_point, start_point)])
+            return
+
+        # step2: get nearest lanelets to start and end point
+        close_from_lanelets = lanelet2.geometry.findNearest(self.map.laneletLayer, start_local_2d, 1)
+        from_lanelet = close_from_lanelets[0][1]
+        close_to_lanelets = lanelet2.geometry.findNearest(self.map.laneletLayer, target_local_2d, 1)
+        to_lanelet = close_to_lanelets[0][1]
 
         # generate traffic_rules based on participant type and location
         traffic_rules_ger = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
@@ -134,26 +155,12 @@ class PathProviderLanelet2(PathProviderAbstract):
             lanelet2.io.write("debuggraph.osm", routing_graph.getDebugLaneletMap(0))
             rospy.loginfo("PathProvider: :DEBUG==TRUE: routing_graph written to 'debuggraph.osm'")
 
-        # step1: get nearest lanelet to start point
-        gps_point_start = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
-        start_local_3d = self.projector.forward(gps_point_start)
-        start_local_2d = lanelet2.core.BasicPoint2d(start_local_3d.x, start_local_3d.y)
-        close_from_lanelets = lanelet2.geometry.findNearest(self.map.laneletLayer, start_local_2d, 1)
-        from_lanelet = close_from_lanelets[0][1]
-
-        # step2: nearest lanelet to end point
-        gps_point_target = GPSPoint(to_b.latitude, to_b.longitude, to_b.altitude)
-        target_local_3d = self.projector.forward(gps_point_target)
-        target_local_2d = lanelet2.core.BasicPoint2d(target_local_3d.x, target_local_3d.y)
-        close_to_lanelets = lanelet2.geometry.findNearest(self.map.laneletLayer, target_local_2d, 1)
-        to_lanelet = close_to_lanelets[0][1]
-
         # step3: compute shortest path, do not prune for path_long
 
         path_long_list = []
         path_short_list = []
         route = routing_graph.getRoute(from_lanelet, to_lanelet, 0)
-
+        rospy.loginfo("PathProvider: Computing feasible path from a to b")
         if debug:
             laneletSubmap = route.laneletSubmap()
             lanelet2.io.write("route.osm", laneletSubmap.laneletMap())
@@ -169,7 +176,7 @@ class PathProviderLanelet2(PathProviderAbstract):
                     point = Point(pos.x, pos.y, pos.z)
                     if prev_point is None:
                         prev_point = point
-                    path_long_list.append(self._get_Pose_Stamped(point, prev_point))
+                    path_long_list.append(self._get_pose_stamped(point, prev_point))
                     prev_point = point
 
             # Path was found!
@@ -186,10 +193,10 @@ class PathProviderLanelet2(PathProviderAbstract):
         else:
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
             start_point = Point(start_local_3d.x, start_local_3d.y, start_local_3d.z)
-            path_long_list.append(self._get_Pose_Stamped(start_point, start_point))
+            path_long_list.append(self._get_pose_stamped(start_point, start_point))
             path_short_list = path_long_list
             rospy.logerr("PathProvider: No possible path was found")
 
         # create self.path messages
-        self._create_path_message(path_short_list)
-        self._create_path_long_message(path_long_list)
+        self._create_path_message(path_short_list, debug)
+        self._create_path_long_message(path_long_list, debug)

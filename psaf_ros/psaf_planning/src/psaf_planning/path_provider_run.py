@@ -7,7 +7,7 @@ import rospy
 
 
 def main():
-    provider: PathProviderAbstract = PathProviderCommonRoads(init_rospy=True)
+    provider: PathProviderAbstract = PathProviderCommonRoads(init_rospy=True, enable_debug= False)
     rospy.spin()
 
 
