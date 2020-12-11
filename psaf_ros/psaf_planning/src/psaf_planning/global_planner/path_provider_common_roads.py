@@ -186,11 +186,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
             for i in range(0, num_routes):
                 self._visualization(all_routes[i], i)
 
+        # first clear potential previous messages
+        self.path = Path()
         path_poses = []
         if num_routes >= 1:
             route = self._get_shortest_route(all_routes)
-            # first clear potential previous messages
-            self.path = Path()
             prev_local_point = None
             for path_point in route.reference_path:
                 local_point = Point(path_point[0], path_point[1], 0)
