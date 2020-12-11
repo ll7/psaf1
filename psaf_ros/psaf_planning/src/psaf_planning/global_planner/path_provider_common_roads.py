@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-import lanelet2
 from lanelet2.core import GPSPoint
-from lanelet2.projection import UtmProjector
 from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
 from commonroad.scenario.trajectory import State
 from commonroad.planning.goal import GoalRegion
@@ -11,16 +9,15 @@ import matplotlib.pyplot as plt
 from commonroad.geometry.shape import Circle
 from commonroad.scenario.scenario import Scenario
 from commonroad.scenario.lanelet import Lanelet
-from commonroad.planning.planning_problem import PlanningProblemSet, PlanningProblem
+from commonroad.planning.planning_problem import PlanningProblem
 from commonroad.visualization.draw_dispatch_cr import draw_object
-from commonroad.common.util import Interval, AngleInterval
+from commonroad.common.util import Interval
 
 from SMP.route_planner.route_planner.route_planner import RoutePlanner
 import numpy as np
-from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path, \
-    get_plot_limits_from_routes
-from psaf_abstraction_layer.GPS import GPS_Position, GPS_Sensor
-from geometry_msgs.msg import PoseStamped, Point
+from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
+from psaf_abstraction_layer.GPS import GPS_Position
+from geometry_msgs.msg import Point
 
 from nav_msgs.msg import Path
 import rospy
@@ -69,8 +66,8 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 nearest = None
                 curr_radius += self.step_size
             else:
-                break
-        return nearest[0]
+                return nearest[0]
+        return None
 
     def visualize_scenario(self, sce: Scenario, prob: PlanningProblem = None):
         plt.figure(figsize=(10, 10))
