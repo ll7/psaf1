@@ -16,9 +16,11 @@ find_package(catkin REQUIRED COMPONENTS
   costmap_2d
   map_server
   teb_local_planner
+  eband_local_planner
   ackermann_msgs
   costmap_converter
   psaf_abstraction_layer
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
@@ -100,6 +102,7 @@ find_package(catkin REQUIRED COMPONENTS
 #   cfg/DynReconf1.cfg
 #   cfg/DynReconf2.cfg
 # )
+generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
 
 ###################################
 ## catkin specific configuration ##

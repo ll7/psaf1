@@ -16,3 +16,5 @@ carla:
     # If the absolute value of the ackermann drive target acceleration exceeds this value,
     # directly the input acceleration is controlled 
     min_accel: 1.0
+
+    input_multiplier: 5.0

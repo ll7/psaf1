@@ -25,7 +25,7 @@ from carla_msgs.msg import CarlaEgoVehicleStatus
 from carla_msgs.msg import CarlaEgoVehicleControl
 from carla_msgs.msg import CarlaEgoVehicleInfo
 from carla_ackermann_control.msg import EgoVehicleControlInfo
-from carla_ackermann_control.cfg import EgoVehicleControlParameterConfig
+from psaf_steering.cfg import EgoVehicleControlParameterConfig
 from geometry_msgs.msg import Twist
 import carla_control_physics as phys
 
@@ -86,6 +86,7 @@ class CarlaAckermannControl(object):
         # input parameters
         self.input_speed = 0.
         self.input_accel = 0.
+        self.input_multiplier = 1.0
 
         self.data_plot_target = deque(maxlen=200)
         self.data_plot_current = deque(maxlen=200)
@@ -134,6 +135,11 @@ class CarlaAckermannControl(object):
         rospy.set_param(
             "/carla/" + self.role_name + "/ackermann_control/accel_Kd",
             rospy.get_param("/carla/ackermann_control/accel_Kd", 0.05))
+
+        rospy.set_param(
+            "/carla/" + self.role_name + "/ackermann_control/input_multiplier",
+            rospy.get_param("/carla/ackermann_control/input_multiplier", 1.0))
+
 
         self.reconfigure_server = Server(
             EgoVehicleControlParameterConfig,
@@ -211,6 +217,8 @@ class CarlaAckermannControl(object):
             ego_vehicle_control_parameter['accel_Ki'],
             ego_vehicle_control_parameter['accel_Kd']
         )
+
+        self.input_multiplier = ego_vehicle_control_parameter['input_multiplier']
         return ego_vehicle_control_parameter
 
     def vehicle_status_updated(self, vehicle_status):
@@ -261,13 +269,13 @@ class CarlaAckermannControl(object):
         """
         self.lastAckermannMsgReceived = datetime.datetime.now()
         # set target values
-        self.set_target_steering_angle(ros_ackermann_drive.steering_angle)
-        self.set_target_speed(ros_ackermann_drive.speed)
-        self.set_target_accel(ros_ackermann_drive.acceleration)
-        self.set_target_jerk(ros_ackermann_drive.jerk)
+        self.set_target_steering_angle(ros_ackermann_drive.steering_angle * self.input_multiplier)
+        self.set_target_speed(ros_ackermann_drive.speed * self.input_multiplier)
+        self.set_target_accel(ros_ackermann_drive.acceleration * self.input_multiplier)
+        self.set_target_jerk(ros_ackermann_drive.jerk * self.input_multiplier)
 
-        self.input_speed = ros_ackermann_drive.speed
-        self.input_accel = ros_ackermann_drive.acceleration
+        self.input_speed = ros_ackermann_drive.speed * self.input_multiplier
+        self.input_accel = ros_ackermann_drive.acceleration * self.input_multiplier
 
     def twist_command_updated(self, ros_twist: Twist):
         """
@@ -279,12 +287,12 @@ class CarlaAckermannControl(object):
         """
         self.lastAckermannMsgReceived = datetime.datetime.now()
         # set target values
-        self.set_target_steering_angle(ros_twist.angular.z)
-        self.set_target_speed(ros_twist.linear.x)
+        self.set_target_steering_angle(ros_twist.angular.z * self.input_multiplier)
+        self.set_target_speed(ros_twist.linear.x * self.input_multiplier)
         self.set_target_accel(0)
         self.set_target_jerk(0)
 
-        self.input_speed = ros_twist.linear.x
+        self.input_speed = ros_twist.linear.x * self.input_multiplier
         self.input_accel = 0.
 
     def reload_input_params(self):
