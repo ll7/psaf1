@@ -83,12 +83,17 @@ class PathProviderCommonRoads(PathProviderAbstract):
         :param target:
         :return:
         """
-        # get nearest lanelet to start
-        start: Lanelet = self._find_nearest_lanlet(start)
+        # check if the car is already on a lanelet, if not get nearest lanelet to start
+        start_lanelet: Lanelet
+        matching_lanelet = self.scenario.lanelet_network.find_lanelet_by_position([np.array([start.x, start.y])])
+        if len(matching_lanelet[0]) == 0:
+            start_lanelet = self._find_nearest_lanlet(start)
+        else:
+            start_lanelet = self.scenario.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
         # get nearest lanelet to target
         goal_lanelet: Lanelet = self._find_nearest_lanlet(target)
 
-        if start is None or goal is None:
+        if start_lanelet is None or goal_lanelet is None:
             return None
 
         # create start and goal state for planning problem
@@ -144,7 +149,18 @@ class PathProviderCommonRoads(PathProviderAbstract):
         fig.gca().axis('equal')
 
         draw_route(route, draw_route_lanelets=True, draw_reference_path=True, plot_limits=plot_limits)
-        plt.savefig("test"+str(num)+".png")
+        plt.savefig("route_"+str(num)+".png")
+        plt.close()
+
+    def _euclidean_2d_distance_from_to_position(self, route_point: PoseStamped, compare_point: Point):
+        """
+        This helper function calculates the euclidean distance between 2 Points
+        :param route_point: Has to be the point entry in path. -> PoseStamped
+        :param compare_point: Point to compare the route_point -> Type Point
+        :return:
+        """
+        return ((route_point.pose.position.x - compare_point.x) ** 2 +
+                (route_point.pose.position.y - compare_point.y) ** 2) ** 0.5
 
     def _get_shortest_route(self, routes_list: list):
         """
