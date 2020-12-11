@@ -4,6 +4,7 @@ from abc import abstractmethod
 import rospy
 from psaf_planning.map_provider import MapProvider
 from psaf_abstraction_layer.GPS import GPS_Position, GPS_Sensor
+from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from nav_msgs.msg import Path
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped, Point, Quaternion
@@ -36,10 +37,12 @@ class PathProviderAbstract:
         self.projector = UtmProjector(self.origin)
         self.role_name = role_name
         self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
+        self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
         rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
         self.map_provider = MapProvider()
         self.path = Path()
         self.start = None
+        self.start_orientation = None
         self.goal = None
 
     def __del__(self):
@@ -126,8 +129,9 @@ class PathProviderAbstract:
         """
         self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
         self.start = self.GPS_Sensor.get_position()
+        self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
         rospy.loginfo("PathProvider: Received start and goal position")
-        self._serialize_message(self.get_path_from_a_to_b())
+        self._serialize_message(self.get_path_from_a_to_b(debug=False))
         self._trigger_move_base(self.path.poses[-1])
         rospy.loginfo("PathProvider: global planner plugin triggered")
 
@@ -160,7 +164,6 @@ class PathProviderAbstract:
         # create self.path messages
         # prunde poses for use in rviz
         path_poses_pruned = self._prune_path_to_rviz_max_len(path_poses)
-        print(str(len(path_poses)) + " PRUNED ->" + str(len(path_poses_pruned)))
         self.path.poses = path_poses_pruned
         self.path.header.frame_id = "map"
         self.path.header.seq = 1
