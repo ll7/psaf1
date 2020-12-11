@@ -15,6 +15,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import rosbag
 from lanelet2.projection import UtmProjector
 from lanelet2.io import Origin
+import numpy as np
 
 
 class PathProviderAbstract:
@@ -157,8 +158,34 @@ class PathProviderAbstract:
         # clear potential previous messages, because it would be invalid now
         self.path = Path()
         # create self.path messages
-        self.path.poses = path_poses
+        # prunde poses for use in rviz
+        path_poses_pruned = self._prune_path_to_rviz_max_len(path_poses)
+        print(str(len(path_poses)) + " PRUNED ->" + str(len(path_poses_pruned)))
+        self.path.poses = path_poses_pruned
         self.path.header.frame_id = "map"
         self.path.header.seq = 1
         self.path.header.stamp = rospy.Time.now()
         rospy.loginfo("PathProvider: Path message created")
+
+    def _prune_path_to_rviz_max_len(self, path_poses: list):
+        """
+        Prunes the path poses list to the max allowed length by rviz, which is 16384.
+        Therefore poses from the path are randomly (uniformly distributed) deleted.
+        Start and Target point will be kept!
+        :param path_poses: List of PoseStamped poses
+        :return: pruned path_poses list
+        """
+        # only prune if needed
+        if len(path_poses) <= 16384:
+            return path_poses
+
+        max_len_rviz = 16384
+
+        # get index list of elements without start and target index
+        index_list = np.array(list(range(1, len(path_poses)-2)))
+
+        # get index of elements which should be deleted
+        index_list_to_del = np.random.choice(index_list, len(path_poses)-max_len_rviz, replace=False, p=None)
+
+        # delete and return
+        return np.delete(path_poses, index_list_to_del).tolist()
