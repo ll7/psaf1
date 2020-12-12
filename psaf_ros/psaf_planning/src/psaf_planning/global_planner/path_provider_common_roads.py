@@ -66,6 +66,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 curr_radius += self.step_size
             else:
                 return nearest[0]
+        self.status_pub.publish("Couldn't find lanlet for point" + str(goal.x)+", " + str(goal.y))
         return None
 
     def _visualize_scenario(self, sce: Scenario, prob: PlanningProblem = None):
@@ -85,6 +86,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         """
         if self.map is None:
             # No map -> generating of planning problem not possible
+            self.status_pub.publish("No map -> Planning aborted")
             return None
 
         # check if the car is already on a lanelet, if not get nearest lanelet to start

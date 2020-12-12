@@ -17,6 +17,7 @@ import rosbag
 from lanelet2.projection import UtmProjector
 from lanelet2.io import Origin
 import numpy as np
+from std_msgs.msg import String
 
 
 class PathProviderAbstract:
@@ -40,6 +41,7 @@ class PathProviderAbstract:
         self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
         self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
         rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
+        self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
         self.map_provider = MapProvider()
         self.path = Path()
         self.start = None
@@ -135,6 +137,7 @@ class PathProviderAbstract:
         self._serialize_message(self.get_path_from_a_to_b(debug=False))
         self._trigger_move_base(self.path.poses[-1])
         rospy.loginfo("PathProvider: global planner plugin triggered")
+        self.status_pub.publish("PathProvider done")
 
     def _trigger_move_base(self, target: PoseStamped):
         """
