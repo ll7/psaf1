@@ -30,6 +30,7 @@ class PathProviderAbstract:
         :param polling_rate: Polling Rate in [Hz]
         :param timeout_iter: Number of polling iterations until timeout occurs
         """
+        self.map = None
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
@@ -162,7 +163,7 @@ class PathProviderAbstract:
         # clear potential previous messages, because it would be invalid now
         self.path = Path()
         # create self.path messages
-        # prunde poses for use in rviz
+        # pruned poses for use in rviz
         path_poses_pruned = self._prune_path_to_rviz_max_len(path_poses)
         self.path.poses = path_poses_pruned
         self.path.header.frame_id = "map"

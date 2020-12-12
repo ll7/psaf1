@@ -31,7 +31,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.radius = initial_search_radius
         self.step_size = step_size
         self.max_radius = max_radius
-        self.scenario = self._load_scenario(polling_rate, timeout_iter)
+        self.map = self._load_scenario(polling_rate, timeout_iter)
 
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
@@ -60,7 +60,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         nearest = None
         curr_radius = self.radius
         while curr_radius < self.max_radius or nearest is not None:
-            nearest = self.scenario.lanelet_network.lanelets_in_proximity(np.array([goal.x, goal.y]), curr_radius)
+            nearest = self.map.lanelet_network.lanelets_in_proximity(np.array([goal.x, goal.y]), curr_radius)
             if len(nearest) == 0:
                 nearest = None
                 curr_radius += self.step_size
@@ -83,13 +83,17 @@ class PathProviderCommonRoads(PathProviderAbstract):
         :param target:
         :return:
         """
+        if self.map is None:
+            # No map -> generating of planning problem not possible
+            return None
+
         # check if the car is already on a lanelet, if not get nearest lanelet to start
         start_lanelet: Lanelet
-        matching_lanelet = self.scenario.lanelet_network.find_lanelet_by_position([np.array([start.x, start.y])])
+        matching_lanelet = self.map.lanelet_network.find_lanelet_by_position([np.array([start.x, start.y])])
         if len(matching_lanelet[0]) == 0:
             start_lanelet = self._find_nearest_lanlet(start)
         else:
-            start_lanelet = self.scenario.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
+            start_lanelet = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
         # get nearest lanelet to target
         goal_lanelet: Lanelet = self._find_nearest_lanlet(target)
 
@@ -199,13 +203,13 @@ class PathProviderCommonRoads(PathProviderAbstract):
         if planning_problem is None:
             # planning_problem is None if e.g. start or goal position has not been found
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
+            rospy.logerr("PathProvider: Path computation aborted, insufficient information (start, target or map)")
             self._create_path_message([self._get_Pose_Stamped(start_point, start_point)])
-            rospy.logerr("PathProvider: No possible path was found")
             return
 
         # COMPUTE SHORTEST ROUTE
         # instantiate a route planner
-        route_planner = RoutePlanner(self.scenario, planning_problem, backend=RoutePlanner.Backend.PRIORITY_QUEUE)
+        route_planner = RoutePlanner(self.map, planning_problem, backend=RoutePlanner.Backend.PRIORITY_QUEUE)
 
         # plan routes, and save the found routes in a route candidate holder
         candidate_holder = route_planner.plan_routes()
@@ -216,6 +220,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
             for i in range(0, num_routes):
                 self._visualization(all_routes[i], i)
 
+        rospy.loginfo("PathProvider: Computing feasible path from a to b")
         path_poses = []
         if num_routes >= 1:
             route = self._get_shortest_route(all_routes)
