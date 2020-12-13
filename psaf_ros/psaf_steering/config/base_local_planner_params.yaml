@@ -1,3 +1,10 @@
+RSBandPlannerROS:
+  max_speed: 10.0
+  max_steering_angle: 0.7
+  wheelbase: 2.0
+
+
+
 
 EBandPlannerROS:
   max_vel_lin: 10.0
@@ -14,7 +21,7 @@ TebLocalPlannerROS:
 
  odom_topic: /carla/ego_vehicle/odometry
  map_frame: map
- controller_frequency: 10.0
+ controller_frequency: 20.0
 
  cmd_angle_instead_rotvel: False # Somehow False works better without this param even tho we have ackermann car
  wheelbase: 2.5
@@ -39,7 +46,7 @@ TebLocalPlannerROS:
  max_vel_theta: 0.8 #0.3
  acc_lim_x: 2.5 #0.5
  acc_lim_theta: 0.8 #0.5
- min_turning_radius: 3
+ min_turning_radius: 5
  footprint_model: # types: "point", "circular", "two_circles", "line", "polygon"
    type: "two_circles"
    front_offset: 1 # for type "two_circles"
@@ -59,7 +66,7 @@ TebLocalPlannerROS:
  min_obstacle_dist: 1.0
  include_costmap_obstacles: True
  costmap_obstacles_behind_robot_dist: 1.0
- obstacle_poses_affected: 20 # 5 Lowered for performance
+ obstacle_poses_affected: 10 # 5 Lowered for performance
  # Moved to own file:
  # costmap_converter_plugin: "costmap_converter::CostmapToPolygonsDBSMCCH" 
  # costmap_converter_plugin: ""
@@ -68,8 +75,8 @@ TebLocalPlannerROS:
 
  # Optimization
     
- no_inner_iterations: 7 # 5 Lowered for performance
- no_outer_iterations: 6 # 4 Lowered for performance
+ no_inner_iterations: 5 # 5 Lowered for performance
+ no_outer_iterations: 4 # 4 Lowered for performance
  optimization_activate: True
  optimization_verbose: False
  penalty_epsilon: 0.1

@@ -114,7 +114,7 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 4.2175798416137695
+        Max Value: 4.218465805053711
         Min Value: 0
         Value: true
       Axis: Z
@@ -333,7 +333,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 17.313730239868164
+      Distance: 34.25230026245117
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
