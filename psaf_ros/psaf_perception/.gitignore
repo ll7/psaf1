@@ -2,3 +2,5 @@
 /models/**/events.out.*
 /models/**/weights/last.pt
 /models/**/*.jpg
+
+/models/*.weights
