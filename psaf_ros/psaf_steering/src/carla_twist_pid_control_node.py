@@ -12,6 +12,7 @@ Control Carla ego vehicle by using AckermannDrive messages
 import sys
 import datetime
 from collections import deque
+from threading import active_count
 
 import numpy
 import rospy
@@ -31,6 +32,11 @@ import carla_control_physics as phys
 
 plot = False  # plot target and current vel
 
+
+class ROS_PID(PID):
+
+    pass
+
 class CarlaAckermannControl(object):
 
     """
@@ -42,7 +48,8 @@ class CarlaAckermannControl(object):
         Constructor
 
         """
-        self.control_loop_rate = rospy.Rate(10)  # 10Hz
+        self.frequency = rospy.get_param('~frequency', 20)
+        self.control_loop_rate = rospy.Rate(self.frequency)  # 10Hz
         self.lastAckermannMsgReceived = datetime.datetime(datetime.MINYEAR, 1, 1)
         self.vehicle_status = CarlaEgoVehicleStatus()
         self.vehicle_info = CarlaEgoVehicleInfo()
@@ -99,18 +106,18 @@ class CarlaAckermannControl(object):
         # a previous point in time (the error happens because the time doesn't
         # change between initialization and first call, therefore dt is 0)
         sys.modules['simple_pid.PID']._current_time = (       # pylint: disable=protected-access
-            lambda: rospy.get_rostime().to_sec() - 0.1)
+            lambda: rospy.get_rostime().to_sec() - (self.control_loop_rate.sleep_dur.to_sec()))
 
         # we might want to use a PID controller to reach the final target speed
         self.speed_controller = PID(Kp=0.0,
                                     Ki=0.0,
                                     Kd=0.0,
-                                    sample_time=0.05,
+                                    sample_time=self.control_loop_rate.sleep_dur.to_sec() / 2.0,
                                     output_limits=(-1., 1.))
         self.accel_controller = PID(Kp=0.0,
                                     Ki=0.0,
                                     Kd=0.0,
-                                    sample_time=0.05,
+                                    sample_time=self.control_loop_rate.sleep_dur.to_sec() / 2.0,
                                     output_limits=(-1, 1))
 
         # use the correct time for further calculations
@@ -436,14 +443,15 @@ class CarlaAckermannControl(object):
         """
         epsilon = 0.00001
         target_accel_abs = abs(self.info.target.accel)
+        activation_count_max = 5 * self.frequency / 10
         if target_accel_abs < self.info.restrictions.min_accel:
-            if self.info.status.speed_control_activation_count < 5:
+            if self.info.status.speed_control_activation_count < activation_count_max:
                 self.info.status.speed_control_activation_count += 1
         else:
             if self.info.status.speed_control_activation_count > 0:
                 self.info.status.speed_control_activation_count -= 1
         # set the auto_mode of the controller accordingly
-        self.speed_controller.auto_mode = self.info.status.speed_control_activation_count >= 5
+        self.speed_controller.auto_mode = self.info.status.speed_control_activation_count >= activation_count_max
 
         if self.speed_controller.auto_mode:
             self.speed_controller.setpoint = self.info.target.speed_abs
@@ -565,12 +573,17 @@ class CarlaAckermannControl(object):
         """
         current_time_sec = rospy.get_rostime().to_sec()
         delta_time = current_time_sec - self.info.current.time_sec
+        rospy.loginfo("delta time: " + str(delta_time))
+
         current_speed = self.vehicle_status.velocity  * (-1 if self.vehicle_status.control.reverse else 1)
         if delta_time > 0:
             delta_speed = abs(current_speed) - abs(self.info.current.speed)
+            rospy.loginfo("delta speed: " + str(delta_speed))
+
             current_accel = delta_speed / delta_time
             # average filter
-            self.info.current.accel = (self.info.current.accel * 4 + current_accel) / 5
+            self.info.current.accel = (self.info.current.accel * 9 + current_accel) / 10
+            rospy.loginfo("acc: " + str(self.info.current.accel))
         self.info.current.time_sec = current_time_sec
         self.info.current.speed = current_speed
         self.info.current.speed_abs = abs(current_speed)

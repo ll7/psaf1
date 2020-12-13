@@ -17,4 +17,5 @@ carla:
     # directly the input acceleration is controlled 
     min_accel: 1.0
 
-    input_multiplier: 5.0
+    input_multiplier: 1.0
+    frequency: 20
