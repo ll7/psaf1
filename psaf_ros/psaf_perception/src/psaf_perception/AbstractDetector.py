@@ -45,11 +45,18 @@ class Labels(Enum):
         return self.label
 
     Unlabeled = (0, "Unlabeled")
-    Stop = (1, "Stop",{LabelGroups.RightOfWay})
-    SpeedLimit30 = (2, "Speed limit 30",{LabelGroups.Speed})
-    Speed30 = (3, "Speed 30",{LabelGroups.Speed})
-    Speed60 = (4, "Speed 60",{LabelGroups.Speed})
-    Speed90 = (5, "Speed 90",{LabelGroups.Speed})
+    Stop = (1, "Stop", {LabelGroups.RightOfWay})
+    SpeedLimit30 = (2, "Speed limit 30", {LabelGroups.Speed})
+    Speed30 = (3, "Speed 30", {LabelGroups.Speed})
+    Speed60 = (4, "Speed 60", {LabelGroups.Speed})
+    Speed90 = (5, "Speed 90", {LabelGroups.Speed})
+    TrafficLightUnknown = (6, "Traffic light unknown", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightRed = (7, "Traffic light red",{LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightYellow = (8, "Traffic light yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightYellowRed = (9, "Traffic light red-yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightGreen = (10, "Traffic light green", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightOff = (11, "Traffic light off", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+
     Other = (99, "Other")
 
 
