@@ -34,7 +34,7 @@ class Labels(Enum):
         return self._groups
 
     @property
-    def label(self) -> str:
+    def label_text(self) -> str:
         """
         Returns the label name
         :return: ł
@@ -42,7 +42,7 @@ class Labels(Enum):
         return self._label
 
     def __str__(self):
-        return self.label
+        return self.label_text
 
     Unlabeled = (0, "Unlabeled")
     Stop = (1, "Stop", {LabelGroups.RightOfWay})

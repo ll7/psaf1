@@ -2,12 +2,13 @@ import csv
 import os
 
 import cv2
-import numpy as np
 import rospy
-from PyTorch_YOLOv3.models import *
-from PyTorch_YOLOv3.utils.utils import *
-from PyTorch_YOLOv3.utils.datasets import *
+from PyTorch_YOLOv3.models import Darknet
+from PyTorch_YOLOv3.utils.utils import non_max_suppression,rescale_boxes
+from PyTorch_YOLOv3.utils.datasets import Dataset,pad_to_square,resize
 import torch
+import torchvision.transforms as transforms
+
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
@@ -73,7 +74,6 @@ class StopMarkDetector(AbstractDetector):
     def __on_image_update(self, image):
 
         (H, W) = image.shape[:2]
-        #image = image[int(0.25*H):H,0:W,:]
 
         dataloader = DataLoader(
             SingleImage(image, self.img_size),
@@ -130,11 +130,11 @@ if __name__ == "__main__":
                 # draw a bounding box rectangle and label on the image
                 color = (0, 255, 0)
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                text = "{}: {:.4f}".format(element.label, element.confidence)
+                text = "{}: {:.4f}".format(element.label.label_text, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         # show the output image
-        cv2.imshow("RGB", image)
+        cv2.imshow("RGB", cv2.cvtColor(image,cv2.COLOR_RGB2BGR))
         cv2.waitKey(1)
 
 

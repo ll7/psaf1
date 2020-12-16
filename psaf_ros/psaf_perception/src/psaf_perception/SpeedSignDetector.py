@@ -55,7 +55,7 @@ class SpeedSignDetector(AbstractDetector):
     def __on_rgb_image_update(self, image):
         (H, W) = image.shape[:2]
 
-        input = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        input = image
         layerOutputs = self.net.forward(input)
         # initialize our lists of detected bounding boxes, confidences, and
         # class IDs, respectively
@@ -126,7 +126,7 @@ if __name__ == "__main__":
                 # draw a bounding box rectangle and label on the image
                 color = (0, 255, 0)
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                text = "{}: {:.4f}".format(element.label, element.confidence)
+                text = "{}: {:.4f}".format(element.label.label_text, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
         # show the output image
