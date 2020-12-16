@@ -11,7 +11,8 @@
                 "/home/jonas/carla-ros-bridge/catkin_ws/src/beginner_tutorials/include/**",
                 "/home/jonas/carla-ros-bridge/catkin_ws/src/ros-bridge/pcl_recorder/include/**",
                 "/home/jonas/carla-ros-bridge/catkin_ws/src/psaf_ros/psaf_steering/include/**",
-                "/usr/include/**"
+                "/usr/include/**",
+                "${workspaceFolder}/**"
             ],
             "name": "ROS",
             "intelliSenseMode": "gcc-x64",

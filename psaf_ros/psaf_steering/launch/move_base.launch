@@ -16,9 +16,11 @@
     <rosparam file="$(find psaf_steering)/config/global_costmap_params.yaml" command="load" /> 
     <rosparam file="$(find psaf_steering)/config/base_local_planner_params.yaml" command="load" />
 
+    <param name="base_local_planner" value="psaf_local_planner/PsafLocalPlanner"/>
+
     <!--<param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />-->
     <!--<param name="base_local_planner" value="eband_local_planner/EBandPlannerROS"/>-->
-    <param name="base_local_planner" value="rsband_local_planner/RSBandPlannerROS"/>
+    <!--<param name="base_local_planner" value="rsband_local_planner/RSBandPlannerROS"/>-->
     <param name="base_global_planner" value="psaf_planning/GlobalPlanner" />
     <rosparam file="$(find psaf_steering)/config/costmap_converter_params.yaml" command="load" />
     <param name="controller_frequency" value="20.0" />

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(psaf_steering)
+project(psaf_local_planner)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -138,8 +138,8 @@ include_directories(
 )
 
 ## Declare a C++ library
-# add_library(psaf_local_planner src/psaf_local_planner/plugin_local_planner.cpp)
-# target_link_libraries(psaf_local_planner ${catkin_LIBRARIES})
+add_library(psaf_local_planner src/psaf_local_planner/plugin_local_planner.cpp)
+target_link_libraries(psaf_local_planner ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

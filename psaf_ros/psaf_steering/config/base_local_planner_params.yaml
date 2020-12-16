@@ -1,7 +1,7 @@
 rsband:
   max_speed: 10.0
   max_steering_angle: 0.7
-  wheelbase: 2.0
+  wheelbase: 1.0
 
 
 
