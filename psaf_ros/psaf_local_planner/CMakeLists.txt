@@ -108,7 +108,7 @@ find_package(catkin REQUIRED COMPONENTS
 #   cfg/DynReconf1.cfg
 #   cfg/DynReconf2.cfg
 # )
-generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
+#generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
 
 ###################################
 ## catkin specific configuration ##
@@ -121,7 +121,7 @@ generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES psaf_steering
+  LIBRARIES psaf_local_planner
   CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
 )

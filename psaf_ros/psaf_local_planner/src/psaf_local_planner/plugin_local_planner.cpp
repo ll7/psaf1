@@ -1,8 +1,9 @@
 // #include "psaf_steering/plugin_local_planner.h"
 #include "psaf_local_planner/plugin_local_planner.h"
+#include <pluginlib/class_list_macros.h>
 
-
-
+//register this planner as a BaseLocalPlanner plugin
+PLUGINLIB_EXPORT_CLASS(psaf_local_planner::PsafLocalPlanner, nav_core::BaseLocalPlanner)
 
 namespace psaf_local_planner {
     PsafLocalPlanner::PsafLocalPlanner() {
