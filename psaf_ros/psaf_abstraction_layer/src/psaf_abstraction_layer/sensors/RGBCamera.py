@@ -5,11 +5,11 @@ from cv_bridge.core import CvBridge
 
 class RGBCamera:
 
-    def __init__(self,role_name:str= "ego_vehicle"):
+    def __init__(self,role_name:str= "ego_vehicle",id:str ="front"):
 
         self.image = None
         self.bridge = CvBridge()
-        self.__subscriber = rospy.Subscriber("/carla/{}/camera/rgb/front/image_color".format(role_name), Image,
+        self.__subscriber = rospy.Subscriber(f"/carla/{role_name}/camera/rgb/{id}/image_color", Image,
                                              self.__update_image)
 
         self.__listener = None

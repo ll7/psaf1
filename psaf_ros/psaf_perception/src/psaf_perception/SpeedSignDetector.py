@@ -3,12 +3,15 @@ import numpy as np
 import rospy
 import torch
 
-from psaf_abstraction_layer.DepthCamera import DepthCamera
-from psaf_abstraction_layer.RGBCamera import RGBCamera
-from psaf_perception.AbstractDetector import DetectedObject, AbstractDetector
+from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
+from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+from psaf_perception.AbstractDetector import DetectedObject, AbstractDetector, Labels
 
+CONV_FAC_MPH_TO_KMH = 0.621371
 
 class SpeedSignDetector(AbstractDetector):
+
+
     def __init__(self, role_name: str = "ego_vehicle"):
         super().__init__()
 
@@ -24,7 +27,7 @@ class SpeedSignDetector(AbstractDetector):
         ckpt = torch.load('../../models/yolov5m-e250-frozen_backbone/weights/best.pt')['model']  # load checkpoint
         model.load_state_dict(ckpt.state_dict())  # load state_dict
         model.names = ckpt.names  # define class names
-        self.labels = ckpt.names  # copy labels
+        self.labels = {'speed_30':Labels.Speed30,'speed_60':Labels.Speed60,'speed_90':Labels.Speed90}
         model.to(self.device)
         # Autoshape wraps model and send data already to device, but must be called after model to device
         self.net = model.autoshape()
@@ -99,7 +102,7 @@ class SpeedSignDetector(AbstractDetector):
                 if boxes[i][2] * boxes[i][3] > (
                 450):
                     detected.append(
-                        DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], self.labels[classIDs[i]],
+                        DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], self.labels[self.net.names[classIDs[i]]],
                                        confidences[i]))
 
         self.inform_listener(detected)
@@ -126,7 +129,6 @@ if __name__ == "__main__":
                 text = "{}: {:.4f}".format(element.label, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
-        image = cv2.resize(image, (1000, 300), interpolation=cv2.INTER_AREA)
         # show the output image
         cv2.imshow("RGB", image)
         cv2.waitKey(1)

@@ -3,8 +3,8 @@
 import rospy
 from carla_msgs.msg import CarlaEgoVehicleControl
 from ackermann_msgs.msg import AckermannDrive
-from psaf_abstraction_layer.GPS import GPS_Sensor
-from psaf_abstraction_layer.VehicleStatus import VehicleStatus,VehicleStatusProvider
+from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
+from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 
 
 def publish(publisher, message):
