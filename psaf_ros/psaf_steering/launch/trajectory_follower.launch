@@ -1,0 +1,5 @@
+<!-- -->
+<launch>
+  <node pkg="psaf_steering" type="trajectory_follower.py" name="trajectory_follower" output="screen" />
+  <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch" />
+</launch>

@@ -30,7 +30,7 @@ from psaf_steering.cfg import EgoVehicleControlParameterConfig
 from geometry_msgs.msg import Twist
 import carla_control_physics as phys
 
-plot = False  # plot target and current vel
+plot = True  # plot target and current vel
 
 
 class ROS_PID(PID):
@@ -98,6 +98,7 @@ class CarlaAckermannControl(object):
         self.data_plot_target = deque(maxlen=200)
         self.data_plot_current = deque(maxlen=200)
         self.data_plot_out = deque(maxlen=200)
+        self.data_plot_steer = deque(maxlen=200)
 
         # PID controller
         # the controller has to run with the simulation time, not with real-time
@@ -160,9 +161,9 @@ class CarlaAckermannControl(object):
             AckermannDrive, self.ackermann_command_updated)
 
         # ackermann drive commands
-        self.control_subscriber = rospy.Subscriber(
-            "/carla/" + self.role_name + "/twist_pid",
-            Twist, self.twist_command_updated)
+        # self.control_subscriber = rospy.Subscriber(
+        #     "/carla/" + self.role_name + "/twist_pid",
+        #     Twist, self.twist_command_updated)
 
         # current status of the vehicle
         self.vehicle_status_subscriber = rospy.Subscriber(
@@ -298,6 +299,7 @@ class CarlaAckermannControl(object):
         self.set_target_speed(ros_twist.linear.x * self.input_multiplier)
         self.set_target_accel(0)
         self.set_target_jerk(0)
+        print(ros_twist.angular.z )
 
         self.input_speed = ros_twist.linear.x * self.input_multiplier
         self.input_accel = 0.
@@ -553,11 +555,13 @@ class CarlaAckermannControl(object):
             self.data_plot_target.append(self.info.target.speed)
             self.data_plot_current.append(self.info.current.speed)
             self.data_plot_out.append(self.info.output.throttle)
+            self.data_plot_steer.append(self.info.output.steer)
             plt.clf()
             plt.plot(self.data_plot_target)
             plt.plot(self.data_plot_current)
             plt.plot(self.data_plot_out)
-            plt.legend(['speed_target', 'speed_current', 'throttle_out'])
+            plt.plot(self.data_plot_steer)
+            plt.legend(['speed_target', 'speed_current', 'throttle_out', 'steer'])
             plt.pause(0.01)
             plt.draw()
 
@@ -573,17 +577,17 @@ class CarlaAckermannControl(object):
         """
         current_time_sec = rospy.get_rostime().to_sec()
         delta_time = current_time_sec - self.info.current.time_sec
-        rospy.loginfo("delta time: " + str(delta_time))
+        # rospy.loginfo("delta time: " + str(delta_time))
 
         current_speed = self.vehicle_status.velocity  * (-1 if self.vehicle_status.control.reverse else 1)
         if delta_time > 0:
             delta_speed = abs(current_speed) - abs(self.info.current.speed)
-            rospy.loginfo("delta speed: " + str(delta_speed))
+            # rospy.loginfo("delta speed: " + str(delta_speed))
 
             current_accel = delta_speed / delta_time
             # average filter
             self.info.current.accel = (self.info.current.accel * 9 + current_accel) / 10
-            rospy.loginfo("acc: " + str(self.info.current.accel))
+            # rospy.loginfo("acc: " + str(self.info.current.accel))
         self.info.current.time_sec = current_time_sec
         self.info.current.speed = current_speed
         self.info.current.speed_abs = abs(current_speed)
