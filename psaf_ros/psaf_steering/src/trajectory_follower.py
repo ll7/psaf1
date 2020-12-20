@@ -65,6 +65,7 @@ class TrajectoryFollower(object):
                 self.global_plan.append(pose.pose.position)
             rospy.loginfo("Global Plan received")
 
+    # c++: odom_helper
     def odometry_received(self, odom: Odometry):
         self.current_location = odom.pose.pose.position
         self.current_orientation = odom.pose.pose.orientation

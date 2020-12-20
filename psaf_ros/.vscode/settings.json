@@ -8,5 +8,15 @@
         "~/carla-ros-bridge/catkin_ws/devel/lib/python3/dist-packages",
         "/opt/ros/noetic/lib/python3/dist-packages",
         "~/carla0.9.10.1/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg"
-    ]
+    ],
+    "files.associations": {
+        "array": "cpp",
+        "*.tcc": "cpp",
+        "memory": "cpp",
+        "istream": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp",
+        "variant": "cpp"
+    }
 }

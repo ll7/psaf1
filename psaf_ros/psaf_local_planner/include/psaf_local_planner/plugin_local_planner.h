@@ -15,6 +15,7 @@
 #include <tf2_ros/buffer.h>
 #include <ros/ros.h>
 #include <base_local_planner/odometry_helper_ros.h>
+#include <base_local_planner/local_planner_util.h>
 
 
 namespace psaf_local_planner {
@@ -49,8 +50,9 @@ namespace psaf_local_planner {
 
 
             costmap_2d::Costmap2DROS* costmap_ros;
+            base_local_planner::LocalPlannerUtil planner_util;
 
-            ros::Publisher g_plan_pub;
+            ros::Publisher g_plan_pub, l_plan_pub;
             ros::Subscriber vel_sub;
 
             geometry_msgs::PoseStamped current_pose;
