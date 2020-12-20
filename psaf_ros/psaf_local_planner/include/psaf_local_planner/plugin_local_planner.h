@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <tf2_ros/buffer.h>
 #include <ros/ros.h>
+#include <base_local_planner/odometry_helper_ros.h>
 
 
 namespace psaf_local_planner {
@@ -43,8 +44,18 @@ namespace psaf_local_planner {
              */
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
         private:
+            void publishLocalPlan(std::vector<geometry_msgs::PoseStamped>& path);
+            void publishGlobalPlan(std::vector<geometry_msgs::PoseStamped>& path);
+
+
+            costmap_2d::Costmap2DROS* costmap_ros;
+
             ros::Publisher g_plan_pub;
             ros::Subscriber vel_sub;
+
+            geometry_msgs::PoseStamped current_pose;
+            base_local_planner::OdometryHelperRos odom_helper;
+            std::string odom_topic;
 
     };
 };
