@@ -65,7 +65,7 @@ class DetectedObject:
     Data class for detected elements
     """
 
-    def __init__(self, x: int = 0, y: int = 0, w: int = 0, h: int = 0, label: Labels = 0,
+    def __init__(self, x: int = 0, y: int = 0, w: int = 0, h: int = 0,distance:float = 0, label: Labels = 0,
                  confidence: float = 0.01):
         """
 
@@ -73,6 +73,7 @@ class DetectedObject:
         :param y: y coord in image
         :param h: height of bounding box
         :param w: weight of bounding box
+        :param distance: distance in meters. 0 (default) stands for an unknown distance
         :param label: the class label
         :param confidence: the confidence value
         """
@@ -80,6 +81,7 @@ class DetectedObject:
         self.y = y
         self.h = h
         self.w = w
+        self.distance = distance
         self.label = label
         self.confidence = confidence
 

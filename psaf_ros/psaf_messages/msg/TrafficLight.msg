@@ -7,6 +7,9 @@
 float32 x
 float32 y
 
+# distance in meters
+float32 distance
+
 # the state of the traffic light. see constants for interpretation
 uint8 state
 

@@ -3,6 +3,7 @@ import numpy as np
 import rospy
 import torch
 
+from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 from psaf_perception.AbstractDetector import DetectedObject, AbstractDetector, Labels
 
@@ -33,6 +34,14 @@ class TrafficLightDetector(AbstractDetector):
         self.rgb_camera = RGBCamera(role_name)
         self.rgb_camera.set_on_image_listener(self.__on_rgb_image_update)
 
+        # Depth camera for distance values
+        self.depth_camera = DepthCamera(role_name, "front")
+        self.depth_camera.set_on_image_listener(self.__on_depth_image)
+        self.depth_image = None
+
+    def __on_depth_image(self, image):
+        self.depth_image = image
+
     def __extract_label(self, image) -> Labels:
         """
         Analyze the given image of the traffic light and returns the corresponding label
@@ -46,6 +55,8 @@ class TrafficLightDetector(AbstractDetector):
         (H, W) = image.shape[:2]
 
         layerOutputs = self.net.forward(image)
+
+        depth_image = self.depth_image  # copy depth image to ensure that the same image will be used for all calculations
         # initialize our lists of detected bounding boxes, confidences, and
         # class IDs, respectively
         boxes = []
@@ -94,10 +105,18 @@ class TrafficLightDetector(AbstractDetector):
                     x2 = boxes[i][0] + boxes[i][2]
                     y1 = int(boxes[i][1])
                     y2 = boxes[i][1] + boxes[i][3]
+                    if depth_image is not None:
+                        crop = depth_image[y1:y2, x1:x2]
+                        crop = np.minimum(crop,np.average(crop))
+                        # Dirty way to reduce the influence of the depth values that are not part of the
+                        # sign but within in the bounding box
+                        distance = np.average(crop)
+                    else:
+                        distance = 0.
                     label = self.__extract_label(
                         image[int(y1):y2, x1:x2])
                     detected.append(
-                        DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], label,
+                        DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], distance, label,
                                        confidences[i]))
 
         self.inform_listener(detected)
@@ -300,7 +319,7 @@ if __name__ == "__main__":
                             Labels.TrafficLightUnknown: (0, 0, 0)}
                 color = colorMap.get(element.label, (0, 0, 0))
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                text = "{}: {:.4f}".format(element.label.label_text, element.confidence)
+                text = "{}-{:.1f}m: {:.4f}".format(element.label.label_text,element.distance, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
         # resize image to limits

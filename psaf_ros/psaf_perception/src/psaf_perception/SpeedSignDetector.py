@@ -9,8 +9,8 @@ from psaf_perception.AbstractDetector import DetectedObject, AbstractDetector, L
 
 CONV_FAC_MPH_TO_KMH = 0.621371
 
-class SpeedSignDetector(AbstractDetector):
 
+class SpeedSignDetector(AbstractDetector):
 
     def __init__(self, role_name: str = "ego_vehicle"):
         super().__init__()
@@ -27,36 +27,27 @@ class SpeedSignDetector(AbstractDetector):
         ckpt = torch.load('../../models/yolov5m-e250-frozen_backbone/weights/best.pt')['model']  # load checkpoint
         model.load_state_dict(ckpt.state_dict())  # load state_dict
         model.names = ckpt.names  # define class names
-        self.labels = {'speed_30':Labels.Speed30,'speed_60':Labels.Speed60,'speed_90':Labels.Speed90}
+        self.labels = {'speed_30': Labels.Speed30, 'speed_60': Labels.Speed60, 'speed_90': Labels.Speed90}
         model.to(self.device)
         # Autoshape wraps model and send data already to device, but must be called after model to device
         self.net = model.autoshape()
         self.net.eval()
         torch.no_grad()  # reduce memory consumption and improve speed
 
-        self.depth_camera = DepthCamera(role_name)
-        # self.depth_camera.set_on_image_listener(self.__on_depth_image)
-        self.rgb_camera = RGBCamera(role_name)
+        self.depth_camera = DepthCamera(role_name, "front")
+        self.depth_camera.set_on_image_listener(self.__on_depth_image)
+        self.rgb_camera = RGBCamera(role_name, "front")
         self.rgb_camera.set_on_image_listener(self.__on_rgb_image_update)
         self.depth_image = None
 
     def __on_depth_image(self, image):
-        scale_percent = 600 / image.shape[0]  # percent of original size
-        width = int(image.shape[1] * scale_percent)
-        height = int(image.shape[0] * scale_percent)
-        dim = (width, height)
-        # resize image
-        image = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
-        over_width = (width - 800.0)
-        min_x = int(over_width / 2)
-        max_x = int(width - over_width / 2)
-        self.depth_image = image[:, min_x:max_x]
+        self.depth_image = image
 
     def __on_rgb_image_update(self, image):
         (H, W) = image.shape[:2]
 
-        input = image
-        layerOutputs = self.net.forward(input)
+        depth_image = self.depth_image  # copy depth image to ensure that the same image will be used for all calculations
+        layerOutputs = self.net.forward(image)
         # initialize our lists of detected bounding boxes, confidences, and
         # class IDs, respectively
         boxes = []
@@ -100,10 +91,20 @@ class SpeedSignDetector(AbstractDetector):
             # loop over the indexes we are keeping
             for i in idxs.flatten():
                 if boxes[i][2] * boxes[i][3] > (
-                450):
+                        450):
+                    if depth_image is not None:
+                        crop = depth_image[boxes[i][1]:boxes[i][1] + boxes[i][3],
+                               boxes[i][0]:boxes[i][0] + boxes[i][2]]
+                        crop = np.minimum(crop, np.average(
+                            crop))  # Dirty way to reduce the influence of the depth values that are not part of the
+                        # sign but within in the bounding box
+                        distance = np.average(crop)
+                    else:
+                        distance = 0
                     detected.append(
-                        DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], self.labels[self.net.names[classIDs[i]]],
-                                       confidences[i]))
+                        DetectedObject(x=boxes[i][0], y=boxes[i][1], w=boxes[i][2], h=boxes[i][3], distance=distance,
+                                       label=self.labels[self.net.names[classIDs[i]]],
+                                       confidence=confidences[i]))
 
         self.inform_listener(detected)
 
@@ -124,13 +125,13 @@ if __name__ == "__main__":
                 (x, y) = (element.x, element.y)
                 (w, h) = (element.w, element.h)
                 # draw a bounding box rectangle and label on the image
-                color = (0, 255, 0)
+                color = (255, 0, 0)
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                text = "{}: {:.4f}".format(element.label.label_text, element.confidence)
-                cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+                text = "{} in {:.1f}m: {:.4f}".format(element.label.label_text, element.distance, element.confidence)
+                cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 2)
 
         # show the output image
-        cv2.imshow("RGB", image)
+        cv2.imshow("RGB", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
         cv2.waitKey(1)
 
 

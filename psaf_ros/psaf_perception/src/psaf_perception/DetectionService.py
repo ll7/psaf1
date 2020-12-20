@@ -47,9 +47,9 @@ class DetectionService:
     def __on_new_speed_Sign(self, detected: List[DetectedObject]):
         self.speed_signs.clear()
         for object in detected:
-            x_center = object.x + object.w / 2
-            y_center = object.y + object.h / 2
             if LabelGroups.Speed in object.label.groups:
+                x_center = object.x + object.w / 2
+                y_center = object.y + object.h / 2
                 limit = 30
                 if object.label == Labels.Speed30:
                     limit = 30
@@ -60,6 +60,7 @@ class DetectionService:
                 msg = SpeedSign()
                 msg.x = int(x_center)
                 msg.y = int(y_center)
+                msg.distance = object.distance
                 msg.limit = int(limit / CONV_FAC_MPH_TO_KMH)
                 self.speed_signs.append(msg)
 
@@ -83,6 +84,7 @@ class DetectionService:
                 msg = TrafficLight()
                 msg.x = int(x_center)
                 msg.y = int(y_center)
+                msg.distance = object.distance
                 # mapping between the traffic light states
                 state_mapper = {
                     Labels.TrafficLightUnknown : TrafficLight.STATE_UNKNOWN,
