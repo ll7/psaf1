@@ -2,12 +2,14 @@ import csv
 import os
 
 import cv2
-import numpy as np
+import rospkg
 import rospy
-from PyTorch_YOLOv3.models import *
-from PyTorch_YOLOv3.utils.utils import *
-from PyTorch_YOLOv3.utils.datasets import *
+from PyTorch_YOLOv3.models import Darknet
+from PyTorch_YOLOv3.utils.utils import non_max_suppression,rescale_boxes
+from PyTorch_YOLOv3.utils.datasets import Dataset,pad_to_square,resize
 import torch
+import torchvision.transforms as transforms
+
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
@@ -41,25 +43,28 @@ class StopMarkDetector(AbstractDetector):
     def __init__(self, role_name: str = "ego_vehicle"):
         super().__init__()
 
+        rospack = rospkg.RosPack()
+        root_path = rospack.get_path('psaf_perception')
+
         self.confidence_min = 0.6
         self.threshold = 0.6
         self.labels = []
         self.count = 0
 
-        weightsPath = os.path.abspath( "../../models/psaf2019_yolo.weights")
-        configPath = os.path.abspath( "../../models/psaf2019_yolo.cfg")
-        label_file = os.path.abspath( "../../models/psaf2019_classes.csv")
+        weights_path = os.path.join(root_path,"models/psaf2019_yolo.weights")
+        config_path = os.path.join(root_path,"models/psaf2019_yolo.cfg")
+        label_file = os.path.join(root_path, "models/psaf2019_classes.csv")
         with open(label_file, newline='') as csvfile:
             csv_in = csv.reader(csvfile, delimiter=' ', quotechar='|')
             for row in csv_in:
                self.labels.append(row[0])
 
-        print("[INFO] loading YOLO from disk...")
+        rospy.loginfo("loading YOLO from disk...")
         # Set up model
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
         self.img_size = 416;
-        model = Darknet(configPath,self.img_size).to(self.device)
-        model.load_darknet_weights(weightsPath)
+        model = Darknet(config_path,self.img_size).to(self.device)
+        model.load_darknet_weights(weights_path)
         model.eval()
 
         self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
@@ -73,7 +78,6 @@ class StopMarkDetector(AbstractDetector):
     def __on_image_update(self, image):
 
         (H, W) = image.shape[:2]
-        #image = image[int(0.25*H):H,0:W,:]
 
         dataloader = DataLoader(
             SingleImage(image, self.img_size),
@@ -98,13 +102,13 @@ class StopMarkDetector(AbstractDetector):
                 for  x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
                     # extract the information
                     x1, y1, x2, y2, conf, cls_conf, cls_pred = x1.item(), y1.item(), x2.item(), y2.item(), conf.item(), cls_conf.item(), cls_pred.item()
-                    classID = int(cls_pred)
+                    class_id = int(cls_pred)
                     score = float(conf)
                     # filter out weak predictions by ensuring the detected
                     # probability is greater than the minimum probability
-                    if score > self.confidence_min and self.labels[classID]=="stop":
+                    if score > self.confidence_min and self.labels[class_id]=="stop":
                         detected.append(
-                            DetectedObject(int(x1), int(y1),  int(x2-x1), int(y2-y1), Labels.Stop,  float(score)))
+                            DetectedObject(float(x1/W), float(y1/H),  (x2-x1)/W, (y2-y1)/H, 0,Labels.Stop, score))
 
 
 
@@ -121,20 +125,21 @@ if __name__ == "__main__":
 
     def store_image(image):
         global detected_r
+        H,W = image.shape[:2]
 
         if detected_r is not None:
             for element in detected_r:
                 # extract the bounding box coordinates
-                (x, y) = (element.x, element.y)
-                (w, h) = (element.w, element.h)
+                (x, y) = (int(element.x * W), int(element.y * H))
+                (w, h) = (int(element.w * W), int(element.h * H))
                 # draw a bounding box rectangle and label on the image
                 color = (0, 255, 0)
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                text = "{}: {:.4f}".format(element.label, element.confidence)
+                text = "{}: {:.4f}".format(element.label.label_text, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         # show the output image
-        cv2.imshow("RGB", image)
+        cv2.imshow("RGB", cv2.cvtColor(image,cv2.COLOR_RGB2BGR))
         cv2.waitKey(1)
 
 

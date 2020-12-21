@@ -1,3 +1,4 @@
+import cv2
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
@@ -20,7 +21,7 @@ class RGBCamera:
         :param image_msg: the message
         :return: None
         """
-        self.image = self.bridge.imgmsg_to_cv2(image_msg,desired_encoding='bgr8')
+        self.image = cv2.cvtColor(self.bridge.imgmsg_to_cv2(image_msg,desired_encoding='bgr8'),cv2.COLOR_BGR2RGB)
 
         if self.__listener != None:
             self.__listener(self.image)
