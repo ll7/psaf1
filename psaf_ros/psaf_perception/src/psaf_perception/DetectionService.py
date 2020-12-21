@@ -48,8 +48,6 @@ class DetectionService:
         self.speed_signs.clear()
         for object in detected:
             if LabelGroups.Speed in object.label.groups:
-                x_center = object.x + object.w / 2
-                y_center = object.y + object.h / 2
                 limit = 30
                 if object.label == Labels.Speed30:
                     limit = 30
@@ -58,8 +56,8 @@ class DetectionService:
                 elif object.label == Labels.Speed90:
                     limit = 90
                 msg = SpeedSign()
-                msg.x = int(x_center)
-                msg.y = int(y_center)
+                msg.x = x_center = object.x + object.w / 2
+                msg.y = object.y + object.h / 2
                 msg.distance = object.distance
                 msg.limit = int(limit / CONV_FAC_MPH_TO_KMH)
                 self.speed_signs.append(msg)
@@ -67,23 +65,19 @@ class DetectionService:
     def __on_new_stop(self, detected: List[DetectedObject]):
         self.stop_marks.clear()
         for object in detected:
-            x_center = object.x + object.w / 2
-            y_center = object.y + object.h / 2
             if object.label == Labels.Stop:
                 msg = StopMark()
-                msg.x = int(x_center)
-                msg.y = int(y_center)
+                msg.x = object.x + object.w / 2
+                msg.y = object.y + object.h / 2
                 self.stop_marks.append(msg)
 
     def __on_new_traffic_light(self, detected: List[DetectedObject]):
         self.trafficLights.clear()
         for object in detected:
-            x_center = object.x + object.w / 2
-            y_center = object.y + object.h / 2
             if LabelGroups.TrafficLight in object.label.groups:
                 msg = TrafficLight()
-                msg.x = int(x_center)
-                msg.y = int(y_center)
+                msg.x = object.x + object.w / 2
+                msg.y = object.y + object.h / 2
                 msg.distance = object.distance
                 # mapping between the traffic light states
                 state_mapper = {

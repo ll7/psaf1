@@ -104,7 +104,7 @@ class StopMarkDetector(AbstractDetector):
                     # probability is greater than the minimum probability
                     if score > self.confidence_min and self.labels[classID]=="stop":
                         detected.append(
-                            DetectedObject(int(x1), int(y1),  int(x2-x1), int(y2-y1), Labels.Stop,  float(score)))
+                            DetectedObject(float(x1/W), float(y1/H),  (x2-x1)/W, (y2-y1)/H, 0,Labels.Stop, score))
 
 
 
@@ -121,12 +121,13 @@ if __name__ == "__main__":
 
     def store_image(image):
         global detected_r
+        H,W = image.shape[:2]
 
         if detected_r is not None:
             for element in detected_r:
                 # extract the bounding box coordinates
-                (x, y) = (element.x, element.y)
-                (w, h) = (element.w, element.h)
+                (x, y) = (int(element.x * W), int(element.y * H))
+                (w, h) = (int(element.w * W), int(element.h * H))
                 # draw a bounding box rectangle and label on the image
                 color = (0, 255, 0)
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)

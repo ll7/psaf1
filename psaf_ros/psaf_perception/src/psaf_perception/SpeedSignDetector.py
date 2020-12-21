@@ -59,25 +59,20 @@ class SpeedSignDetector(AbstractDetector):
                 # extract the class ID and confidence (i.e., probability) of
                 # the current object detection
                 classID = int(detection[5])
-                score = detection[4]
+                score = float(detection[4])
                 # filter out weak predictions by ensuring the detected
                 # probability is greater than the minimum probability
                 if score > self.confidence_min:
-                    # scale the bounding box coordinates back relative to the
-                    # size of the image, keeping in mind that YOLO actually
-                    # returns the center (x, y)-coordinates of the bounding
-                    # box followed by the boxes' width and height
-                    # TODO keep relative coordinates
-                    box = detection[0:4] * np.array([W, H, W, H])
-                    (centerX, centerY, width, height) = box.astype("int")
+
+                    (centerX, centerY, width, height) = detection[0:4]
                     # use the center (x, y)-coordinates to derive the top and
                     # and left corner of the bounding box
-                    x = int(centerX - (width / 2))
-                    y = int(centerY - (height / 2))
+                    x = centerX - (width / 2)
+                    y = centerY - (height / 2)
                     # update our list of bounding box coordinates, confidences,
                     # and class IDs
-                    boxes.append([x, y, int(width), int(height)])
-                    confidences.append(float(score))
+                    boxes.append([float(x), float(y), float(width), float(height)])
+                    confidences.append(score)
                     classIDs.append(classID)
 
         # List oif detected elements
@@ -90,8 +85,11 @@ class SpeedSignDetector(AbstractDetector):
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                if boxes[i][2] * boxes[i][3] > (
-                        450):
+                if (boxes[i][2] * boxes[i][3] * H * W) > 450:
+                    x1 = int(boxes[i][0] * W)
+                    x2 = int((boxes[i][0] + boxes[i][2]) * W)
+                    y1 = int(boxes[i][1] * H)
+                    y2 = int((boxes[i][1] + boxes[i][3]) * H)
                     if depth_image is not None:
                         crop = depth_image[boxes[i][1]:boxes[i][1] + boxes[i][3],
                                boxes[i][0]:boxes[i][0] + boxes[i][2]]
@@ -100,9 +98,9 @@ class SpeedSignDetector(AbstractDetector):
                         # sign but within in the bounding box
                         distance = np.average(crop)
                     else:
-                        distance = 0
+                        distance = 0.
                     detected.append(
-                        DetectedObject(x=boxes[i][0], y=boxes[i][1], w=boxes[i][2], h=boxes[i][3], distance=distance,
+                        DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3], distance=distance,
                                        label=self.labels[self.net.names[classIDs[i]]],
                                        confidence=confidences[i]))
 
@@ -118,12 +116,13 @@ if __name__ == "__main__":
 
     def store_image(image):
         global detected_r
+        H,W = image.shape[:2]
 
         if detected_r is not None:
             for element in detected_r:
                 # extract the bounding box coordinates
-                (x, y) = (element.x, element.y)
-                (w, h) = (element.w, element.h)
+                (x, y) = (int(element.x * W), int(element.y * H))
+                (w, h) = (int(element.w * W), int(element.h * H))
                 # draw a bounding box rectangle and label on the image
                 color = (255, 0, 0)
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)

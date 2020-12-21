@@ -68,25 +68,19 @@ class TrafficLightDetector(AbstractDetector):
                 # extract the class ID and confidence (i.e., probability) of
                 # the current object detection
                 classID = int(detection[5])
-                score = detection[4]
+                score = float(detection[4])
                 # filter out weak predictions by ensuring the detected
                 # probability is greater than the minimum probability
                 if score > self.confidence_min and self.net.names[classID] == 'traffic light':
-                    # scale the bounding box coordinates back relative to the
-                    # size of the image, keeping in mind that YOLO actually
-                    # returns the center (x, y)-coordinates of the bounding
-                    # box followed by the boxes' width and height
-                    # TODO keep relative coordinates
-                    box = detection[0:4] * np.array([W, H, W, H])
-                    (centerX, centerY, width, height) = box.astype("int")
+                    (centerX, centerY, width, height) = detection[0:4]
                     # use the center (x, y)-coordinates to derive the top and
                     # and left corner of the bounding box
-                    x = int(centerX - (width / 2))
-                    y = int(centerY - (height / 2))
+                    x = centerX - (width / 2)
+                    y = centerY - (height / 2)
                     # update our list of bounding box coordinates, confidences,
                     # and class IDs
-                    boxes.append([x, y, int(width), int(height)])
-                    confidences.append(float(score))
+                    boxes.append([float(x), float(y), float(width), float(height)])
+                    confidences.append(score)
                     classIDs.append(classID)
 
         # List oif detected elements
@@ -99,12 +93,11 @@ class TrafficLightDetector(AbstractDetector):
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                if boxes[i][2] * boxes[i][3] > (
-                        450):
-                    x1 = int(boxes[i][0])
-                    x2 = boxes[i][0] + boxes[i][2]
-                    y1 = int(boxes[i][1])
-                    y2 = boxes[i][1] + boxes[i][3]
+                if (boxes[i][2] * boxes[i][3] * H * W) > 300:
+                    x1 = int(boxes[i][0] * W)
+                    x2 = int((boxes[i][0] + boxes[i][2]) * W)
+                    y1 = int(boxes[i][1] * H)
+                    y2 = int((boxes[i][1] + boxes[i][3]) * H)
                     if depth_image is not None:
                         crop = depth_image[y1:y2, x1:x2]
                         crop = np.minimum(crop,np.average(crop))
@@ -114,7 +107,7 @@ class TrafficLightDetector(AbstractDetector):
                     else:
                         distance = 0.
                     label = self.__extract_label(
-                        image[int(y1):y2, x1:x2])
+                        image[y1:y2, x1:x2])
                     detected.append(
                         DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], distance, label,
                                        confidences[i]))
@@ -308,18 +301,20 @@ if __name__ == "__main__":
     def store_image(image):
         global detected_r
 
+        H, W = image.shape[:2]
+
         if detected_r is not None:
             for element in detected_r:
                 # extract the bounding box coordinates
-                (x, y) = (element.x, element.y)
-                (w, h) = (element.w, element.h)
+                (x, y) = (int(element.x * W), int(element.y * H))
+                (w, h) = (int(element.w * W), int(element.h * H))
                 # draw a bounding box rectangle and label on the image
                 colorMap = {Labels.TrafficLightRed: (255, 0, 0), Labels.TrafficLightGreen: (0, 255, 0),
                             Labels.TrafficLightYellow: (255, 255, 0), Labels.TrafficLightOff: (0, 0, 255),
                             Labels.TrafficLightUnknown: (0, 0, 0)}
                 color = colorMap.get(element.label, (0, 0, 0))
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                text = "{}-{:.1f}m: {:.4f}".format(element.label.label_text,element.distance, element.confidence)
+                text = "{}-{:.1f}m: {:.4f}".format(element.label.label_text, element.distance, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
         # resize image to limits
