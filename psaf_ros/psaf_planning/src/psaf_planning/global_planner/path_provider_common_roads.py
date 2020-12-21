@@ -16,7 +16,7 @@ from commonroad.common.util import Interval
 from SMP.route_planner.route_planner.route_planner import RoutePlanner
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
-from psaf_abstraction_layer.GPS import GPS_Position
+from psaf_abstraction_layer.sensors.GPS import GPS_Position
 from geometry_msgs.msg import Point, PoseStamped
 
 import rospy

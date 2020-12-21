@@ -6,7 +6,7 @@ from lanelet2.projection import UtmProjector
 from lanelet2.core import GPSPoint
 from lanelet2.io import Origin
 import rospy
-from psaf_abstraction_layer.GPS import GPS_Position
+from psaf_abstraction_layer.sensors.GPS import GPS_Position
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Point
 from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
