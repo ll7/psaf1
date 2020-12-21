@@ -31,7 +31,6 @@ def cmd_callback(data):
 
 if __name__ == '__main__': 
   try:
-    
     rospy.init_node('cmd_vel_to_ackermann_drive')
         
     twist_cmd_topic = rospy.get_param('~twist_cmd_topic', '/cmd_vel') 

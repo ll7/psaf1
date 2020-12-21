@@ -1,0 +1,4 @@
+2020-11-09 14:05:51,696	Batch processor	DEBUG	Config file loaded and logger created
+2020-11-09 14:05:51,696	Batch processor	INFO	Run on all scenarios
+2020-11-09 14:05:52,318	Batch processor	INFO	Found route candidates: 1
+2020-11-09 14:05:52,322	Batch processor	DEBUG	  1/1	[DEU_Gar-3_2_T-1     ]	 search took	   58.8771	ms		path FOUND to goal lanelet: [54502]

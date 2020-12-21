@@ -34,19 +34,30 @@ namespace psaf_goal {
 
         QFormLayout *carlaLayout = new QFormLayout;
 
-        QHBoxLayout *synchronous_layout = new QHBoxLayout;
+        QHBoxLayout *button_layout = new QHBoxLayout;
         QPixmap pixmap(":/icons/play.png");
         QIcon iconPlay(pixmap);
         bPublish = new QPushButton(iconPlay, "");
-        synchronous_layout->addWidget(bPublish);
+        button_layout->addWidget(bPublish);
         connect(bPublish, SIGNAL(released()), this, SLOT(sendGoal())); // connect the sendGoal methode with the button
+        carlaLayout->addRow("Plan Path:", button_layout);
 
-        carlaLayout->addRow("Plan Path:", synchronous_layout);
-
+        QHBoxLayout *status_layout = new QHBoxLayout;
+        timer = new QTimer(this);
+        connect(timer, SIGNAL(timeout()), this, SLOT(spinOnce_Wrapper()));
+        timer->start(500);
+        lstatus = new QLabel("");
+        lstatus->setWordWrap(true);
+        lstatus->setMaximumWidth(this->width()-50);
+        lstatus->setMidLineWidth(this->width()-50);
+        status_layout->addWidget(lstatus);
+        carlaLayout->addRow("Status: ", status_layout);
         layout->addLayout(carlaLayout);
 
         setLayout(layout);
         goalPublisher = nodeHandle.advertise<sensor_msgs::NavSatFix>("/psaf/goal/set", 1);
+        statusSubscriber = nodeHandle.subscribe("/psaf/status", 1000, &GoalPanel::statusCallback, this);
+
         }
 
     void GoalPanel::setGoal(float latitude, float longitude, float altitude)
@@ -69,5 +80,10 @@ namespace psaf_goal {
             goalPublisher.publish(msg);
         }
     }
-
+    void GoalPanel::spinOnce_Wrapper() {
+        ros::spinOnce();
+    }
+    void GoalPanel::statusCallback(const std_msgs::String::ConstPtr& msg) {
+        lstatus->setText(msg.get()->data.c_str());
+    }
 } // end namespace psaf_goal
