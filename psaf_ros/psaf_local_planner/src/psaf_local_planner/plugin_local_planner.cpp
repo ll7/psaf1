@@ -69,8 +69,7 @@ namespace psaf_local_planner {
     /**
      * Compute relative angle and distance between a target_location and a current_location
      */
-    void compute_magnitude_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location) {
-        
+    void compute_magnitude_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location, float &magnitude, float &angle) {
         tf2::Transform target_transform;
         tf2::Transform current_transform;
         tf2::convert(target_location, target_transform);
@@ -92,23 +91,41 @@ namespace psaf_local_planner {
         // vector from vehicle to target point and distance
         tf2::Vector3 target_vector = tf2::Vector3(target_location.position.x - current_location.position.x, target_location.position.y - current_location.position.y, 0);
         target_vector.length();
-        auto dist_target = target_vector;
+        auto dist_target = target_vector.length();
+        target_vector.normalize();
         /*target_vector = np.array([target_location.x - current_location.x, target_location.y - current_location.y]);
         dist_target = np.linalg.norm(target_vector);
-
+        */
+        
         // vector of the car and absolut angle between vehicle and target point
         // angle = (a o b) / (|a|*|b|), here: |b| = 1
+        tf2::Vector3 forward_vector = tf2::Vector3(cos(orientation), sin(orientation), 0);
+        auto c = std::clamp(forward_vector.dot(target_vector) / dist_target);
+        auto d_angle = acos(c);
+
+        /*
         forward_vector = np.array([math.cos(math.radians(orientation)), math.sin(math.radians(orientation))]);
         c = np.clip(np.dot(forward_vector, target_vector) / dist_target, -1.0, 1.0);
         d_angle = math.degrees(math.acos(c));
 
+        */
+
         //make angle negative or positive
-        cross = np.cross(forward_vector, target_vector);
+        
+        auto cross = forward_vector.cross(target_vector);
+        if (cross < 0) {
+            d_angle *= -1.0;
+        }
+        /*cross = np.cross(forward_vector, target_vector);
         if (cross < 0) {
             d_angle *= -1.0;
         }
 
         return dist_target, d_angle
         */
+
+
+        magnitude = dist_target;
+        angle = d_angle;
     }
 }

@@ -35,7 +35,8 @@ Panels:
     Help Height: 138
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /Odometry1/Shape1
       Splitter Ratio: 0.5
     Tree Height: 1522
   - Class: rviz_carla_plugin/CarlaControl
@@ -114,8 +115,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 4.218465805053711
-        Min Value: 0
+        Max Value: 4.228093147277832
+        Min Value: -0.02741098403930664
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -208,10 +209,10 @@ Visualization Manager:
         Axes Length: 1
         Axes Radius: 0.10000000149011612
         Color: 255; 25; 0
-        Head Length: 0.30000001192092896
-        Head Radius: 0.10000000149011612
-        Shaft Length: 1
-        Shaft Radius: 0.05000000074505806
+        Head Length: 0.10000000149011612
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.20000000298023224
+        Shaft Radius: 0.019999999552965164
         Value: Arrow
       Topic: /carla/ego_vehicle/odometry
       Unreliable: false
@@ -333,7 +334,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 34.25230026245117
+      Distance: 8.746491432189941
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -341,9 +342,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 8.617961883544922
-        Y: 20.101884841918945
-        Z: 18.089582443237305
+        X: 12.132637977600098
+        Y: 13.252849578857422
+        Z: 20.45240020751953
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
