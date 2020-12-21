@@ -161,9 +161,9 @@ class CarlaAckermannControl(object):
             AckermannDrive, self.ackermann_command_updated)
 
         #ackermann drive commands
-        self.control_subscriber = rospy.Subscriber(
-             "/carla/" + self.role_name + "/twist_pid",
-             Twist, self.twist_command_updated)
+        #self.control_subscriber = rospy.Subscriber(
+        #     "/carla/" + self.role_name + "/twist_pid",
+        #     Twist, self.twist_command_updated)
 
         # current status of the vehicle
         self.vehicle_status_subscriber = rospy.Subscriber(
