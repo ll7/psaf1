@@ -6,6 +6,7 @@
 #include <nav_core/base_local_planner.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Quaternion.h>
 #include <nav_msgs/Path.h>
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
@@ -16,7 +17,7 @@
 #include <ros/ros.h>
 #include <base_local_planner/odometry_helper_ros.h>
 #include <base_local_planner/local_planner_util.h>
-
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace psaf_local_planner {
     class PsafLocalPlanner : public nav_core::BaseLocalPlanner {
@@ -45,8 +46,18 @@ namespace psaf_local_planner {
              */
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
         private:
-            void publishLocalPlan(std::vector<geometry_msgs::PoseStamped>& path);
-            void publishGlobalPlan(std::vector<geometry_msgs::PoseStamped>& path);
+            void publishLocalPlan(const std::vector<geometry_msgs::PoseStamped>& path);
+            void publishGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& path);
+            
+            void deleteOldPoints();
+            
+            /**
+             * Fills the point buffer with points of the route
+             */
+            void fillPointBuffer();
+            
+            void compute_magnitude_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location, float &magnitude, float &angle);
+
 
 
             costmap_2d::Costmap2DROS* costmap_ros;
@@ -58,6 +69,12 @@ namespace psaf_local_planner {
             geometry_msgs::PoseStamped current_pose;
             base_local_planner::OdometryHelperRos odom_helper;
             std::string odom_topic;
+            
+
+            std::vector<geometry_msgs::PoseStamped> local_plan, global_plan;
+            int bufferSize;
+
+            bool initialized;
 
     };
 };

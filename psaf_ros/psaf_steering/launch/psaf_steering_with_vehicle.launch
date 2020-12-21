@@ -53,7 +53,7 @@
 
 
   <!--<include file="$(find psaf_steering)/launch/cmd_vel_to_ackermann_drive.launch" />-->
-  <include file="$(find psaf_steering)/launch/move_base.launch" />
+  <!--<include file="$(find psaf_steering)/launch/move_base.launch" />-->
 
   <include file="$(find psaf_steering)/launch/psaf_steering.launch" />
         <node pkg="rviz" type="rviz" name="rviz" args="-d $(find psaf_steering)/config/psaf_rviz.cfg.rviz">

@@ -115,8 +115,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 4.228093147277832
-        Min Value: -0.02741098403930664
+        Max Value: 5.071963310241699
+        Min Value: -1.9073486328125e-06
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -238,7 +238,7 @@ Visualization Manager:
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
-      Topic: /move_base/TebLocalPlannerROS/global_plan
+      Topic: /move_base/PsafLocalPlanner/psaf_global_plan
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -262,7 +262,7 @@ Visualization Manager:
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
-      Topic: /move_base/TebLocalPlannerROS/local_plan
+      Topic: /move_base/PsafLocalPlanner/psaf_local_plan
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -334,7 +334,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 8.746491432189941
+      Distance: 4.822063446044922
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -342,15 +342,15 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 12.132637977600098
-        Y: 13.252849578857422
-        Z: 20.45240020751953
+        X: 2.5820953845977783
+        Y: 11.913141250610352
+        Z: 24.656841278076172
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9997984170913696
+      Pitch: 0.9947984218597412
       Target Frame: ego_vehicle
       Yaw: 0.9722787141799927
     Saved: ~

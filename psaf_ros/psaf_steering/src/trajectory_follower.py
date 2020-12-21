@@ -36,7 +36,7 @@ class TrajectoryFollower(object):
         self.local_plan = deque(maxlen=self.buffer_size)
         self.global_plan = deque()
 
-        self.global_plan_subscriber = rospy.Subscriber('/move_base/TebLocalPlannerROS/global_plan',
+        self.global_plan_subscriber = rospy.Subscriber('/move_base/PsafLocalPlanner/psaf_global_plan',
                                                        Path, self.global_plan_received)
 
         self.global_plan_subscriber = rospy.Subscriber('/clicked_point',
