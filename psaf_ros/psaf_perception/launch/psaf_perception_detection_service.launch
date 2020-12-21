@@ -1,0 +1,5 @@
+<!-- -->
+<launch>
+  <node pkg="psaf_perception" type="DetectionService.py" name="detection_service" output="screen">
+  </node>
+</launch>

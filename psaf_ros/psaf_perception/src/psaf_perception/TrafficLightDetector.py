@@ -18,13 +18,12 @@ class TrafficLightDetector(AbstractDetector):
 
         self.confidence_min = 0.65
         self.threshold = 0.7
-        print("[INFO] init device")
+        rospy.loginfo("init device")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
-        print("[INFO] Device:" + str(self.device))
+        rospy.loginfo("Device:" + str(self.device))
         # load our YOLO object detector trained on COCO dataset (3 classes)
-        print("[INFO] loading basic YOLO from torch hub...")
+        rospy.loginfo("loading basic YOLO from torch hub...")
         model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
-        print("[INFO] loading YOLO from disk...")
         model.to(self.device)
         # Autoshape wraps model and send data already to device, but must be called after model to device
         self.net = model.autoshape()

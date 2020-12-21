@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
-import rospy
+import rospy, rospkg
 import torch
+import os
 
 from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
@@ -15,16 +16,19 @@ class SpeedSignDetector(AbstractDetector):
     def __init__(self, role_name: str = "ego_vehicle"):
         super().__init__()
 
+        rospack = rospkg.RosPack()
+        root_path = rospack.get_path('psaf_perception')
+
         self.confidence_min = 0.70
         self.threshold = 0.7
-        print("[INFO] init device")
+        rospy.loginfo("init device")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
-        print("[INFO] Device:" + str(self.device))
+        rospy.loginfo("Device:" + str(self.device))
         # load our YOLO object detector trained on COCO dataset (3 classes)
-        print("[INFO] loading basic YOLO from torch hub...")
+        rospy.loginfo("[loading basic YOLO from torch hub...")
         model = torch.hub.load('ultralytics/yolov5', 'yolov5m', classes=3)
-        print("[INFO] loading YOLO from disk...")
-        ckpt = torch.load('../../models/yolov5m-e250-frozen_backbone/weights/best.pt')['model']  # load checkpoint
+        rospy.loginfo("loading YOLO from disk...")
+        ckpt = torch.load(os.path.join(root_path,'models/yolov5m-e250-frozen_backbone/weights/best.pt'))['model']  # load checkpoint
         model.load_state_dict(ckpt.state_dict())  # load state_dict
         model.names = ckpt.names  # define class names
         self.labels = {'speed_30': Labels.Speed30, 'speed_60': Labels.Speed60, 'speed_90': Labels.Speed90}

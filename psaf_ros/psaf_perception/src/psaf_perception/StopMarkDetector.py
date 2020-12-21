@@ -2,6 +2,7 @@ import csv
 import os
 
 import cv2
+import rospkg
 import rospy
 from PyTorch_YOLOv3.models import Darknet
 from PyTorch_YOLOv3.utils.utils import non_max_suppression,rescale_boxes
@@ -42,20 +43,23 @@ class StopMarkDetector(AbstractDetector):
     def __init__(self, role_name: str = "ego_vehicle"):
         super().__init__()
 
+        rospack = rospkg.RosPack()
+        root_path = rospack.get_path('psaf_perception')
+
         self.confidence_min = 0.6
         self.threshold = 0.6
         self.labels = []
         self.count = 0
 
-        weights_path = os.path.abspath( "../../models/psaf2019_yolo.weights")
-        config_path = os.path.abspath( "../../models/psaf2019_yolo.cfg")
-        label_file = os.path.abspath( "../../models/psaf2019_classes.csv")
+        weights_path = os.path.join(root_path,"models/psaf2019_yolo.weights")
+        config_path = os.path.join(root_path,"models/psaf2019_yolo.cfg")
+        label_file = os.path.join(root_path, "models/psaf2019_classes.csv")
         with open(label_file, newline='') as csvfile:
             csv_in = csv.reader(csvfile, delimiter=' ', quotechar='|')
             for row in csv_in:
                self.labels.append(row[0])
 
-        print("[INFO] loading YOLO from disk...")
+        rospy.loginfo("loading YOLO from disk...")
         # Set up model
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
         self.img_size = 416;
