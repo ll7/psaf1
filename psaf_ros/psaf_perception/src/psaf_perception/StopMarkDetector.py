@@ -47,8 +47,8 @@ class StopMarkDetector(AbstractDetector):
         self.labels = []
         self.count = 0
 
-        weightsPath = os.path.abspath( "../../models/psaf2019_yolo.weights")
-        configPath = os.path.abspath( "../../models/psaf2019_yolo.cfg")
+        weights_path = os.path.abspath( "../../models/psaf2019_yolo.weights")
+        config_path = os.path.abspath( "../../models/psaf2019_yolo.cfg")
         label_file = os.path.abspath( "../../models/psaf2019_classes.csv")
         with open(label_file, newline='') as csvfile:
             csv_in = csv.reader(csvfile, delimiter=' ', quotechar='|')
@@ -59,8 +59,8 @@ class StopMarkDetector(AbstractDetector):
         # Set up model
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
         self.img_size = 416;
-        model = Darknet(configPath,self.img_size).to(self.device)
-        model.load_darknet_weights(weightsPath)
+        model = Darknet(config_path,self.img_size).to(self.device)
+        model.load_darknet_weights(weights_path)
         model.eval()
 
         self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
@@ -98,11 +98,11 @@ class StopMarkDetector(AbstractDetector):
                 for  x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
                     # extract the information
                     x1, y1, x2, y2, conf, cls_conf, cls_pred = x1.item(), y1.item(), x2.item(), y2.item(), conf.item(), cls_conf.item(), cls_pred.item()
-                    classID = int(cls_pred)
+                    class_id = int(cls_pred)
                     score = float(conf)
                     # filter out weak predictions by ensuring the detected
                     # probability is greater than the minimum probability
-                    if score > self.confidence_min and self.labels[classID]=="stop":
+                    if score > self.confidence_min and self.labels[class_id]=="stop":
                         detected.append(
                             DetectedObject(float(x1/W), float(y1/H),  (x2-x1)/W, (y2-y1)/H, 0,Labels.Stop, score))
 

@@ -54,34 +54,34 @@ class TrafficLightDetector(AbstractDetector):
     def __on_rgb_image_update(self, image):
         (H, W) = image.shape[:2]
 
-        layerOutputs = self.net.forward(image)
+        layer_outputs = self.net.forward(image)
 
         depth_image = self.depth_image  # copy depth image to ensure that the same image will be used for all calculations
         # initialize our lists of detected bounding boxes, confidences, and
         # class IDs, respectively
         boxes = []
         confidences = []
-        classIDs = []
-        for output in layerOutputs.xywhn:
+        class_ids = []
+        for output in layer_outputs.xywhn:
             # loop over each of the detections
             for detection in output.cpu().numpy():
                 # extract the class ID and confidence (i.e., probability) of
                 # the current object detection
-                classID = int(detection[5])
+                class_id = int(detection[5])
                 score = float(detection[4])
                 # filter out weak predictions by ensuring the detected
                 # probability is greater than the minimum probability
-                if score > self.confidence_min and self.net.names[classID] == 'traffic light':
-                    (centerX, centerY, width, height) = detection[0:4]
+                if score > self.confidence_min and self.net.names[class_id] == 'traffic light':
+                    (center_x, center_y, width, height) = detection[0:4]
                     # use the center (x, y)-coordinates to derive the top and
                     # and left corner of the bounding box
-                    x = centerX - (width / 2)
-                    y = centerY - (height / 2)
+                    x = center_x - (width / 2)
+                    y = center_y - (height / 2)
                     # update our list of bounding box coordinates, confidences,
                     # and class IDs
                     boxes.append([float(x), float(y), float(width), float(height)])
                     confidences.append(score)
-                    classIDs.append(classID)
+                    class_ids.append(class_id)
 
         # List oif detected elements
         detected = []
@@ -101,7 +101,7 @@ class TrafficLightDetector(AbstractDetector):
                     if depth_image is not None:
                         distance = 0.
                         crop = depth_image[y1:y2, x1:x2]
-                        for r in range(5):
+                        for _ in range(5):
                             crop = np.minimum(crop, np.average(crop))
                             # Dirty way to reduce the influence of the depth values that are not part of the
                             # sign but within in the bounding box
@@ -221,10 +221,6 @@ class TrafficLightClassifier:
         green_index = np.logical_and(hue_value > 1.2, hue_value < 2)
         yellow_index = np.logical_and(hue_value > 1.9, hue_value < 2.2)
 
-        # red_index = np.logical_and(hue_value > (-0.125 * np.pi), hue_value < (0.125 * np.pi))
-        # green_index = np.logical_and(hue_value > (0.66 * np.pi), hue_value < 1.0 * np.pi)
-        # yellow_index = np.logical_and(hue_value > (0.25 * np.pi), hue_value < (0.42 * np.pi))
-
         return red_index, green_index, yellow_index
 
     @classmethod
@@ -311,10 +307,10 @@ if __name__ == "__main__":
                 (x, y) = (int(element.x * W), int(element.y * H))
                 (w, h) = (int(element.w * W), int(element.h * H))
                 # draw a bounding box rectangle and label on the image
-                colorMap = {Labels.TrafficLightRed: (255, 0, 0), Labels.TrafficLightGreen: (0, 255, 0),
+                color_map = {Labels.TrafficLightRed: (255, 0, 0), Labels.TrafficLightGreen: (0, 255, 0),
                             Labels.TrafficLightYellow: (255, 255, 0), Labels.TrafficLightOff: (0, 0, 255),
                             Labels.TrafficLightUnknown: (0, 0, 0)}
-                color = colorMap.get(element.label, (0, 0, 0))
+                color = color_map.get(element.label, (0, 0, 0))
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
                 text = "{}-{:.1f}m: {:.4f}".format(element.label.label_text, element.distance, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)

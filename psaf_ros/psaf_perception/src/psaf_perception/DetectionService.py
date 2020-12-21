@@ -40,11 +40,11 @@ class DetectionService:
         self.lock = asyncio.Lock()
 
         # Collect detection
-        self.detectors["speed"].set_on_detection_listener(self.__on_new_speed_Sign)
+        self.detectors["speed"].set_on_detection_listener(self.__on_new_speed_sign)
         self.detectors["stop"].set_on_detection_listener(self.__on_new_stop)
         self.detectors["trafficLight"].set_on_detection_listener(self.__on_new_traffic_light)
 
-    def __on_new_speed_Sign(self, detected: List[DetectedObject]):
+    def __on_new_speed_sign(self, detected: List[DetectedObject]):
         self.speed_signs.clear()
         for object in detected:
             if LabelGroups.Speed in object.label.groups:
@@ -56,7 +56,7 @@ class DetectionService:
                 elif object.label == Labels.Speed90:
                     limit = 90
                 msg = SpeedSign()
-                msg.x = x_center = object.x + object.w / 2
+                msg.x = object.x + object.w / 2
                 msg.y = object.y + object.h / 2
                 msg.distance = object.distance
                 msg.limit = int(limit / CONV_FAC_MPH_TO_KMH)
@@ -98,13 +98,13 @@ class DetectionService:
         :param event: the timer event ( it is ignored)
         :return: None
         """
-        signMsg = TrafficSignInfo()
-        signMsg.header.stamp = rospy.Time.now()
-        signMsg.header.frame_id = 'DetectionServiceTrafficSigns'
-        signMsg.speedSigns.extend(self.speed_signs)
-        signMsg.stopMarks.extend(self.stop_marks)
-        signMsg.trafficLights.extend(self.trafficLights)
-        self.traffic_sign_publisher.publish(signMsg)
+        sign_msg = TrafficSignInfo()
+        sign_msg.header.stamp = rospy.Time.now()
+        sign_msg.header.frame_id = 'DetectionServiceTrafficSigns'
+        sign_msg.speedSigns.extend(self.speed_signs)
+        sign_msg.stopMarks.extend(self.stop_marks)
+        sign_msg.trafficLights.extend(self.trafficLights)
+        self.traffic_sign_publisher.publish(sign_msg)
 
 
 if __name__ == "__main__":

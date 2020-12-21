@@ -20,9 +20,11 @@ class Labels(Enum):
     Enum that stores the available perception tags used to communicate between the components
     """
 
-    def __init__(self, id: int, label: str, groups: LabelGroupSet = {}):
+    def __init__(self, id: int, label: str, groups: LabelGroupSet = None):
         self._value_ = id
         self._label = label
+        if groups is None:
+            groups = {}
         self._groups = groups
 
     @property

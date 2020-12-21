@@ -47,33 +47,33 @@ class SpeedSignDetector(AbstractDetector):
         (H, W) = image.shape[:2]
 
         depth_image = self.depth_image  # copy depth image to ensure that the same image will be used for all calculations
-        layerOutputs = self.net.forward(image)
+        layer_outputs = self.net.forward(image)
         # initialize our lists of detected bounding boxes, confidences, and
         # class IDs, respectively
         boxes = []
         confidences = []
-        classIDs = []
-        for output in layerOutputs.xywhn:
+        class_ids = []
+        for output in layer_outputs.xywhn:
             # loop over each of the detections
             for detection in output.cpu().numpy():
                 # extract the class ID and confidence (i.e., probability) of
                 # the current object detection
-                classID = int(detection[5])
+                class_id = int(detection[5])
                 score = float(detection[4])
                 # filter out weak predictions by ensuring the detected
                 # probability is greater than the minimum probability
                 if score > self.confidence_min:
 
-                    (centerX, centerY, width, height) = detection[0:4]
+                    (center_x, center_y, width, height) = detection[0:4]
                     # use the center (x, y)-coordinates to derive the top and
                     # and left corner of the bounding box
-                    x = centerX - (width / 2)
-                    y = centerY - (height / 2)
+                    x = center_x - (width / 2)
+                    y = center_y - (height / 2)
                     # update our list of bounding box coordinates, confidences,
                     # and class IDs
                     boxes.append([float(x), float(y), float(width), float(height)])
                     confidences.append(score)
-                    classIDs.append(classID)
+                    class_ids.append(class_id)
 
         # List oif detected elements
         detected = []
@@ -93,7 +93,7 @@ class SpeedSignDetector(AbstractDetector):
                     if depth_image is not None:
                         distance = 0.
                         crop = depth_image[y1:y2, x1:x2]
-                        for r in range(5):
+                        for _ in range(5):
                             crop = np.minimum(crop, np.average(crop))
                             # Dirty way to reduce the influence of the depth values that are not part of the
                             # sign but within in the bounding box
@@ -102,7 +102,7 @@ class SpeedSignDetector(AbstractDetector):
                         distance = 0.
                     detected.append(
                         DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3], distance=distance,
-                                       label=self.labels[self.net.names[classIDs[i]]],
+                                       label=self.labels[self.net.names[class_ids[i]]],
                                        confidence=confidences[i]))
 
         self.inform_listener(detected)
