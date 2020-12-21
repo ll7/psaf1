@@ -53,20 +53,12 @@ class GPS_Sensor:
         """
         return self.position
 
-    def set_on_position_listener(self, func):
+    def set_on_position_listener(self,func):
         """
         Set function to be called with the GPS_Position as parameter
         :param func: the function
         :return: None
         """
-        self.__listener = func
-
-    def unregister_on_position_listener(self):
-        """
-        Set function to be called with the GPS_Position as parameter
-        :param func: the function
-        :return: None
-        """
-        self.__listener = None
+        self.__listener = func;
 
 
