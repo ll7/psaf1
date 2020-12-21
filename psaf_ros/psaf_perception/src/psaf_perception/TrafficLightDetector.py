@@ -99,11 +99,13 @@ class TrafficLightDetector(AbstractDetector):
                     y1 = int(boxes[i][1] * H)
                     y2 = int((boxes[i][1] + boxes[i][3]) * H)
                     if depth_image is not None:
+                        distance = 0.
                         crop = depth_image[y1:y2, x1:x2]
-                        crop = np.minimum(crop,np.average(crop))
-                        # Dirty way to reduce the influence of the depth values that are not part of the
-                        # sign but within in the bounding box
-                        distance = np.average(crop)
+                        for r in range(5):
+                            crop = np.minimum(crop, np.average(crop))
+                            # Dirty way to reduce the influence of the depth values that are not part of the
+                            # sign but within in the bounding box
+                            distance = np.average(crop)
                     else:
                         distance = 0.
                     label = self.__extract_label(
