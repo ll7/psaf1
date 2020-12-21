@@ -1,7 +1,7 @@
 import cv2
 import rospy
+from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
-import numpy as np
 
 
 class DepthCamera:
@@ -19,6 +19,8 @@ class DepthCamera:
                                              self.__update_image)
 
         self.__listener = None
+        self.bridge = CvBridge()
+
 
     def __update_image(self, image_msg: Image):
         """
@@ -26,13 +28,8 @@ class DepthCamera:
         :param image_msg: the message
         :return: None
         """
-        array = np.frombuffer(image_msg.data, dtype=np.dtype("uint8"))
-        array = np.reshape(array, (image_msg.height, image_msg.width, 4))
-        array = array.astype(np.float32)
-        # Apply (R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1).
 
-        normed= np.dot(array[:, :, :3], [65536.0, 256.0, 1.0]) / 16777215.0
-        self.image = normed * self.MAX_METERS  # 65536.0 = (256.0 * 256.0 * 256.0 - 1.0)
+        self.image = self.bridge.imgmsg_to_cv2(image_msg,desired_encoding='passthrough')
 
         if self.__listener != None:
             self.__listener(self.image)
