@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /Grid1
+        - /Marker1
         - /Image1
       Splitter Ratio: 0.6000000238418579
     Tree Height: 270
@@ -29,7 +30,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Image
+    SyncSource: Lidar
   - Class: rviz/Displays
     Help Height: 138
     Name: Displays
@@ -37,7 +38,7 @@ Panels:
       Expanded:
         - /Odometry1/Shape1
       Splitter Ratio: 0.5
-    Tree Height: 1075
+    Tree Height: 1522
   - Class: rviz_carla_plugin/CarlaControl
     Name: CarlaControl
   - Class: psaf_planning/GoalPanel
@@ -67,17 +68,17 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: ego_vehicle
       Value: true
-    - Class: rviz/MarkerArray
+    - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /carla/markers
-      Name: MarkerArray
+      Marker Topic: /carla/marker
+      Name: Marker
       Namespaces:
         "": true
       Queue Size: 100
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /carla/ego_vehicle/depth_front/image
+      Image Topic: /carla/ego_vehicle/camera/rgb/front/image_color
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -89,7 +90,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /carla/ego_vehicle/rgb_front/image
+      Image Topic: /carla/ego_vehicle/camera/depth/front/image_depth
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -101,7 +102,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /carla/ego_vehicle/semantic_segmentation_front/image
+      Image Topic: /carla/ego_vehicle/camera/semantic_segmentation/front/image_segmentation
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -114,8 +115,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 12.592241287231445
-        Min Value: 1.1247539520263672
+        Max Value: 5.071963310241699
+        Min Value: -1.9073486328125e-06
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -136,11 +137,41 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.009999999776482582
       Style: Points
-      Topic: /carla/ego_vehicle/processed_semantic_lidar
+      Topic: /carla/ego_vehicle/processed_semantic_lidar/lidar1/point_cloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 3.793550729751587
+        Min Value: 0.14888012409210205
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: AxisColor
+      Decay Time: 1
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Radar
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Points
+      Topic: /carla/ego_vehicle/radar/front/radar_points
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
     - Alpha: 0.699999988079071
       Class: rviz/Map
       Color Scheme: map
@@ -275,30 +306,6 @@ Visualization Manager:
         {}
       Queue Size: 100
       Value: true
-    - Class: rviz/Camera
-      Enabled: true
-      Image Rendering: background and overlay
-      Image Topic: /carla/ego_vehicle/rgb_view/image
-      Name: Camera
-      Overlay Alpha: 0.5
-      Queue Size: 2
-      Transport Hint: raw
-      Unreliable: false
-      Value: true
-      Visibility:
-        Global Plan: true
-        Goal: true
-        Grid: true
-        Image: true
-        Lidar: true
-        Local Map: true
-        Local Path: true
-        MarkerArray: true
-        Odometry: true
-        TebMarker: true
-        TebPoses: true
-        Value: true
-      Zoom Factor: 1
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -327,7 +334,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 15.21548080444336
+      Distance: 4.822063446044922
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -335,21 +342,19 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 3.4915852546691895
-        Y: 13.951432228088379
-        Z: 21.286840438842773
+        X: 2.5820953845977783
+        Y: 11.913141250610352
+        Z: 24.656841278076172
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7247985005378723
+      Pitch: 0.9947984218597412
       Target Frame: ego_vehicle
-      Yaw: 1.5622788667678833
+      Yaw: 0.9722787141799927
     Saved: ~
 Window Geometry:
-  Camera:
-    collapsed: false
   CarlaControl:
     collapsed: false
   Displays:
@@ -361,7 +366,7 @@ Window Geometry:
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000030a00000724fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b000000b000fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730200000f00000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730000000028000000d70000018200fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065010000006e000001510000002600fffffffb0000000a0049006d00610067006501000001cb0000018f0000002600fffffffb0000000a0049006d0061006700650100000366000001a80000002600fffffffb0000000a0049006d00610067006501000002b8000001310000000000000000fb00000018004300610072006c00610043006f006e00740072006f006c010000051a000001540000015400fffffffb000000120047006f0061006c00500061006e0065006c010000067a000001180000011800ffffff00000001000003c800000724fc0200000004fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000c00430061006d006500720061010000006e000001b30000002600fffffffc0000022d00000565000001bc01000039fa000000000100000002fb000000100044006900730070006c0061007900730100000000ffffffff000001f700fffffffb0000000a00560069006500770073010000063a0000010f0000015f00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000f000000005afc0100000002fb0000000800540069006d0065010000000000000f000000057100fffffffb0000000800540069006d00650100000000000004500000000000000000000008160000072400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000030a00000724fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b000000b000fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730200000f00000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730000000028000000d70000018200fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065010000006e000001780000002600fffffffb0000000a0049006d00610067006501000001f2000001a90000002600fffffffb0000000a0049006d00610067006501000003a7000001670000002600fffffffb0000000a0049006d00610067006501000002b8000001310000000000000000fb00000018004300610072006c00610043006f006e00740072006f006c010000051a000001540000015400fffffffb000000120047006f0061006c00500061006e0065006c010000067a000001180000011800ffffff000000010000043f00000724fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fc0000006e00000724000001bc01000039fa000000000100000002fb000000100044006900730070006c0061007900730100000000ffffffff000001f700fffffffb0000000a00560069006500770073010000063a0000010f0000015f00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000f000000005afc0100000002fb0000000800540069006d0065010000000000000f000000057100fffffffb0000000800540069006d006501000000000000045000000000000000000000079f0000072400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
