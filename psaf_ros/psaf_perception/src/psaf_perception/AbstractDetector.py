@@ -1,5 +1,5 @@
 from enum import Enum, Flag
-from typing import Set
+from typing import Set, List, Callable
 
 
 class LabelGroups(Enum):
@@ -103,9 +103,9 @@ class AbstractDetector:
         if self.__listener is not None:
             self.__listener(detected_list)
 
-    def set_on_detection_listener(self, func):
+    def set_on_detection_listener(self, func:Callable[[List[DetectedObject]],None]):
         """
-        Set function to be called with detected bounding boxes
+        Set function to be called with detected objects
         :param func: the function
         :return: None
         """
