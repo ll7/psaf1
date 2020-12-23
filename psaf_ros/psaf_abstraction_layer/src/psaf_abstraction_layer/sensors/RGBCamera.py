@@ -1,5 +1,9 @@
+from typing import Callable
+
 import cv2
+import numpy
 import rospy
+from std_msgs.msg import Time
 from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
 
@@ -22,9 +26,8 @@ class RGBCamera:
         :return: None
         """
         self.image = cv2.cvtColor(self.bridge.imgmsg_to_cv2(image_msg,desired_encoding='bgr8'),cv2.COLOR_BGR2RGB)
-
         if self.__listener != None:
-            self.__listener(self.image)
+            self.__listener(self.image,image_msg.header.stamp)
 
     def get_image(self):
         """
@@ -33,7 +36,7 @@ class RGBCamera:
         """
         return self.position
 
-    def set_on_image_listener(self, func):
+    def set_on_image_listener(self, func:Callable[[numpy.ndarray,Time],None]):
         """
         Set function to be called with the rgb image as parameter
         :param func: the function

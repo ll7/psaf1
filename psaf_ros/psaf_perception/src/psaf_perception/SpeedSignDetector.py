@@ -44,10 +44,10 @@ class SpeedSignDetector(AbstractDetector):
         self.rgb_camera.set_on_image_listener(self.__on_rgb_image_update)
         self.depth_image = None
 
-    def __on_depth_image(self, image):
+    def __on_depth_image(self, image,_):
         self.depth_image = image
 
-    def __on_rgb_image_update(self, image):
+    def __on_rgb_image_update(self, image,_):
         (H, W) = image.shape[:2]
 
         depth_image = self.depth_image  # copy depth image to ensure that the same image will be used for all calculations
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     detected_r = None
 
 
-    def store_image(image):
+    def store_image(image,_):
         global detected_r
         H,W = image.shape[:2]
 

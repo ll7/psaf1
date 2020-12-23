@@ -75,7 +75,7 @@ class StopMarkDetector(AbstractDetector):
         self.rgb_camera = RGBCamera(role_name, id="street")
         self.rgb_camera.set_on_image_listener(self.__on_image_update)
 
-    def __on_image_update(self, image):
+    def __on_image_update(self, image,_):
 
         (H, W) = image.shape[:2]
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     detected_r = None
 
 
-    def store_image(image):
+    def store_image(image,_):
         global detected_r
         H,W = image.shape[:2]
 

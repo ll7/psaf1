@@ -38,7 +38,7 @@ class TrafficLightDetector(AbstractDetector):
         self.depth_camera.set_on_image_listener(self.__on_depth_image)
         self.depth_image = None
 
-    def __on_depth_image(self, image):
+    def __on_depth_image(self, image,_):
         self.depth_image = image
 
     def __extract_label(self, image) -> Labels:
@@ -50,7 +50,7 @@ class TrafficLightDetector(AbstractDetector):
 
         return TrafficLightClassifier.classify(image)
 
-    def __on_rgb_image_update(self, image):
+    def __on_rgb_image_update(self, image,_):
         (H, W) = image.shape[:2]
 
         layer_outputs = self.net.forward(image)
@@ -295,7 +295,7 @@ if __name__ == "__main__":
     detected_r = None
 
 
-    def store_image(image):
+    def store_image(image,_):
         global detected_r
 
         H, W = image.shape[:2]
