@@ -42,10 +42,8 @@ def cmd_callback(data: PointCloud2):
           # PointField('rgba', 12, PointField.UINT32, 1),
           ]
 
-    header = Header()
-    header.frame_id = "ego_vehicle/lidar/lidar1"
-    header.stamp = rospy.Time.now()
-    cloud = pc2.create_cloud(header, fields, points)
+
+    cloud = pc2.create_cloud(data.header, fields, points)
     pub.publish(cloud)
 
 
@@ -54,7 +52,7 @@ if __name__ == '__main__':
 
         rospy.init_node('semantic_lidar_processor')
 
-        rospy.Subscriber("/carla/ego_vehicle/semantic_lidar/lidar1/point_cloud/", PointCloud2, cmd_callback, queue_size=1)
+        rospy.Subscriber("/carla/ego_vehicle/semantic_lidar/lidar1/point_cloud", PointCloud2, cmd_callback, queue_size=1)
         rospy.Subscriber("/carla/ego_vehicle/odometry", Odometry, odo_callback, queue_size=1)
         pub = rospy.Publisher("/carla/ego_vehicle/processed_semantic_lidar/lidar1/point_cloud/", PointCloud2, queue_size=1)
 
