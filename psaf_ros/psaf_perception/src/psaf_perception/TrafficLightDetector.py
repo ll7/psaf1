@@ -2,10 +2,12 @@ import cv2
 import numpy as np
 import rospy
 import torch
+from genpy import Time
 
 from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 from psaf_perception.AbstractDetector import DetectedObject, AbstractDetector, Labels
+from psaf_perception.CameraDataFusion import CameraDataFusion, SegmentationTag
 
 
 class TrafficLightDetector(AbstractDetector):
@@ -18,28 +20,14 @@ class TrafficLightDetector(AbstractDetector):
 
         self.confidence_min = 0.65
         self.threshold = 0.7
-        rospy.loginfo("init device")
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
-        rospy.loginfo("Device:" + str(self.device))
-        # load our YOLO object detector trained on COCO dataset (3 classes)
-        rospy.loginfo("loading basic YOLO from torch hub...")
-        model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
-        model.to(self.device)
-        # Autoshape wraps model and send data already to device, but must be called after model to device
-        self.net = model.autoshape()
-        self.net.eval()
-        torch.no_grad()  # reduce memory consumption and improve speed
+        self.canny_threshold = 100
 
-        self.rgb_camera = RGBCamera(role_name)
-        self.rgb_camera.set_on_image_listener(self.__on_rgb_image_update)
 
-        # Depth camera for distance values
-        self.depth_camera = DepthCamera(role_name, "front")
-        self.depth_camera.set_on_image_listener(self.__on_depth_image)
-        self.depth_image = None
+        # init image source = combination of segmentation, rgb and depth camera
+        self.combinedCamera = CameraDataFusion(role_name=role_name, time_threshold=0.08,
+                                               visible_tags=set([SegmentationTag.TrafficLight]))
+        self.combinedCamera.set_on_image_data_listener(self.__on_new_image_data)
 
-    def __on_depth_image(self, image,_):
-        self.depth_image = image
 
     def __extract_label(self, image) -> Labels:
         """
@@ -50,43 +38,30 @@ class TrafficLightDetector(AbstractDetector):
 
         return TrafficLightClassifier.classify(image)
 
-    def __on_rgb_image_update(self, image,_):
-        (H, W) = image.shape[:2]
-
-        layer_outputs = self.net.forward(image)
-
-        depth_image = self.depth_image  # copy depth image to ensure that the same image will be used for all calculations
-        # initialize our lists of detected bounding boxes, confidences, and
-        # class IDs, respectively
-        boxes = []
-        confidences = []
-        class_ids = []
-        for output in layer_outputs.xywhn:
-            # loop over each of the detections
-            for detection in output.cpu().numpy():
-                # extract the class ID and confidence (i.e., probability) of
-                # the current object detection
-                class_id = int(detection[5])
-                score = float(detection[4])
-                # filter out weak predictions by ensuring the detected
-                # probability is greater than the minimum probability
-                if score > self.confidence_min and self.net.names[class_id] == 'traffic light':
-                    (center_x, center_y, width, height) = detection[0:4]
-                    # use the center (x, y)-coordinates to derive the top and
-                    # and left corner of the bounding box
-                    x = center_x - (width / 2)
-                    y = center_y - (height / 2)
-                    # update our list of bounding box coordinates, confidences,
-                    # and class IDs
-                    boxes.append([float(x), float(y), float(width), float(height)])
-                    confidences.append(score)
-                    class_ids.append(class_id)
+    def __on_new_image_data(self, segmentation_image, rgb_image, depth_image, time):
+        """
+        Handles the new image data from the cameras
+        :param segmentation_image: the segmentation image
+        :param rgb_image: the rgb image
+        :param depth_image: the depth data
+        :param time: time stamp when the images where taken
+        :return: none
+        """
+        (H, W) = segmentation_image.shape[:2]
 
         # List oif detected elements
         detected = []
-        # apply non-maxima suppression to suppress weak, overlapping bounding
-        # boxes
-        idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_min, self.threshold)
+
+        canny_output = cv2.Canny(segmentation_image, self.canny_threshold, self.canny_threshold * 2)
+        contours, _ = cv2.findContours(canny_output, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        boxes = []
+        for i, c in enumerate(contours):
+            contours_poly = cv2.approxPolyDP(c, 3, True)
+            boxes.append(cv2.boundingRect(contours_poly) / np.array([W, H, W, H]))
+
+        # apply non-maxima suppression to suppress weak, overlapping bounding boxes
+        idxs = cv2.dnn.NMSBoxes(boxes, ([1.] * len(boxes)), self.confidence_min, self.threshold)
 
         # ensure at least one detection exists
         if len(idxs) > 0:
@@ -97,21 +72,24 @@ class TrafficLightDetector(AbstractDetector):
                     x2 = int((boxes[i][0] + boxes[i][2]) * W)
                     y1 = int(boxes[i][1] * H)
                     y2 = int((boxes[i][1] + boxes[i][3]) * H)
-                    if depth_image is not None:
-                        distance = 0.
-                        crop = depth_image[y1:y2, x1:x2]
-                        for _ in range(5):
-                            crop = np.minimum(crop, np.average(crop))
-                            # Dirty way to reduce the influence of the depth values that are not part of the
-                            # sign but within in the bounding box
-                            distance = np.average(crop)
-                    else:
-                        distance = 0.
-                    label = self.__extract_label(
-                        image[y1:y2, x1:x2])
+
+                    # Use segmentation data to create a mask to delete the background
+                    mask = segmentation_image[y1:y2, x1:x2] == SegmentationTag.TrafficLight.color
+
+                    # get cropped depth image
+                    crop_depth = depth_image[y1:y2, x1:x2]
+                    # use mask to extract the traffic sign distances
+                    distance = np.average(crop_depth[mask[:,:,1]])
+                    # get cropped rgb image
+                    crop_rgb = rgb_image[y1:y2, x1:x2, :]
+                    # use inverted mask to clear the background
+                    crop_rgb[np.logical_not(mask)] = 0
+                    label = self.__extract_label(crop_rgb)
                     detected.append(
-                        DetectedObject(boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], distance, label,
-                                       confidences[i]))
+                        DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3],
+                                       distance=distance,
+                                       label=label,
+                                       confidence=1.))
 
         self.inform_listener(detected)
 
@@ -289,6 +267,20 @@ class TrafficLightClassifier:
 
 
 # Show case code
+def show_image(title, image):
+    max_width, max_height = 1200, 800
+
+    limit = (max_height, max_width)
+    fac = 1.0
+    if image.shape[0] > limit[0]:
+        fac = limit[0] / image.shape[0]
+    if image.shape[1] > limit[1]:
+        fac = limit[1] / image.shape[1]
+    image = cv2.resize(image, (int(image.shape[1] * fac), int(image.shape[0] * fac)))
+    # show the output image
+    cv2.imshow(title, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+    cv2.waitKey(1)
+
 if __name__ == "__main__":
     rospy.init_node("DetectionTest")
 
@@ -314,17 +306,7 @@ if __name__ == "__main__":
                 text = "{}-{:.1f}m: {:.4f}".format(element.label.label_text, element.distance, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
-        # resize image to limits
-        limit = (1000, 1000)  # height, width
-        fac = 1.0
-        if image.shape[0] > limit[0]:
-            fac = limit[0] / image.shape[0]
-        elif image.shape[1] > limit[1]:
-            fac = limit[1] / image.shape[1]
-        image = cv2.resize(image, (int(image.shape[1] * fac), int(image.shape[0] * fac)))
-        # show the output image
-        cv2.imshow("RGB", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-        cv2.waitKey(1)
+        show_image("Traffic light detection", image)
 
 
     def on_detected(detected_list):

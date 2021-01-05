@@ -1,13 +1,10 @@
 import math
-from abc import abstractmethod
-from operator import itemgetter
 from threading import Lock
 from typing import Set, Tuple, List, Callable, Dict
 
 import cv2
 import numpy as np
-import rospy, rospkg
-import os
+import rospy
 from genpy import Time
 
 from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
