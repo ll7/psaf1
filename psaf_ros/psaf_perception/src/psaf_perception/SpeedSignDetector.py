@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+from typing import Tuple
 
 import cv2
 import rospkg
@@ -39,6 +40,10 @@ class SpeedSignDetector(AbstractDetector):
         self.combinedCamera.set_on_image_data_listener(self.__on_new_image_data)
 
     def __load_descriptors(self):
+        """
+        Load the descriptors for comparing with currently captured descriptor
+        :return: None
+        """
         self.descriptors.clear()
 
         label_folders = []
@@ -57,6 +62,12 @@ class SpeedSignDetector(AbstractDetector):
                 self.descriptors[label].append(des_goal)
 
     def __compute_descriptor(self,image):
+        """
+        Compute the descriptor and return it
+        This method wraps around the image manipulation and the orb calculation 
+        :param image: the rgb image
+        :return: the descriptor
+        """
         gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
 
@@ -64,8 +75,12 @@ class SpeedSignDetector(AbstractDetector):
 
         return orb.detectAndCompute(gray, None)
 
-    def __classify(self, image):
-
+    def __classify(self, image) -> Tuple[Labels,float]:
+        """
+        Classifies the given image
+        :param image: the rgb image
+        :return: the Label and the confidence as a tuple
+        """
 
         kp_curr, des_curr = self.__compute_descriptor(image)
 
@@ -90,8 +105,8 @@ class SpeedSignDetector(AbstractDetector):
             # get best label
             best_label = max(max_label_count.items(), default=("None",0), key=lambda x: x[1])
             if best_label[1] >= 5:
-                return self.labels.get( best_label[0], None)
-        return None
+                return self.labels.get( best_label[0], None), float(best_label[1]/sum(max_label_count.values()))
+        return None, 0.0
 
     def __on_new_image_data(self, segmentation_image, rgb_image, depth_image, time):
         (H, W) = segmentation_image.shape[:2]
@@ -107,10 +122,8 @@ class SpeedSignDetector(AbstractDetector):
             contours_poly = cv2.approxPolyDP(c, 3, True)
             boxes.append(cv2.boundingRect(contours_poly) / np.array([W, H, W, H]))
 
-        confidences = [1.] * len(boxes)
-        # apply non-maxima suppression to suppress weak, overlapping bounding
-        # # boxes
-        idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_min, self.threshold)
+        # apply non-maxima suppression to suppress weak, overlapping bounding boxes
+        idxs = cv2.dnn.NMSBoxes(boxes, ([1.] * len(boxes)), self.confidence_min, self.threshold)
 
         # ensure at least one detection exists
         if len(idxs) > 0:
@@ -122,22 +135,24 @@ class SpeedSignDetector(AbstractDetector):
                     y1 = int(boxes[i][1] * H)
                     y2 = int((boxes[i][1] + boxes[i][3]) * H)
 
-                    distance = 0.
-                    crop_depth = depth_image[y1:y2, x1:x2]
-                    for _ in range(5):
-                        crop_depth = np.minimum(crop_depth, np.average(crop_depth))
-                        # Dirty way to reduce the influence of the depth values that are not part of the
-                        # sign but within in the bounding box
-                        distance = np.average(crop_depth)
+                    # Use segmentation data to create a mask to delete the background
+                    mask = segmentation_image[y1:y2, x1:x2] == SegmentationTag.TrafficSign.color
 
+                    # get cropped depth image
+                    crop_depth = depth_image[y1:y2, x1:x2]
+                    # use mask to extract the traffic sign distances
+                    distance = np.average(crop_depth[mask[:,:,1]])
+                    # get cropped rgb image
                     crop_rgb = rgb_image[y1:y2, x1:x2, :]
-                    classification = self.__classify(crop_rgb)
+                    # use inverted mask to clear the background
+                    crop_rgb[np.logical_not(mask)] = 255
+                    classification,confidence = self.__classify(crop_rgb)
                     if classification is not None:
                         detected.append(
                             DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3],
                                            distance=distance,
                                            label=classification,
-                                           confidence=confidences[i]))
+                                           confidence=confidence))
                     elif self.collect_unlabeled_data:
                         now = datetime.now().strftime("%H:%M:%S")
                         cv2.imwrite(os.path.join(self.descriptor_path,f"unlabeled/{now}.jpg"),cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
