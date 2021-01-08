@@ -1,0 +1,5 @@
+<!-- -->
+<launch>
+   <node pkg="psaf_optimizer" type="simulated_annealing_optimizer.py" name="simulated_annealing_optimizer" output="screen">
+ </node>
+</launch>
