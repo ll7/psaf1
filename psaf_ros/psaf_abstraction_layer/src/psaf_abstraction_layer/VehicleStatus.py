@@ -42,9 +42,11 @@ class VehicleStatusProvider:
         self.__subscriber = rospy.Subscriber("/carla/{}/vehicle_status".format(role_name), CarlaEgoVehicleStatus,
                                              self.__update_status)
         self.__listener = None
+        self.status_available: bool = False
 
     def __update_status(self,message:CarlaEgoVehicleStatus):
         self.status = VehicleStatus(message.orientation,message.acceleration,message.velocity)
+        self.status_available = True
         if self.__listener != None:
             self.__listener(self.status)
 

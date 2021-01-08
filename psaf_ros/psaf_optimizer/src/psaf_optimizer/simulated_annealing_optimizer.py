@@ -22,7 +22,7 @@ class ParameterType(Enum):
 class SimulatedAnnealingOptimizer:
 
     def __init__(self, step: float, alpha: float, parameter_range: list, it_count: int,
-                 time_weight: float, quality_weight: float, param_enum: ParameterType):
+                 time_weight: float, quality_weight: float, param_enum: ParameterType, init_rospy: bool = False):
         """
 
         :param step: step size in percent of total value range, given in parameter_range
@@ -34,7 +34,9 @@ class SimulatedAnnealingOptimizer:
         :param time_weight: weight of the duration time
         :param quality_weight: weight of the quality value
         """
-        self.scenario_runner = ScenarioRunner(init_rospy=True)
+        if init_rospy:
+            rospy.init_node('SimulatedAnnealingOptimizer', anonymous=True)
+        self.scenario_runner = ScenarioRunner(init_rospy=False, height=0)
         self.logfile = None
         self.init_logfile()
         self.step = step
@@ -162,7 +164,6 @@ class SimulatedAnnealingOptimizer:
             neighbour_index = self._get_random_neighbour(current_index)  # b
             neighbour_value = float(self._run_scenario(params=neighbour_index, time_weight=time_weight,
                                                        quality_weight=quality_weight))
-            rospy.sleep(10) # sleep for 10 seconds to ensure, that the car has stopped
             if neighbour_value <= current_value:
                 current_index = neighbour_index.copy()  # c1
                 current_value = neighbour_value
@@ -235,7 +236,7 @@ def main():
     param_range = [[0, 1], [0, 1], [0, 1]]
 
     optimizer = SimulatedAnnealingOptimizer(step=0.05, alpha=0.5, parameter_range=param_range,
-                                            it_count=3, quality_weight=1, time_weight=1, param_enum=ParameterType.speed)
+                                            it_count=3, quality_weight=1, time_weight=1, param_enum=ParameterType.speed, init_rospy = True)
 
 
 if __name__ == "__main__":

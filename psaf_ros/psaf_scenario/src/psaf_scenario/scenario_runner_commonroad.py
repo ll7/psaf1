@@ -12,7 +12,9 @@ import matplotlib.pyplot as plt
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance, Pose, PoseStamped, PoseWithCovarianceStamped
-from psaf_abstraction_layer.CarlaCar import AckermannControl
+from psaf_abstraction_layer.CarlaCar import AckermannControl, Car
+from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
+from actionlib import GoalID
 
 import rosbag
 import rospy
@@ -40,6 +42,7 @@ class ScenarioRunner:
         self.current_pose: Pose = Pose()
         self.initial_pose_publisher = rospy.Publisher('/carla/ego_vehicle/initialpose', PoseWithCovarianceStamped,
                                                       queue_size=10)
+        self.cancel_movebase_publisher = rospy.Publisher('/move_base/cancel', GoalID, queue_size=10)
         self.position_subscriber = rospy.Subscriber('/carla/ego_vehicle/odometry', Odometry, self._position_listener)
         self.finish_time_stamp: float = -1.0
         self.start_time_stamp: float = -1.0
@@ -226,12 +229,28 @@ class ScenarioRunner:
         :return:
         """
         rospy.loginfo("ScenarioRunner: Reset variables")
-        car: AckermannControl = AckermannControl()
-        car.set_jerk(0)
-        car.set_steering_angle(0)
-        car.set_steering_angle_velocity(0)
-        car.set_acceleration(0)
-        car.set_speed(0)
+        while self.cancel_movebase_publisher.get_num_connections() == 0:
+            self.rate.sleep()
+        self.cancel_movebase_publisher.publish(GoalID())
+        ack_ctrl: AckermannControl = AckermannControl()
+        ack_ctrl.set_jerk(0)
+        ack_ctrl.set_steering_angle(0)
+        ack_ctrl.set_steering_angle_velocity(0)
+        ack_ctrl.set_acceleration(0)
+        ack_ctrl.set_speed(0)
+
+        vehicle: VehicleStatusProvider = VehicleStatusProvider("ego_vehicle")
+        # wait for commands to be executed
+        # make sure that the car has really stopped
+        while not vehicle.status_available:
+            self.rate.sleep()
+        current_speed = vehicle.get_status().velocity
+        current_acceleration = vehicle.get_status().acceleration
+        while current_speed != 0 and current_acceleration != 0:
+            self.rate.sleep()
+            current_speed = vehicle.get_status().velocity
+            current_acceleration = vehicle.get_status().acceleration
+
         # reset variables
         self.finish_time_stamp: float = -1.0
         self.start_time_stamp: float = -1.0

@@ -74,6 +74,8 @@ namespace psaf_global_planner {
 
     bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan) {
         std_msgs::String statusMsg;
+        ROS_ERROR("Start: %lf, %lf, %lf\n Goal: %lf, %lf, %lf", start.pose.position.x,start.pose.position.y, start.pose.position.z,
+                  goal.pose.position.x,goal.pose.position.y, goal.pose.position.z);
         plan.clear();
         if(init && ros::ok()){
             std::string filename;
