@@ -26,6 +26,7 @@ class SimulatedAnnealingOptimizer:
         :param file: file path and name to which the results shall be written
         # TODO: Add default values for parameters
         """
+
         self.scenario_runner = ScenarioRunner(init_rospy=True)
         self.logfile = None
         self.init_logfile()
@@ -58,13 +59,13 @@ class SimulatedAnnealingOptimizer:
         :param sample_count: used sample count of the scenario runner
         """
         f = open(self.logfile + "_results.txt", "w")
-        f.write("Sample count: " + str(sample_count))
-        f.write("Best result: " + str(best_result))
+        f.write("Sample count: " + str(sample_count) + "\n")
+        f.write("Best result: " + str(best_result)+ "\n")
         best_param_str = "["
         for param in best_params:
             best_param_str += str(param) + ","
         best_param_str += "]"
-        f.write("Best parameters: " + best_param_str)
+        f.write("Best parameters: " + best_param_str + "\n")
 
     def _run_scenario(self, params: np.ndarray, time_weight: float = 1.0, quality_weight: float = 1.5):
         """
@@ -175,7 +176,7 @@ class SimulatedAnnealingOptimizer:
         :return:
         """
         current_date_and_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        file = open(self.logfile, 'a')
+        file = open(self.logfile +".txt", 'a')
         file.write(current_date_and_time + "," + str(current_value) + "," + str(current_index) + "," +
                    str(best_value) + "," + str(best_index) + "\n")
         file.close()
