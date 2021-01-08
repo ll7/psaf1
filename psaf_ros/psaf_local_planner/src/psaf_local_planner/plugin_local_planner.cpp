@@ -10,7 +10,7 @@ PLUGINLIB_EXPORT_CLASS(psaf_local_planner::PsafLocalPlanner, nav_core::BaseLocal
 namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), local_plan({}),
-                                           bufferSize(100), initialized(false), closest_point_local_plan(3),
+                                           bufferSize(150), initialized(false), closest_point_local_plan(3),
                                            lookahead_factor(1), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false)
     {
@@ -35,7 +35,7 @@ namespace psaf_local_planner
             double distance_sq = x_diff * x_diff + y_diff * y_diff;
             if (distance_sq > closest_point_local_plan * closest_point_local_plan)
             {
-                ROS_INFO("Nearest waypoint to <%f, %f> is <%f, %f>\n", current_pose.pose.position.x, current_pose.pose.position.y, w.pose.position.x, w.pose.position.y);
+                // ROS_INFO("Nearest waypoint to <%f, %f> is <%f, %f>\n", current_pose.pose.position.x, current_pose.pose.position.y, w.pose.position.x, w.pose.position.y);
                 break;
             }
             it = local_plan.erase(it);
@@ -105,13 +105,11 @@ namespace psaf_local_planner
         if (initialized)
         {
             costmap_ros->getRobotPose(current_pose);
-            ROS_INFO("x: %f, y: %f, z: %f", current_pose.pose.position.x, current_pose.pose.position.y, current_pose.pose.position.z);
 
             deleteOldPoints();
             fillPointBuffer();
             publishLocalPlan(local_plan);
 
-            ROS_INFO("Computed Velocity, len of plan: %ld", local_plan.size());
             if (local_plan.empty() && global_plan.empty())
             {
                 ROS_INFO("Goal reached");
@@ -121,13 +119,20 @@ namespace psaf_local_planner
             }
             else
             {
+                estimate_curvature_and_set_target_velocity(current_pose.pose);
                 int index = (target_velocity / lookahead_factor);
                 auto target_point = &local_plan[index];
 
                 float mag;
                 float angle;
+                double distance;
                 compute_magnitude_angle(target_point->pose, current_pose.pose, mag, angle);
-                estimate_curvature(current_pose.pose);
+
+                
+                if (target_velocity > 0 && !check_distance_forward(distance)) {
+                    target_velocity *= boost::algorithm::clamp((distance - 5) / (pow(max_velocity * 0.36, 2)), 0, 1);
+                    ROS_INFO("distance forward: %f, max distance: %f", distance, pow(max_velocity * 0.36, 2));
+                }
 
                 cmd_vel.linear.x = target_velocity;
                 cmd_vel.angular.z = angle;
@@ -138,29 +143,6 @@ namespace psaf_local_planner
             ROS_WARN("Called compute velocity before being inited");
         }
 
-        /*self.del_old_points()
-
-        if len(self.local_plan) < self.buffer_size:
-            self.fill_point_buffer()
-
-        if not self.local_plan and not self.global_plan:
-            self.target_reached = True
-            rospy.loginfo("Target reached!")
-            self.control_cmd.steering_angle = 0.0
-            self.control_cmd.speed = 0.0
-        else:
-            target_point = self.local_plan[0]
-            _, angle = self.compute_magnitude_angle(target_point, self.current_location, self.current_orientation)
-            self.control_cmd.steering_angle = math.radians(np.clip(angle, -60.0, 60.0))
-            # self.control_cmd.speed = (self.target_speed - abs(self.control_cmd.steering_angle) * (
-            #         self.target_speed - self.min_speed)) / 3.6
-
-            d, a = self.estimate_curvature(self.current_location, self.current_orientation, self.local_plan)
-            rospy.loginfo('curvature: ' + str(a))
-            fact = np.clip(a/100, 0, 1)
-            self.control_cmd.speed = (self.target_speed - fact * (self.target_speed - self.min_speed)) / 3.6
-        */
-
         return true;
     }
 
@@ -169,7 +151,6 @@ namespace psaf_local_planner
      */
     bool PsafLocalPlanner::isGoalReached()
     {
-        ROS_INFO("called: %i", goal_reached);
         return goal_reached && local_plan.empty() && global_plan.empty();
     }
 
@@ -220,7 +201,6 @@ namespace psaf_local_planner
         double unclamped_angle = atan2(
             forward_vector.getX() * target_vector.getY() - forward_vector.getY() * target_vector.getX(),
             forward_vector.getX() * target_vector.getX() + forward_vector.getY() * target_vector.getY());
-        ROS_INFO("Angle: %f", unclamped_angle);
 
         // Limit angle to the limits of the car
         auto d_angle = boost::algorithm::clamp(unclamped_angle, -1.2, 1.2);
@@ -265,7 +245,7 @@ namespace psaf_local_planner
         angle = d_angle;
     }
 
-    void PsafLocalPlanner::estimate_curvature(geometry_msgs::Pose current_location)
+    void PsafLocalPlanner::estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location)
     {
         tf2::Vector3 point1, point2, point3;
         auto it = local_plan.begin();
@@ -296,8 +276,55 @@ namespace psaf_local_planner
         }
 
         ROS_INFO("curvature: %f; distance %f", sum_angle, sum_distance);
-        auto fact = boost::algorithm::clamp(sum_angle * 20 / sum_distance, 0, 1);
+        auto fact = boost::algorithm::clamp(sum_angle * 10 / sum_distance, 0, 1);
         target_velocity = (max_velocity - fact * (max_velocity - min_velocity));
+    }
 
+    /**
+     * Returns false if it failed because something is close; true if out of bounds
+     */
+    bool PsafLocalPlanner::check_distance_forward(double& distance)
+    {
+        tf2::Vector3 last_point, current_point, acutal_point;
+        tf2::convert(current_pose.pose.position, last_point);
+        acutal_point = last_point;
+
+        double sum_distance = 0;
+        int count_error = 0;
+
+        for (auto it = local_plan.begin(); it != local_plan.end(); ++it)
+        {
+            const geometry_msgs::PoseStamped &w = *it;
+            tf2::convert(w.pose.position, current_point);
+            sum_distance += tf2::tf2Distance(last_point, current_point);
+
+            unsigned int cx, cy;
+            if (costmap_ros->getCostmap()->worldToMap(current_point.getX(), current_point.getY(), cx, cy))
+            {
+                unsigned char cost = costmap_ros->getCostmap()->getCost(cx, cy);
+
+                if (cost > 128 && cost != costmap_2d::NO_INFORMATION)
+                {
+                    count_error += 1;
+                    if (count_error >= 2)
+                    {
+                        ROS_WARN("cost is %i at %f %f", cost, current_point.getX() - acutal_point.getX(), current_point.getY() - acutal_point.getY());                
+                        distance = sum_distance;
+                        return false;
+                    }
+                }
+                else
+                {
+                    count_error = 0;
+                }
+            }
+
+            last_point = current_point;
+        }
+
+        
+
+        distance = sum_distance;
+        return true;
     }
 } // namespace psaf_local_planner

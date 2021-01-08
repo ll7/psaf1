@@ -3,6 +3,7 @@
 #include <ros/ros.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <costmap_2d/costmap_2d.h>
+ #include <costmap_2d/cost_values.h>
 #include <nav_core/base_local_planner.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
@@ -61,8 +62,8 @@ namespace psaf_local_planner {
             void fillPointBuffer();
             
             void compute_magnitude_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location, float &magnitude, float &angle);
-            void estimate_curvature(geometry_msgs::Pose current_location);
-
+            void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
+            bool check_distance_forward(double& distance);
 
             costmap_2d::Costmap2DROS* costmap_ros;
             base_local_planner::LocalPlannerUtil planner_util;

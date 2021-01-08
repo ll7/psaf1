@@ -71,6 +71,7 @@ class TrajectoryFollower(object):
         self.current_orientation = odom.pose.pose.orientation
         self.current_speed = odom.twist.twist.linear.x
 
+    # c++: computeVelocityCommands
     def step(self):
         self.del_old_points()
 

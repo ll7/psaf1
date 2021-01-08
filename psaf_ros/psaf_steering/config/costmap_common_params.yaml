@@ -9,13 +9,10 @@ plugins:
  - {name: inflation, type: "costmap_2d::InflationLayer"}
 
 
-
-
-
 obstacle:
   track_unknown_space: true
-  observation_sources: lidar #radar
-  lidar: {sensor_frame: ego_vehicle/lidar/lidar1, data_type: PointCloud2, topic: /carla/ego_vehicle/processed_semantic_lidar/lidar1/point_cloud, marking: true, clearing: true, min_obstacle_height: -10}
+  observation_sources: lidar # radar
+  lidar: {sensor_frame: ego_vehicle, data_type: PointCloud2, topic: /carla/ego_vehicle/processed_semantic_lidar/lidar1/point_cloud, marking: true, clearing: true, min_obstacle_height: -10}
   # radar: {sensor_frame: ego_vehicle, data_type: PointCloud2, topic: /carla/ego_vehicle/radar/front/radar_points, marking: true, clearing: true, min_obstacle_height: 1}
 
 
