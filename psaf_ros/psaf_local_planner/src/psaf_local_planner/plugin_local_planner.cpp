@@ -267,25 +267,36 @@ namespace psaf_local_planner
 
     void PsafLocalPlanner::estimate_curvature(geometry_msgs::Pose current_location)
     {
-        tf2::Transform last_transform;
-        tf2::convert(current_location, last_transform);
-        double sum_distance = 0;
+        tf2::Vector3 point1, point2, point3;
+        auto it = local_plan.begin();
+
+        tf2::convert(current_location.position, point1);
+        const geometry_msgs::PoseStamped &w = *it;
+        tf2::convert(w.pose.position, point2);
+
+        ++it;
+        double sum_distance = tf2::tf2Distance2(point1, point2);
         double sum_angle = 0;
 
-        for (auto it = local_plan.begin(); it != local_plan.end(); ++it)
+        for (; it != local_plan.end(); ++it)
         {
             const geometry_msgs::PoseStamped &w = *it;
-            tf2::Transform current_transform;
-            tf2::convert(w.pose, current_transform);
+            tf2::convert(w.pose.position, point3);
 
-            sum_distance += tf2::tf2Distance(last_transform.getOrigin(), current_transform.getOrigin());
-            sum_angle += abs(tf2::angle(last_transform.getRotation(), current_transform.getRotation()));
+            sum_distance += tf2::tf2Distance(point2, point3);
+            auto v1 = (point2 - point1);
+            auto v2 = (point3 - point2);
 
-            last_transform = current_transform;   
+            double angle = v1.angle(v2);
+            if (isfinite(angle))
+                sum_angle += abs(angle);
+
+            point1 = point2;
+            point2 = point3;
         }
 
         ROS_INFO("curvature: %f; distance %f", sum_angle, sum_distance);
-        auto fact = boost::algorithm::clamp(sum_angle * 2 / sum_distance, 0, 1);
+        auto fact = boost::algorithm::clamp(sum_angle * 20 / sum_distance, 0, 1);
         target_velocity = (max_velocity - fact * (max_velocity - min_velocity));
 
     }

@@ -132,16 +132,16 @@ Visualization Manager:
         Local Map: true
         Local Path: true
         Marker: true
+        MarkerArray: true
         Odometry: true
         Semantic: true
         Value: true
-        View: true
       Zoom Factor: 1
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 4.340476036071777
-        Min Value: 0
+        Max Value: 4.193597316741943
+        Min Value: -9.5367431640625e-07
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -276,6 +276,15 @@ Visualization Manager:
       Topic: /move_base/current_goal
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /move_base/PsafLocalPlanner/debug
+      Name: MarkerArray
+      Namespaces:
+        current: true
+        target: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -304,7 +313,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 83.27095031738281
+      Distance: 49.33198547363281
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
