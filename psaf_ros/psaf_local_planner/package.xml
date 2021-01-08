@@ -55,14 +55,14 @@
   <build_depend>carla_msgs</build_depend>
   <build_depend>psaf_abstraction_layer</build_depend>
   <build_depend>move_base</build_depend>
-  
+
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>carla_msgs</build_export_depend>
   <build_export_depend>psaf_abstraction_layer</build_export_depend>
   <build_export_depend>move_base</build_export_depend>
-  
+
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
@@ -74,11 +74,11 @@
   <build_depend>costmap_2d</build_depend>
   <build_export_depend>costmap_2d</build_export_depend>
   <exec_depend>costmap_2d</exec_depend>
-  
+
   <build_depend>map_server</build_depend>
   <build_export_depend>map_server</build_export_depend>
   <exec_depend>map_server</exec_depend>
-  
+
   <build_depend>teb_local_planner</build_depend>
   <build_export_depend>teb_local_planner</build_export_depend>
   <exec_depend>teb_local_planner</exec_depend>
@@ -90,16 +90,20 @@
   <build_depend>costmap_converter</build_depend>
   <build_export_depend>costmap_converter</build_export_depend>
   <exec_depend>costmap_converter</exec_depend>
-  
-    <build_depend>nav_core</build_depend>
-    <build_export_depend>nav_core</build_export_depend>
-    <exec_depend>nav_core</exec_depend>
+
+  <build_depend>nav_core</build_depend>
+  <build_export_depend>nav_core</build_export_depend>
+  <exec_depend>nav_core</exec_depend>
 
 
-    <build_depend>tf2_geometry_msgs</build_depend>
-    <build_export_depend>tf2_geometry_msgs</build_export_depend>
-    <exec_depend>tf2_geometry_msgs</exec_depend>
-    
+  <build_depend>tf2_geometry_msgs</build_depend>
+  <build_export_depend>tf2_geometry_msgs</build_export_depend>
+  <exec_depend>tf2_geometry_msgs</exec_depend>
+
+  <build_depend>visualization_msgs</build_depend>
+  <build_export_depend>visualization_msgs</build_export_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

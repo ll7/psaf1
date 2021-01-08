@@ -18,6 +18,10 @@
 #include <base_local_planner/odometry_helper_ros.h>
 #include <base_local_planner/local_planner_util.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/utils.h>
+#include <visualization_msgs/MarkerArray.h>
+#include <visualization_msgs/Marker.h>
+
 
 namespace psaf_local_planner {
     class PsafLocalPlanner : public nav_core::BaseLocalPlanner {
@@ -57,13 +61,14 @@ namespace psaf_local_planner {
             void fillPointBuffer();
             
             void compute_magnitude_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location, float &magnitude, float &angle);
-
+            void estimate_curvature(geometry_msgs::Pose current_location);
 
 
             costmap_2d::Costmap2DROS* costmap_ros;
             base_local_planner::LocalPlannerUtil planner_util;
 
             ros::Publisher g_plan_pub, l_plan_pub;
+            ros::Publisher debug_pub;
             ros::Subscriber vel_sub;
 
             geometry_msgs::PoseStamped current_pose;
@@ -75,6 +80,24 @@ namespace psaf_local_planner {
             int bufferSize;
 
             bool initialized;
+
+            /** Actual Max velocity that is allowed to be driven */
+            double max_velocity;
+            
+            /** min speed that the car should drive at even through sharp angles */
+            double min_velocity;
+
+            /** the velocity that is targeted; influenced by the angle of the road etc. */
+            double target_velocity;
+            
+            /** All points closer than this value are getting rejected */
+            double closest_point_local_plan;
+            
+            /** floor (target_velocity / lookahead_factor) == index of the point to the use in the local planner list; lower is more points */
+            double lookahead_factor;
+
+            /** set to true when the goal is reached*/
+            bool goal_reached;
 
     };
 };
