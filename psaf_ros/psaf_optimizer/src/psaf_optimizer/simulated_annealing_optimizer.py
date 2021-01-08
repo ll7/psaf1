@@ -3,6 +3,8 @@
 import math
 import numpy as np
 import random
+import datetime
+import pathlib
 from psaf_scenario.scenario_runner_commonroad import ScenarioRunner
 import rospy
 
@@ -10,7 +12,7 @@ import rospy
 class SimulatedAnnealingOptimizer:
 
     def __init__(self, step: float, alpha: float, parameter_range: list, it_count: int,
-                 time_weight: float, quality_weight: float, file: str):
+                 time_weight: float, quality_weight: float):
         """
 
         :param step: step size for exploring
@@ -25,6 +27,8 @@ class SimulatedAnnealingOptimizer:
         # TODO: Add default values for parameters
         """
         self.scenario_runner = ScenarioRunner(init_rospy=True)
+        self.logfile = None
+        self.init_logfile()
         self.step = step
         self.alpha = alpha
         self.parameter_range = parameter_range
@@ -36,7 +40,7 @@ class SimulatedAnnealingOptimizer:
         sample_count = self.scenario_runner.sample_cnt
 
         # write results to file
-        self._write_results_to_file(file, best_result, best_parameter_set, sample_count)
+        self._write_results_to_file(best_result, best_parameter_set, sample_count)
 
     def _set_params(self, params: np.ndarray):
         """
@@ -56,7 +60,7 @@ class SimulatedAnnealingOptimizer:
         """
         f = open(file, "w")
         f.write("Sample count: " + str(sample_count))
-        f.write("Best result: "+str(best_result))
+        f.write("Best result: " + str(best_result))
         best_param_str = "["
         for param in best_params:
             best_param_str += str(param) + ","
@@ -90,7 +94,6 @@ class SimulatedAnnealingOptimizer:
         for i in range(0, self.parameter_count):
             params.append(random.uniform(self.parameter_range[i][0], self.parameter_range[i][1]))
 
-        print("Hallo Tobi")
         return np.array(params)
 
     def find_optimum(self, it_count, time_weight: float, quality_weight: float):
@@ -102,11 +105,10 @@ class SimulatedAnnealingOptimizer:
         :param quality_weight: weight of the quality value
         :return: best result
         """
-        current_index = []
-        best_result = []
         current_index = self._generate_initial_parameter_set()
         best_index = current_index.copy()
-        best_value = float(self._run_scenario(params=best_index, time_weight=time_weight, quality_weight=quality_weight))
+        best_value = float(
+            self._run_scenario(params=best_index, time_weight=time_weight, quality_weight=quality_weight))
         current_value = best_value  # init
         for i in range(0, it_count):
             T = self._cooling_function(it_count, i)  # a
@@ -125,8 +127,9 @@ class SimulatedAnnealingOptimizer:
             if current_value < best_value:
                 best_index = current_index
                 best_value = current_value
-            best_result = best_value
-        return best_result, best_index
+            self.log_to_file(current_value=current_value, current_index=current_index, best_value=best_value, best_index=best_index)
+
+        return best_value, best_index
 
     def _cooling_function(self, i_max, i):
         return i_max * (self.alpha ** i)
@@ -146,6 +149,37 @@ class SimulatedAnnealingOptimizer:
             else:
                 neighbour_index[i] = index[i] + d
         return neighbour_index
+
+    def init_logfile(self):
+        """
+        creates .txt for logging the values which are getting optimized
+        """
+
+        current_date_and_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # get destination path for the log file
+        logs_path = str(pathlib.Path(__file__).parent.absolute().parents[1]) + "/logs"
+        # create /logs folder if not already existant
+        pathlib.Path(logs_path).mkdir(parents=False, exist_ok=True)
+        # create name and file
+        self.logfile = logs_path + "/" + str(current_date_and_time) + ".txt"
+        file = open(self.logfile, 'w')
+        # write header for data
+        file.write("Timestamp, Current Value, Current Index, Best Value, Best Index \n")
+        file.close()
+
+    def log_to_file(self, current_value, current_index, best_value, best_index):
+        """
+        :param current_value: value of the current iteration
+        :param current_index: parameters of the current iteration
+        :param best_value: value of the best iteration
+        :param best_index: parameters of the best iteration
+        :return:
+        """
+        current_date_and_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        file = open(self.logfile, 'a')
+        file.write(current_date_and_time + "," + str(current_value) + "," + str(current_index) + "," +
+                   str(best_value) + "," + str(best_index) + "\n")
+        file.close()
 
 
 def main():
