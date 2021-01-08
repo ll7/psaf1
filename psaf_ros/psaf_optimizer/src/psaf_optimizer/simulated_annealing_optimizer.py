@@ -7,15 +7,25 @@ import datetime
 import pathlib
 from psaf_scenario.scenario_runner_commonroad import ScenarioRunner
 import rospy
+import sys
+from dynamic_reconfigure import client
+import dynamic_reconfigure
+from enum import Enum
+
+
+class ParameterType(Enum):
+    speed = 0
+    acceleration = 1
+    steering = 2
 
 
 class SimulatedAnnealingOptimizer:
 
     def __init__(self, step: float, alpha: float, parameter_range: list, it_count: int,
-                 time_weight: float, quality_weight: float):
+                 time_weight: float, quality_weight: float, param_enum: ParameterType):
         """
 
-        :param step: step size for exploring
+        :param step: step size in percent of total value range, given in parameter_range
         :param alpha: parameter for the cooling function
         :param parameter_range: list of tuples for each parameter, which defines its range:
                                 e.g. parameter_range = [[1, 2], [0, 100]] means that there are two parameters
@@ -23,8 +33,6 @@ class SimulatedAnnealingOptimizer:
         :param it_count: number of iterations to search the optimum
         :param time_weight: weight of the duration time
         :param quality_weight: weight of the quality value
-        :param file: file path and name to which the results shall be written
-        # TODO: Add default values for parameters
         """
 
         self.scenario_runner = ScenarioRunner(init_rospy=True)
@@ -34,6 +42,7 @@ class SimulatedAnnealingOptimizer:
         self.alpha = alpha
         self.parameter_range = parameter_range
         self.parameter_count = len(self.parameter_range)
+        self.param_enum = param_enum
 
         # start
         best_result, best_parameter_set = self.find_optimum(it_count, time_weight=time_weight,
@@ -43,13 +52,49 @@ class SimulatedAnnealingOptimizer:
         # write results to file
         self._write_results_to_file(best_result, best_parameter_set, sample_count)
 
+    def _check_parameter_validity(self):
+        """
+        Check if the given parameters match certain conditions.
+        Has to be adjusted for every new parameter set, which is set to be optimized!
+        :return: bool
+        """
+        if self.param_enum is ParameterType.speed or self.param_enum is ParameterType.acceleration:
+            if len(self.parameter_range) != 3:
+                return False
+
+            for par_range in self.parameter_range:
+                if par_range[0] < 0 or par_range[1] > 1:
+                    return False
+            return True
+
+        elif self.param_enum is ParameterType.steering:
+            pass
+        else:
+            pass
+
+        return False
+
     def _set_params(self, params: np.ndarray):
         """
         Implements the functionality to set run parameters of the given problem space
         :param params: list of parameters
         """
-        # TODO: Implement :D
-        pass
+        if self.param_enum is ParameterType.speed or self.param_enum is ParameterType.acceleration:
+            self._set_params_pid(params)
+        elif self.param_enum is ParameterType.steering:
+            pass
+        else:
+            sys.exit(1)
+
+    def _set_params_pid(self, params: np.ndarray):
+        try:
+            rec_client = dynamic_reconfigure.client.Client('/carla/ego_vehicle/ackermann_control', timeout=10)
+            if self.param_enum is ParameterType.speed:
+                rec_client.update_configuration({'speed_Kp': params[0], 'speed_Ki': params[1], 'speed_Kd': params[2]})
+            else:
+                rec_client.update_configuration({'accel_Kp': params[0], 'accel_Ki': params[1], 'accel_Kd': params[2]})
+        except rospy.ROSException as e:
+            print("Service not available: %s" % str(e))
 
     def _write_results_to_file(self, best_result: float, best_params: list, sample_count: int):
         """
@@ -60,7 +105,7 @@ class SimulatedAnnealingOptimizer:
         """
         f = open(self.logfile + "_results.txt", "w")
         f.write("Sample count: " + str(sample_count) + "\n")
-        f.write("Best result: " + str(best_result)+ "\n")
+        f.write("Best result: " + str(best_result) + "\n")
         best_param_str = "["
         for param in best_params:
             best_param_str += str(param) + ","
@@ -107,8 +152,7 @@ class SimulatedAnnealingOptimizer:
         """
         current_index = self._generate_initial_parameter_set()
         best_index = current_index.copy()
-        best_value = float(
-            self._run_scenario(params=best_index, time_weight=time_weight, quality_weight=quality_weight))
+        best_value = float(self._run_scenario(params=best_index, time_weight=time_weight, quality_weight=quality_weight))
         current_value = best_value  # init
         for i in range(0, it_count):
             T = self._cooling_function(it_count, i)  # a
@@ -158,7 +202,7 @@ class SimulatedAnnealingOptimizer:
         current_date_and_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # get destination path for the log file
         logs_path = str(pathlib.Path(__file__).parent.absolute().parents[1]) + "/logs"
-        # create /logs folder if not already existant
+        # create /logs folder if not already existent
         pathlib.Path(logs_path).mkdir(parents=False, exist_ok=True)
         # create name and file
         self.logfile = logs_path + "/" + str(current_date_and_time)
@@ -176,15 +220,18 @@ class SimulatedAnnealingOptimizer:
         :return:
         """
         current_date_and_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        file = open(self.logfile +".txt", 'a')
+        file = open(self.logfile + ".txt", 'a')
         file.write(current_date_and_time + "," + str(current_value) + "," + str(current_index) + "," +
                    str(best_value) + "," + str(best_index) + "\n")
         file.close()
 
 
 def main():
-    # TODO
-    pass
+    # pid setup
+    param_range = [[0, 1], [0, 1], [0, 1]]
+
+    optimizer = SimulatedAnnealingOptimizer(step=0.05, alpha=0.5, parameter_range=param_range,
+                                            it_count=3, quality_weight=1, time_weight=1, param_enum=ParameterType.speed)
 
 
 if __name__ == "__main__":
