@@ -34,7 +34,6 @@ class SimulatedAnnealingOptimizer:
         :param time_weight: weight of the duration time
         :param quality_weight: weight of the quality value
         """
-
         self.scenario_runner = ScenarioRunner(init_rospy=True)
         self.logfile = None
         self.init_logfile()
@@ -42,7 +41,11 @@ class SimulatedAnnealingOptimizer:
         self.alpha = alpha
         self.parameter_range = parameter_range
         self.parameter_count = len(self.parameter_range)
-        self.param_enum = param_enum
+        self.param_enum: ParameterType = param_enum
+
+        if not self._check_parameter_validity():
+            rospy.logerr("The given parameter set is not valid")
+            sys.exit(1)
 
         # start
         best_result, best_parameter_set = self.find_optimum(it_count, time_weight=time_weight,
@@ -159,6 +162,7 @@ class SimulatedAnnealingOptimizer:
             neighbour_index = self._get_random_neighbour(current_index)  # b
             neighbour_value = float(self._run_scenario(params=neighbour_index, time_weight=time_weight,
                                                        quality_weight=quality_weight))
+            rospy.sleep(10) # sleep for 10 seconds to ensure, that the car has stopped
             if neighbour_value <= current_value:
                 current_index = neighbour_index.copy()  # c1
                 current_value = neighbour_value
