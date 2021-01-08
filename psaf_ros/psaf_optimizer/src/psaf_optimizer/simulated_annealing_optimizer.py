@@ -50,15 +50,14 @@ class SimulatedAnnealingOptimizer:
         # TODO: Implement :D
         pass
 
-    def _write_results_to_file(self, file: str, best_result: float, best_params: list, sample_count: int):
+    def _write_results_to_file(self, best_result: float, best_params: list, sample_count: int):
         """
         Write results to file
-        :param file: file path and name
         :param best_result: best received result (calculated by evaluation metric)
         :param best_params: best received set of parameters
         :param sample_count: used sample count of the scenario runner
         """
-        f = open(file, "w")
+        f = open(self.logfile + "_results.txt", "w")
         f.write("Sample count: " + str(sample_count))
         f.write("Best result: " + str(best_result))
         best_param_str = "["
@@ -161,8 +160,8 @@ class SimulatedAnnealingOptimizer:
         # create /logs folder if not already existant
         pathlib.Path(logs_path).mkdir(parents=False, exist_ok=True)
         # create name and file
-        self.logfile = logs_path + "/" + str(current_date_and_time) + ".txt"
-        file = open(self.logfile, 'w')
+        self.logfile = logs_path + "/" + str(current_date_and_time)
+        file = open(self.logfile + ".txt", 'w')
         # write header for data
         file.write("Timestamp, Current Value, Current Index, Best Value, Best Index \n")
         file.close()
