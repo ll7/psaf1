@@ -21,7 +21,7 @@ from rosbag import ROSBagException
 
 class ScenarioRunner:
     def __init__(self, route_file: str = "path.debugpath", init_rospy: bool = False, timeout: int = -1,
-                 radius: int = 5, sample_cnt: int = 600):
+                 radius: int = 5, sample_cnt: int = 600, height: float = 10):
         if init_rospy:
             rospy.init_node('ScenarioRunner', anonymous=True)
         self.timeout: int = timeout
@@ -43,6 +43,7 @@ class ScenarioRunner:
         self.position_subscriber = rospy.Subscriber('/carla/ego_vehicle/odometry', Odometry, self._position_listener)
         self.finish_time_stamp: float = -1.0
         self.start_time_stamp: float = -1.0
+        self.height = height
         self.rate = rospy.Rate(10)  # 10hz
 
     def __del__(self):
@@ -61,7 +62,7 @@ class ScenarioRunner:
         rospy.loginfo("ScenarioRunner: Init route")
         self._unpack_route()
         self._start.pose = self.planned_route[0].pose
-        self._start.pose.position.z = 10
+        self._start.pose.position.z = self.height
         self._goal = self.planned_route[len(self.planned_route) - 1]
         # Move path file to the tmp folder so that the movebase can execute the global plan
         shutil.copyfile(self.route_file, "/tmp/path.path")
@@ -296,12 +297,13 @@ class ScenarioRunner:
 
 
 def main():
-
-    timout = rospy.get_param('~timout', -1.0)
-    radius = rospy.get_param('~radius', 5)
-    sample_cnt = rospy.get_param('~sample_cnt', 100)
-    file = rospy.get_param('~file', 'path.debugpath')
-    scenario = ScenarioRunner(init_rospy=True, timeout=timout, radius=radius, route_file=file, sample_cnt=sample_cnt)
+    print(rospy.get_name())
+    timout = rospy.get_param('/scenario_runner_commonroad/timout', -1.0)
+    radius = rospy.get_param('/scenario_runner_commonroad/radius', 5)
+    sample_cnt = rospy.get_param('/scenario_runner_commonroad/sample_cnt', 100)
+    file = rospy.get_param('/scenario_runner_commonroad/file', 'path.debugpath')
+    height = rospy.get_param('/scenario_runner_commonroad/height', 10)
+    scenario = ScenarioRunner(init_rospy=True, timeout=timout, radius=radius, route_file=file, sample_cnt=sample_cnt, height=height)
     scenario.init_scenario()
     scenario.execute_scenario()
     scenario.evaluate_route_quality_cos()
