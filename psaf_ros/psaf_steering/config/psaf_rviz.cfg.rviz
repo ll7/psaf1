@@ -30,7 +30,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Lidar
+    SyncSource: ""
   - Class: rviz/Displays
     Help Height: 138
     Name: Displays
@@ -281,8 +281,7 @@ Visualization Manager:
       Marker Topic: /move_base/PsafLocalPlanner/debug
       Name: MarkerArray
       Namespaces:
-        current: true
-        target: true
+        {}
       Queue Size: 100
       Value: true
   Enabled: true

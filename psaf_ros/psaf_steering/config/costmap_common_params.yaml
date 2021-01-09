@@ -2,7 +2,7 @@ obstacle_range: 40.0
 raytrace_range: 40.0
 footprint: [[-2, -1], [-2, 1], [2, 1], [2, -1]]
 #robot_radius: ir_of_robot
-inflation_radius: 0.55
+inflation_radius: 0.5
 
 plugins:
  - {name: obstacle, type: "costmap_2d::ObstacleLayer"}
@@ -10,10 +10,13 @@ plugins:
 
 
 obstacle:
-  track_unknown_space: true
-  observation_sources: lidar # radar
-  lidar: {sensor_frame: ego_vehicle, data_type: PointCloud2, topic: /carla/ego_vehicle/processed_semantic_lidar/lidar1/point_cloud, marking: true, clearing: true, min_obstacle_height: -10}
-  # radar: {sensor_frame: ego_vehicle, data_type: PointCloud2, topic: /carla/ego_vehicle/radar/front/radar_points, marking: true, clearing: true, min_obstacle_height: 1}
+  track_unknown_space: false
+  footprint_clearing_enabled: true
+  observation_sources: lidar #radar
+  combination_method: 0
+  max_obstacle_height: 20
+  lidar: {sensor_frame: "", data_type: PointCloud2, topic: /carla/ego_vehicle/processed_semantic_lidar/lidar1/point_cloud, marking: true, clearing: true, min_obstacle_height: -10, observation_persistence: 0.0, max_obstacle_height: 20.0}
+  #radar: {sensor_frame: ego_vehicle, data_type: PointCloud2, topic: /carla/ego_vehicle/radar/front/radar_points, marking: true, clearing: true, min_obstacle_height: 1}
 
 
 #laser_scan_sensor: {sensor_frame: frame_name, data_type: LaserScan, topic: topic_name, marking: true, clearing: true}
