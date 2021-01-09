@@ -318,12 +318,13 @@ class ScenarioRunner:
 
 def main():
     print(rospy.get_name())
-    timout = rospy.get_param('/scenario_runner_commonroad/timout', -1.0)
+    timeout = rospy.get_param('/scenario_runner_commonroad/timeout', -1.0)
     radius = rospy.get_param('/scenario_runner_commonroad/radius', 5)
     sample_cnt = rospy.get_param('/scenario_runner_commonroad/sample_cnt', 100)
     file = rospy.get_param('/scenario_runner_commonroad/file', 'path.debugpath')
     height = rospy.get_param('/scenario_runner_commonroad/height', 10)
-    scenario = ScenarioRunner(init_rospy=True, timeout=timout, radius=radius, route_file=file, sample_cnt=sample_cnt, height=height)
+    scenario = ScenarioRunner(init_rospy=True, timeout=timeout, radius=radius, route_file=file,
+                              sample_cnt=sample_cnt, height=height)
     scenario.init_scenario()
     scenario.execute_scenario()
     scenario.evaluate_route_quality_cos()

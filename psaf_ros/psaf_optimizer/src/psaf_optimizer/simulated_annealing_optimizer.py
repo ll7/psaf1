@@ -255,7 +255,7 @@ def main():
     height = rospy.get_param('~height', 0)
     sample_count = rospy.get_param('~sample_cnt', 100)
     file = rospy.get_param('~file', "minimal_example.debugpath")
-    timeout = rospy.get_param('~timeout', "-1")
+    timeout = rospy.get_param('~timeout', -1)
 
     optimizer = SimulatedAnnealingOptimizer(step=step, alpha=alpha, parameter_range=parameter_range, it_count=it_count,
                                             quality_weight=quality_weight, time_weight=time_weight,
