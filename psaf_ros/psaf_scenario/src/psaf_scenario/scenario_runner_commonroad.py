@@ -80,18 +80,18 @@ class ScenarioRunner:
         :return:
         """
         # wait for the car to setup
-        timout_cnt = 0
-        first_timout: bool = True
+        timeout_cnt = 0
+        first_timeout: bool = True
         while abs(abs(self.current_pose.position.x) - abs(self.planned_route[0].pose.position.x)) > 0.0001 \
                 and abs(abs(self.current_pose.position.y) - abs(self.planned_route[0].pose.position.y)) > 0.0001:
             self.rate.sleep()
-            timout_cnt += 1
-            if timout_cnt == 100 and first_timout:
-                timout_cnt = 0
-                first_timout = False
-                rospy.loginfo("ScenarioRunner: Timout reached, respawning vehicle")
+            timeout_cnt += 1
+            if timeout_cnt == 100 and first_timeout:
+                timeout_cnt = 0
+                first_timeout = False
+                rospy.loginfo("ScenarioRunner: Timeout reached, respawning vehicle")
                 self._spawn_vehicle()
-            elif timout_cnt == 100:
+            elif timeout_cnt == 100:
                 rospy.loginfo("ScenarioRunner: execution failed")
                 sys.exit(1)
         # init timers
