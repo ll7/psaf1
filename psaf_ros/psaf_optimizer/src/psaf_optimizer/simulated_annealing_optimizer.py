@@ -23,7 +23,8 @@ class ParameterType(Enum):
 class SimulatedAnnealingOptimizer:
 
     def __init__(self, step: float, alpha: float, parameter_range: list, it_count: int, height: float,
-                 time_weight: float, quality_weight: float, param_enum: ParameterType, sample_count: int, file: str):
+                 time_weight: float, quality_weight: float, param_enum: ParameterType, sample_count: int, file: str,
+                 timeout: int):
         """
 
         :param step: step size in percent of total value range, given in parameter_range
@@ -37,8 +38,10 @@ class SimulatedAnnealingOptimizer:
         :param height: spawn height of car in the test scenario
         :param sample_count: sample count of scenario runner
         :param file: file of scenario runner
+        :param timeout: timeout of scenario runner
         """
-        self.scenario_runner = ScenarioRunner(init_rospy=False, height=height, sample_cnt=sample_count, route_file=file)
+        self.scenario_runner = ScenarioRunner(init_rospy=False, height=height, sample_cnt=sample_count, route_file=file,
+                                              timeout=timeout)
         self.logfile = None
         self.init_logfile()
         self.step = step
@@ -252,11 +255,12 @@ def main():
     height = rospy.get_param('~height', 0)
     sample_count = rospy.get_param('~sample_cnt', 100)
     file = rospy.get_param('~file', "minimal_example.debugpath")
+    timeout = rospy.get_param('~timeout', "-1")
 
     optimizer = SimulatedAnnealingOptimizer(step=step, alpha=alpha, parameter_range=parameter_range, it_count=it_count,
                                             quality_weight=quality_weight, time_weight=time_weight,
                                             param_enum=ParameterType[param_enum], height=height,
-                                            sample_count=sample_count, file=file)
+                                            sample_count=sample_count, file=file, timeout=timeout)
 
 
 if __name__ == "__main__":
