@@ -26,7 +26,7 @@ def cmd_callback(data: PointCloud2):
         # print("%f %f %f: %i", p[0], p[1], p[2], p[3], p[4], p[5])
         if (p[5] == 6 or p[5] == 7):
             # skip += 1
-            points.append([p[0], p[1], p[2] - 200])
+            points.append([p[0], p[1], -22])
             continue
         if (abs(p[0]) < 2.0 and abs(p[1]) < 1.0):
             skip2 += 2
