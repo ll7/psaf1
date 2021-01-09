@@ -4,7 +4,7 @@
     <param name="step" value="0.2" />
     <param name="alpha" value="0.99" />
     <param name="parameter_range" value="[[0, 1], [0, 1], [0, 1]]" />
-    <param name="it_count" value="100" />
+    <param name="it_count" value="600" />
     <param name="quality_weight" value="1" />
     <param name="time_weight" value="1" />
     <param name="param_enum" value="speed" />
