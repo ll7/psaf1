@@ -242,9 +242,14 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 pos: self._euclidean_2d_distance_from_to_position(pos, start_point)))
             real_end_index = path_poses.index(min(path_poses, key=lambda
                 pos: self._euclidean_2d_distance_from_to_position(pos, target_point)))
-            path_poses = path_poses[real_start_index:real_end_index]
+            path_poses_shortened = path_poses[real_start_index:real_end_index]
             rospy.loginfo("PathProvider: Computation of feasible path done")
 
+            # check if you are already closer to end point than to start point (rare condition)
+            if len(path_poses_shortened) == 0:
+                path_poses_shortened.append(path_poses[real_end_index])
+
+            path_poses = path_poses_shortened
         else:
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
             path_poses.append(self._get_pose_stamped(start_point, start_point))
