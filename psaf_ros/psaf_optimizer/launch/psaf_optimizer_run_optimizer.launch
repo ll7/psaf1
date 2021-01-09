@@ -4,10 +4,12 @@
     <param name="step" value="0.05" />
     <param name="alpha" value="0.5" />
     <param name="parameter_range" value="[[0, 1], [0, 1], [0, 1]]" />
-    <param name="it_count" value="700" />
+    <param name="it_count" value="100" />
     <param name="quality_weight" value="1" />
     <param name="time_weight" value="1" />
     <param name="param_enum" value="speed" />
     <param name="height" value="0" />
+    <param name="sample_cnt" value="100" />
+    <param name="file" value="minimal_example.debugpath" />
  </node>
 </launch>
