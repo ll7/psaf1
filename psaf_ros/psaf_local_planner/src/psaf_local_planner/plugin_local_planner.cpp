@@ -10,7 +10,7 @@ PLUGINLIB_EXPORT_CLASS(psaf_local_planner::PsafLocalPlanner, nav_core::BaseLocal
 namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), local_plan({}),
-                                           bufferSize(150), initialized(false), closest_point_local_plan(3),
+                                           bufferSize(1000), initialized(false), closest_point_local_plan(3),
                                            lookahead_factor(3), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false)
     {
