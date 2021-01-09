@@ -11,7 +11,7 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), local_plan({}),
                                            bufferSize(1000), initialized(false), closest_point_local_plan(3),
-                                           lookahead_factor(3), max_velocity(15), target_velocity(15), min_velocity(5),
+                                           lookahead_factor(2), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false)
     {
         std::cout << "Hi";
