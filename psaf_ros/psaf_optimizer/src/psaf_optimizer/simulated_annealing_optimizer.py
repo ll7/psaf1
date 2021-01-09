@@ -21,8 +21,8 @@ class ParameterType(Enum):
 
 class SimulatedAnnealingOptimizer:
 
-    def __init__(self, step: float, alpha: float, parameter_range: list, it_count: int,
-                 time_weight: float, quality_weight: float, param_enum: ParameterType, init_rospy: bool = False):
+    def __init__(self, step: float, alpha: float, parameter_range: list, it_count: int, height: float,
+                 time_weight: float, quality_weight: float, param_enum: ParameterType):
         """
 
         :param step: step size in percent of total value range, given in parameter_range
