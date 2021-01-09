@@ -3,11 +3,14 @@
 import rospy
 from carla_msgs.msg import CarlaEgoVehicleControl
 from ackermann_msgs.msg import AckermannDrive
-from psaf_abstraction_layer.GPS import GPS_Sensor
-from psaf_abstraction_layer.VehicleStatus import VehicleStatus,VehicleStatusProvider
+from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
+from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 
 
 def publish(publisher, message):
+    rate = rospy.Rate(10)
+    while publisher.get_num_connections() == 0:
+        rate.sleep()
     publisher.publish(message)
 
 
@@ -16,7 +19,7 @@ class AckermannControl:
     Wrapper for Ackermann controller of message of carla
     """
 
-    def __init__(self, role_name: str):
+    def __init__(self, role_name: str = "ego_vehicle"):
         self.pub_ackermann = rospy.Publisher('/carla/{}/ackermann_cmd'.format(role_name), AckermannDrive, queue_size=1)
         self.message = AckermannDrive()
 

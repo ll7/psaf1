@@ -1,0 +1,10 @@
+<!-- -->
+<launch>
+   <node pkg="psaf_scenario" type="scenario_runner_commonroad.py" name="scenario_runner_commonroad" output="screen">
+    <param name="file" value="path.debugpath" />
+    <param name="timout" value="-1" />
+    <param name="sample_cnt" value="100" />
+    <param name="radius" value="5" />
+    <param name="height" value="0" />
+ </node>
+</launch>

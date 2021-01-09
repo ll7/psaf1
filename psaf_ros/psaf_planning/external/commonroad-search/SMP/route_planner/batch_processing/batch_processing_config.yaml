@@ -1,0 +1,57 @@
+# logging
+log_to_file: True
+log_file_dir: ../outputs/logs/
+log_file_name: new_ccosy
+add_timestamp_to_log_file: True
+
+# input directory of your intended CommonRoad scenarios
+input_path: ../scenarios/
+# output directory for produced figs
+output_path: ../outputs/figs/
+# whether to produce figures of planned routes
+save_to_fig: True
+# overwrite solution file if it already exists
+overwrite: True
+
+
+# the list of scenarios in form "- scenario_id"
+# if it is empty then run all scenarios
+scenarios_to_run:
+#  - CHN_Cho-2_2_T-1
+#  - CHN_Cho-2_3_T-1
+#  - CHN_Cho-2_5_T-1
+#  - CHN_Sha-14_1_T-1
+#  - CHN_Sha-15_1_T-1
+#  - CHN_Sha-15_3_T-1
+#  - CHN_Sha-2_5_T-1
+#  - DEU_Gar-3_4_T-1
+#  - DEU_Muc-17_1_T-1
+#  - DEU_Muc-17_2_T-1
+#  - DEU_Muc-2_1_T-1
+#  - DEU_Muc-30_1_S-1
+
+#  - USA_US101-2_3_T-1
+#  - DEU_Muc-1_2_T-1
+#  - CHN_Sha-10_1_T-1
+#  - CHN_Sha-13_1_T-1
+#  - USA_US101-13_1_T-1
+#  - USA_Lanker-1_2_T-15
+#  - USA_Lanker-2_18_T-1
+#  - USA_US101-13_1_T-1
+  #  - DEU_Hhr-1_1
+  #  - USA_Lanker-1_12_T-1
+  #  - USA_Lanker-1_4_T-1
+  #  - USA_Lanker-1_7_T-1
+  #  - USA_Lanker-1_8_T-1
+  #  - USA_Lanker-1_9_T-1
+  #  - USA_Lanker-2_26_T-1
+  #  - USA_Peach-4_8_T-1
+#  - USA_Peach-1_1_T-1
+#  - DEU_Gar-3_2_T-1
+
+scenarios_to_skip:
+#  - DEU_Muc-29_1_T-1
+#  - USA_US101-13_1_T-1
+#  - USA_Peach-4_2_T-1
+#  - USA_US101-12_2_T-1
+#  - USA_Peach-4_7_T-1
