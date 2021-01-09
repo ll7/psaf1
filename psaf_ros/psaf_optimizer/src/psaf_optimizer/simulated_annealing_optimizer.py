@@ -242,13 +242,13 @@ class SimulatedAnnealingOptimizer:
 
 def main():
     # pid setup
-    param_range = [[0, 1], [0, 1], [0, 1]]
+    param_range = '[[0, 1], [0, 1], [0, 1]]'
     rospy.init_node('SimulatedAnnealingOptimizer', anonymous=True)
     step = rospy.get_param('~step', 0.05)
     alpha = rospy.get_param('~alpha', 0.5)
     parameter_range = rospy.get_param('~parameter_range', param_range)
     parameter_range = json.loads(parameter_range) # convert string to list
-    it_count = rospy.get_param('~it_count', 0.5)
+    it_count = rospy.get_param('~it_count', 100)
     quality_weight = rospy.get_param('~quality_weight', 1)
     time_weight = rospy.get_param('~time_weight', 1)
     param_enum = rospy.get_param('~param_enum', 'speed')
