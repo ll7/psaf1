@@ -119,6 +119,7 @@ class ScenarioRunner:
             rospy.loginfo("ScenarioRunner: Finished scenario successfully in {} s".format(
                 str(self.finish_time_stamp - self.start_time_stamp)))
         else:
+            self.finish_time_stamp = float("inf")
             rospy.loginfo("ScenarioRunner: Scenario failed")
 
     def plot_routes(self):

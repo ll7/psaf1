@@ -33,10 +33,11 @@ class SimulatedAnnealingOptimizer:
         :param it_count: number of iterations to search the optimum
         :param time_weight: weight of the duration time
         :param quality_weight: weight of the quality value
+        :param height: spawn height of car in the test scenario
         """
-        if init_rospy:
-            rospy.init_node('SimulatedAnnealingOptimizer', anonymous=True)
-        self.scenario_runner = ScenarioRunner(init_rospy=False, height=0)
+        print(str(parameter_range))
+        print(str(it_count))
+        self.scenario_runner = ScenarioRunner(init_rospy=False, height=height)
         self.logfile = None
         self.init_logfile()
         self.step = step
@@ -159,24 +160,28 @@ class SimulatedAnnealingOptimizer:
         best_index = current_index.copy()
         best_value = float(self._run_scenario(params=best_index, time_weight=time_weight, quality_weight=quality_weight))
         current_value = best_value  # init
+        # start iterating
         for i in range(0, it_count):
-            T = self._cooling_function(it_count, i)  # a
-            neighbour_index = self._get_random_neighbour(current_index)  # b
+            T = self._cooling_function(it_count, i)  # calculate temperature of current iteration
+            neighbour_index = self._get_random_neighbour(current_index)  # get a new index
             neighbour_value = float(self._run_scenario(params=neighbour_index, time_weight=time_weight,
-                                                       quality_weight=quality_weight))
-            if neighbour_value <= current_value:
-                current_index = neighbour_index.copy()  # c1
+                                                       quality_weight=quality_weight))  # evaluate that index
+            if neighbour_value <= current_value:  # compare these indices and replace with optimum
+                current_index = neighbour_index.copy()
                 current_value = neighbour_value
             else:
-                tmp = random.uniform(0, 1)
+                tmp = random.uniform(0, 1)  # replace index anyway with probability p
                 probability = self._acceptance_probability(neighbour_value - current_value, T)
-                if tmp > probability:
-                    current_index = neighbour_index.copy()  # c2
+                if tmp < probability:
+                    current_index = neighbour_index.copy()
                     current_value = neighbour_value
-            if current_value < best_value:
+
+            if current_value < best_value:  # save best
                 best_index = current_index
                 best_value = current_value
-            self.log_to_file(current_value=current_value, current_index=current_index, best_value=best_value, best_index=best_index)
+            # log iteration results
+            self.log_to_file(current_value=current_value, current_index=current_index, best_value=best_value,
+                             best_index=best_index)
 
         return best_value, best_index
 
@@ -184,19 +189,20 @@ class SimulatedAnnealingOptimizer:
         return i_max * (self.alpha ** i)
 
     def _acceptance_probability(self, delta, t):
-        # TODO: to be looked at
         return math.exp(delta / t * (-1))
 
     def _get_random_neighbour(self, index):
         neighbour_index = np.zeros(len(index))
-        for i in range(0, len(index)):
-            # do steps with step_size * (1% of total value range)
-            value_range = abs(self.parameter_range[i][1] - self.parameter_range[i][0]) * 0.01
+        i = 0
+        while i < len(index):
+            # do steps with step [%] * total value range
+            value_range = abs(self.parameter_range[i][1] - self.parameter_range[i][0])
             d = random.uniform(-value_range * self.step, value_range * self.step)
             if (index[i] + d > self.parameter_range[i][1]) or (index[i] + d < self.parameter_range[i][0]):
                 i = i - 1
             else:
                 neighbour_index[i] = index[i] + d
+            i += 1
         return neighbour_index
 
     def init_logfile(self):
@@ -234,9 +240,19 @@ class SimulatedAnnealingOptimizer:
 def main():
     # pid setup
     param_range = [[0, 1], [0, 1], [0, 1]]
+    rospy.init_node('SimulatedAnnealingOptimizer', anonymous=True)
+    step = rospy.get_param('~step', 0.05)
+    alpha = rospy.get_param('~alpha', 0.5)
+    parameter_range = rospy.get_param('~parameter_range', param_range)
+    it_count = rospy.get_param('~it_count', 0.5)
+    quality_weight = rospy.get_param('~quality_weight', 1)
+    time_weight = rospy.get_param('~time_weight', 1)
+    param_enum = rospy.get_param('~param_enum', ParameterType.speed)
+    height = rospy.get_param('~height', 0)
 
-    optimizer = SimulatedAnnealingOptimizer(step=0.05, alpha=0.5, parameter_range=param_range,
-                                            it_count=3, quality_weight=1, time_weight=1, param_enum=ParameterType.speed, init_rospy = True)
+    optimizer = SimulatedAnnealingOptimizer(step=step, alpha=alpha, parameter_range=parameter_range, it_count=it_count,
+                                            quality_weight=quality_weight, time_weight=time_weight,
+                                            param_enum=param_enum, height=height)
 
 
 if __name__ == "__main__":
