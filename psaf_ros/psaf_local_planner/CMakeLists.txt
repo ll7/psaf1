@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(psaf_steering)
+project(psaf_local_planner)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -26,6 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_geometry_msgs
   tf2_ros
+  visualization_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -107,7 +108,7 @@ find_package(catkin REQUIRED COMPONENTS
 #   cfg/DynReconf1.cfg
 #   cfg/DynReconf2.cfg
 # )
-generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
+#generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
 
 ###################################
 ## catkin specific configuration ##
@@ -119,8 +120,8 @@ generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  #INCLUDE_DIRS include
-  #LIBRARIES psaf_steering
+  INCLUDE_DIRS include
+  LIBRARIES psaf_local_planner
   CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
 )
@@ -137,8 +138,8 @@ include_directories(
 )
 
 ## Declare a C++ library
-# add_library(psaf_local_planner src/psaf_local_planner/plugin_local_planner.cpp)
-# target_link_libraries(psaf_local_planner ${catkin_LIBRARIES})
+add_library(psaf_local_planner src/psaf_local_planner/plugin_local_planner.cpp)
+target_link_libraries(psaf_local_planner ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

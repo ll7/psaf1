@@ -1,11 +1,13 @@
 local_costmap:
   global_frame: map #was odom previously
   robot_base_frame: ego_vehicle
-  update_frequency: 4.0
+  update_frequency: 5.0
   publish_frequency: 2.0
   static_map: false
   rolling_window: true
-  width: 40.0
-  height: 40.0
-  resolution: 0.4
-  transform_tolerance: 0.5
+  width: 75.0
+  height: 75.0
+  origin_x: 0.0
+  origin_y: 0.0
+  resolution: 0.75
+  transform_tolerance: 1.0

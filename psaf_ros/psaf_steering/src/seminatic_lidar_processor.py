@@ -25,7 +25,8 @@ def cmd_callback(data: PointCloud2):
     for p in pc2.read_points(data, skip_nans=True):
         # print("%f %f %f: %i", p[0], p[1], p[2], p[3], p[4], p[5])
         if (p[5] == 6 or p[5] == 7):
-            skip += 1
+            # skip += 1
+            points.append([p[0], p[1], -22])
             continue
         if (abs(p[0]) < 2.0 and abs(p[1]) < 1.0):
             skip2 += 2
@@ -42,10 +43,8 @@ def cmd_callback(data: PointCloud2):
           # PointField('rgba', 12, PointField.UINT32, 1),
           ]
 
-    header = Header()
-    header.frame_id = "ego_vehicle/lidar/lidar1"
-    header.stamp = rospy.Time.now()
-    cloud = pc2.create_cloud(header, fields, points)
+
+    cloud = pc2.create_cloud(data.header, fields, points)
     pub.publish(cloud)
 
 
@@ -54,7 +53,7 @@ if __name__ == '__main__':
 
         rospy.init_node('semantic_lidar_processor')
 
-        rospy.Subscriber("/carla/ego_vehicle/semantic_lidar/lidar1/point_cloud/", PointCloud2, cmd_callback, queue_size=1)
+        rospy.Subscriber("/carla/ego_vehicle/semantic_lidar/lidar1/point_cloud", PointCloud2, cmd_callback, queue_size=1)
         rospy.Subscriber("/carla/ego_vehicle/odometry", Odometry, odo_callback, queue_size=1)
         pub = rospy.Publisher("/carla/ego_vehicle/processed_semantic_lidar/lidar1/point_cloud/", PointCloud2, queue_size=1)
 

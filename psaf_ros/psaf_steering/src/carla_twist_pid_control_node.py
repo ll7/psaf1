@@ -12,6 +12,7 @@ Control Carla ego vehicle by using AckermannDrive messages
 import sys
 import datetime
 from collections import deque
+from threading import active_count
 
 import numpy
 import rospy
@@ -25,11 +26,18 @@ from carla_msgs.msg import CarlaEgoVehicleStatus
 from carla_msgs.msg import CarlaEgoVehicleControl
 from carla_msgs.msg import CarlaEgoVehicleInfo
 from carla_ackermann_control.msg import EgoVehicleControlInfo
-from carla_ackermann_control.cfg import EgoVehicleControlParameterConfig
+from psaf_steering.cfg import EgoVehicleControlParameterConfig
 from geometry_msgs.msg import Twist
 import carla_control_physics as phys
 
-plot = False  # plot target and current vel
+plot = True  # plot target and current vel
+# Alternative way of plotting: 
+# rqt_plot /carla/ego_vehicle/ackermann_control/control_info/target/steering_angle:speed carla/ego_vehicle/ackermann_control/control_info/current/speed carla/ego_vehicle/ackermann_control/control_info/output/steer:brake
+
+
+class ROS_PID(PID):
+
+    pass
 
 class CarlaAckermannControl(object):
 
@@ -42,7 +50,8 @@ class CarlaAckermannControl(object):
         Constructor
 
         """
-        self.control_loop_rate = rospy.Rate(10)  # 10Hz
+        self.frequency = rospy.get_param('~frequency', 20)
+        self.control_loop_rate = rospy.Rate(self.frequency)  # 10Hz
         self.lastAckermannMsgReceived = datetime.datetime(datetime.MINYEAR, 1, 1)
         self.vehicle_status = CarlaEgoVehicleStatus()
         self.vehicle_info = CarlaEgoVehicleInfo()
@@ -86,10 +95,12 @@ class CarlaAckermannControl(object):
         # input parameters
         self.input_speed = 0.
         self.input_accel = 0.
+        self.input_multiplier = 1.0
 
         self.data_plot_target = deque(maxlen=200)
         self.data_plot_current = deque(maxlen=200)
         self.data_plot_out = deque(maxlen=200)
+        self.data_plot_steer = deque(maxlen=200)
 
         # PID controller
         # the controller has to run with the simulation time, not with real-time
@@ -98,18 +109,18 @@ class CarlaAckermannControl(object):
         # a previous point in time (the error happens because the time doesn't
         # change between initialization and first call, therefore dt is 0)
         sys.modules['simple_pid.PID']._current_time = (       # pylint: disable=protected-access
-            lambda: rospy.get_rostime().to_sec() - 0.1)
+            lambda: rospy.get_rostime().to_sec() - (self.control_loop_rate.sleep_dur.to_sec()))
 
         # we might want to use a PID controller to reach the final target speed
         self.speed_controller = PID(Kp=0.0,
                                     Ki=0.0,
                                     Kd=0.0,
-                                    sample_time=0.05,
+                                    sample_time=self.control_loop_rate.sleep_dur.to_sec() / 2.0,
                                     output_limits=(-1., 1.))
         self.accel_controller = PID(Kp=0.0,
                                     Ki=0.0,
                                     Kd=0.0,
-                                    sample_time=0.05,
+                                    sample_time=self.control_loop_rate.sleep_dur.to_sec() / 2.0,
                                     output_limits=(-1, 1))
 
         # use the correct time for further calculations
@@ -135,6 +146,11 @@ class CarlaAckermannControl(object):
             "/carla/" + self.role_name + "/ackermann_control/accel_Kd",
             rospy.get_param("/carla/ackermann_control/accel_Kd", 0.05))
 
+        rospy.set_param(
+            "/carla/" + self.role_name + "/ackermann_control/input_multiplier",
+            rospy.get_param("/carla/ackermann_control/input_multiplier", 1.0))
+
+
         self.reconfigure_server = Server(
             EgoVehicleControlParameterConfig,
             namespace="/carla/" + self.role_name + "/ackermann_control",
@@ -146,10 +162,10 @@ class CarlaAckermannControl(object):
             "/carla/" + self.role_name + "/ackermann_cmd",
             AckermannDrive, self.ackermann_command_updated)
 
-        # ackermann drive commands
+        #ackermann drive commands
         self.control_subscriber = rospy.Subscriber(
-            "/carla/" + self.role_name + "/twist_pid",
-            Twist, self.twist_command_updated)
+             "/carla/" + self.role_name + "/twist_pid",
+             Twist, self.twist_command_updated)
 
         # current status of the vehicle
         self.vehicle_status_subscriber = rospy.Subscriber(
@@ -211,6 +227,8 @@ class CarlaAckermannControl(object):
             ego_vehicle_control_parameter['accel_Ki'],
             ego_vehicle_control_parameter['accel_Kd']
         )
+
+        self.input_multiplier = ego_vehicle_control_parameter['input_multiplier']
         return ego_vehicle_control_parameter
 
     def vehicle_status_updated(self, vehicle_status):
@@ -261,13 +279,13 @@ class CarlaAckermannControl(object):
         """
         self.lastAckermannMsgReceived = datetime.datetime.now()
         # set target values
-        self.set_target_steering_angle(ros_ackermann_drive.steering_angle)
-        self.set_target_speed(ros_ackermann_drive.speed)
-        self.set_target_accel(ros_ackermann_drive.acceleration)
-        self.set_target_jerk(ros_ackermann_drive.jerk)
+        self.set_target_steering_angle(ros_ackermann_drive.steering_angle * self.input_multiplier)
+        self.set_target_speed(ros_ackermann_drive.speed * self.input_multiplier)
+        self.set_target_accel(ros_ackermann_drive.acceleration * self.input_multiplier)
+        self.set_target_jerk(ros_ackermann_drive.jerk * self.input_multiplier)
 
-        self.input_speed = ros_ackermann_drive.speed
-        self.input_accel = ros_ackermann_drive.acceleration
+        self.input_speed = ros_ackermann_drive.speed * self.input_multiplier
+        self.input_accel = ros_ackermann_drive.acceleration * self.input_multiplier
 
     def twist_command_updated(self, ros_twist: Twist):
         """
@@ -279,12 +297,13 @@ class CarlaAckermannControl(object):
         """
         self.lastAckermannMsgReceived = datetime.datetime.now()
         # set target values
-        self.set_target_steering_angle(ros_twist.angular.z)
-        self.set_target_speed(ros_twist.linear.x)
+        self.set_target_steering_angle(ros_twist.angular.z * self.input_multiplier)
+        self.set_target_speed(ros_twist.linear.x * self.input_multiplier)
         self.set_target_accel(0)
         self.set_target_jerk(0)
+        print(ros_twist.angular.z )
 
-        self.input_speed = ros_twist.linear.x
+        self.input_speed = ros_twist.linear.x * self.input_multiplier
         self.input_accel = 0.
 
     def reload_input_params(self):
@@ -428,14 +447,15 @@ class CarlaAckermannControl(object):
         """
         epsilon = 0.00001
         target_accel_abs = abs(self.info.target.accel)
+        activation_count_max = 5 * self.frequency / 10
         if target_accel_abs < self.info.restrictions.min_accel:
-            if self.info.status.speed_control_activation_count < 5:
+            if self.info.status.speed_control_activation_count < activation_count_max:
                 self.info.status.speed_control_activation_count += 1
         else:
             if self.info.status.speed_control_activation_count > 0:
                 self.info.status.speed_control_activation_count -= 1
         # set the auto_mode of the controller accordingly
-        self.speed_controller.auto_mode = self.info.status.speed_control_activation_count >= 5
+        self.speed_controller.auto_mode = self.info.status.speed_control_activation_count >= activation_count_max
 
         if self.speed_controller.auto_mode:
             self.speed_controller.setpoint = self.info.target.speed_abs
@@ -537,11 +557,13 @@ class CarlaAckermannControl(object):
             self.data_plot_target.append(self.info.target.speed)
             self.data_plot_current.append(self.info.current.speed)
             self.data_plot_out.append(self.info.output.throttle)
+            self.data_plot_steer.append(self.info.output.steer)
             plt.clf()
             plt.plot(self.data_plot_target)
             plt.plot(self.data_plot_current)
             plt.plot(self.data_plot_out)
-            plt.legend(['speed_target', 'speed_current', 'throttle_out'])
+            plt.plot(self.data_plot_steer)
+            plt.legend(['speed_target', 'speed_current', 'throttle_out', 'steer'])
             plt.pause(0.01)
             plt.draw()
 
@@ -557,12 +579,17 @@ class CarlaAckermannControl(object):
         """
         current_time_sec = rospy.get_rostime().to_sec()
         delta_time = current_time_sec - self.info.current.time_sec
+        # rospy.loginfo("delta time: " + str(delta_time))
+
         current_speed = self.vehicle_status.velocity  * (-1 if self.vehicle_status.control.reverse else 1)
         if delta_time > 0:
             delta_speed = abs(current_speed) - abs(self.info.current.speed)
+            # rospy.loginfo("delta speed: " + str(delta_speed))
+
             current_accel = delta_speed / delta_time
             # average filter
-            self.info.current.accel = (self.info.current.accel * 4 + current_accel) / 5
+            self.info.current.accel = (self.info.current.accel * 9 + current_accel) / 10
+            # rospy.loginfo("acc: " + str(self.info.current.accel))
         self.info.current.time_sec = current_time_sec
         self.info.current.speed = current_speed
         self.info.current.speed_abs = abs(current_speed)
