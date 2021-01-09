@@ -40,6 +40,7 @@ class SimulatedAnnealingOptimizer:
         :param file: file of scenario runner
         :param timeout: timeout of scenario runner
         """
+        rospy.loginfo("SA-Optimizer: Simulated Annealing Optimizer started!")
         self.scenario_runner = ScenarioRunner(init_rospy=False, height=height, sample_cnt=sample_count, route_file=file,
                                               timeout=timeout)
         self.logfile = None
@@ -60,6 +61,8 @@ class SimulatedAnnealingOptimizer:
 
         # write results to file
         self._write_results_to_file(best_result, best_parameter_set, sample_count)
+
+        rospy.loginfo("SA-Optimizer: Optimizer finished!")
 
     def _check_parameter_validity(self):
         """
@@ -159,6 +162,7 @@ class SimulatedAnnealingOptimizer:
         :param quality_weight: weight of the quality value
         :return: best result
         """
+        rospy.loginfo("SA-Optimizer: Optimization process started!")
         current_index = self._generate_initial_parameter_set()
         best_index = current_index.copy()
         best_value = float(self._run_scenario(params=best_index, time_weight=time_weight, quality_weight=quality_weight))
@@ -182,6 +186,8 @@ class SimulatedAnnealingOptimizer:
             if current_value < best_value:  # save best
                 best_index = current_index
                 best_value = current_value
+
+            rospy.loginfo("SA-Optimizer: Optimization iteration: " + str(i))
             # log iteration results
             self.log_to_file(current_value=current_value, current_index=current_index, best_value=best_value,
                              best_index=best_index)
