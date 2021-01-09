@@ -12,7 +12,9 @@ import matplotlib.pyplot as plt
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance, Pose, PoseStamped, PoseWithCovarianceStamped
-from psaf_abstraction_layer.CarlaCar import AckermannControl
+from psaf_abstraction_layer.CarlaCar import AckermannControl, Car
+from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
+from actionlib import GoalID
 
 import rosbag
 import rospy
@@ -40,6 +42,7 @@ class ScenarioRunner:
         self.current_pose: Pose = Pose()
         self.initial_pose_publisher = rospy.Publisher('/carla/ego_vehicle/initialpose', PoseWithCovarianceStamped,
                                                       queue_size=10)
+        self.cancel_movebase_publisher = rospy.Publisher('/move_base/cancel', GoalID, queue_size=10)
         self.position_subscriber = rospy.Subscriber('/carla/ego_vehicle/odometry', Odometry, self._position_listener)
         self.finish_time_stamp: float = -1.0
         self.start_time_stamp: float = -1.0
@@ -77,18 +80,18 @@ class ScenarioRunner:
         :return:
         """
         # wait for the car to setup
-        timout_cnt = 0
-        first_timout: bool = True
+        timeout_cnt = 0
+        first_timeout: bool = True
         while abs(abs(self.current_pose.position.x) - abs(self.planned_route[0].pose.position.x)) > 0.0001 \
                 and abs(abs(self.current_pose.position.y) - abs(self.planned_route[0].pose.position.y)) > 0.0001:
             self.rate.sleep()
-            timout_cnt += 1
-            if timout_cnt == 100 and first_timout:
-                timout_cnt = 0
-                first_timout = False
-                rospy.loginfo("ScenarioRunner: Timout reached, respawning vehicle")
+            timeout_cnt += 1
+            if timeout_cnt == 100 and first_timeout:
+                timeout_cnt = 0
+                first_timeout = False
+                rospy.loginfo("ScenarioRunner: Timeout reached, respawning vehicle")
                 self._spawn_vehicle()
-            elif timout_cnt == 100:
+            elif timeout_cnt == 100:
                 rospy.loginfo("ScenarioRunner: execution failed")
                 sys.exit(1)
         # init timers
@@ -116,6 +119,7 @@ class ScenarioRunner:
             rospy.loginfo("ScenarioRunner: Finished scenario successfully in {} s".format(
                 str(self.finish_time_stamp - self.start_time_stamp)))
         else:
+            self.finish_time_stamp = float("inf")
             rospy.loginfo("ScenarioRunner: Scenario failed")
 
     def plot_routes(self):
@@ -226,12 +230,28 @@ class ScenarioRunner:
         :return:
         """
         rospy.loginfo("ScenarioRunner: Reset variables")
-        car: AckermannControl = AckermannControl()
-        car.set_jerk(0)
-        car.set_steering_angle(0)
-        car.set_steering_angle_velocity(0)
-        car.set_acceleration(0)
-        car.set_speed(0)
+        while self.cancel_movebase_publisher.get_num_connections() == 0:
+            self.rate.sleep()
+        self.cancel_movebase_publisher.publish(GoalID())
+        ack_ctrl: AckermannControl = AckermannControl()
+        ack_ctrl.set_jerk(0)
+        ack_ctrl.set_steering_angle(0)
+        ack_ctrl.set_steering_angle_velocity(0)
+        ack_ctrl.set_acceleration(0)
+        ack_ctrl.set_speed(0)
+
+        vehicle: VehicleStatusProvider = VehicleStatusProvider("ego_vehicle")
+        # wait for commands to be executed
+        # make sure that the car has really stopped
+        while not vehicle.status_available:
+            self.rate.sleep()
+        current_speed = vehicle.get_status().velocity
+        current_acceleration = vehicle.get_status().acceleration
+        while current_speed != 0 and current_acceleration != 0:
+            self.rate.sleep()
+            current_speed = vehicle.get_status().velocity
+            current_acceleration = vehicle.get_status().acceleration
+
         # reset variables
         self.finish_time_stamp: float = -1.0
         self.start_time_stamp: float = -1.0
@@ -298,12 +318,13 @@ class ScenarioRunner:
 
 def main():
     print(rospy.get_name())
-    timout = rospy.get_param('/scenario_runner_commonroad/timout', -1.0)
+    timeout = rospy.get_param('/scenario_runner_commonroad/timeout', -1.0)
     radius = rospy.get_param('/scenario_runner_commonroad/radius', 5)
     sample_cnt = rospy.get_param('/scenario_runner_commonroad/sample_cnt', 100)
     file = rospy.get_param('/scenario_runner_commonroad/file', 'path.debugpath')
     height = rospy.get_param('/scenario_runner_commonroad/height', 10)
-    scenario = ScenarioRunner(init_rospy=True, timeout=timout, radius=radius, route_file=file, sample_cnt=sample_cnt, height=height)
+    scenario = ScenarioRunner(init_rospy=True, timeout=timeout, radius=radius, route_file=file,
+                              sample_cnt=sample_cnt, height=height)
     scenario.init_scenario()
     scenario.execute_scenario()
     scenario.evaluate_route_quality_cos()
