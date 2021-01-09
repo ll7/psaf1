@@ -11,6 +11,7 @@ import sys
 from dynamic_reconfigure import client
 import dynamic_reconfigure
 from enum import Enum
+import json
 
 
 class ParameterType(Enum):
@@ -35,8 +36,6 @@ class SimulatedAnnealingOptimizer:
         :param quality_weight: weight of the quality value
         :param height: spawn height of car in the test scenario
         """
-        print(str(parameter_range))
-        print(str(it_count))
         self.scenario_runner = ScenarioRunner(init_rospy=False, height=height)
         self.logfile = None
         self.init_logfile()
@@ -45,7 +44,6 @@ class SimulatedAnnealingOptimizer:
         self.parameter_range = parameter_range
         self.parameter_count = len(self.parameter_range)
         self.param_enum: ParameterType = param_enum
-
         if not self._check_parameter_validity():
             rospy.logerr("The given parameter set is not valid")
             sys.exit(1)
@@ -244,15 +242,16 @@ def main():
     step = rospy.get_param('~step', 0.05)
     alpha = rospy.get_param('~alpha', 0.5)
     parameter_range = rospy.get_param('~parameter_range', param_range)
+    parameter_range = json.loads(parameter_range) # convert string to list
     it_count = rospy.get_param('~it_count', 0.5)
     quality_weight = rospy.get_param('~quality_weight', 1)
     time_weight = rospy.get_param('~time_weight', 1)
-    param_enum = rospy.get_param('~param_enum', ParameterType.speed)
+    param_enum = rospy.get_param('~param_enum', 'speed')
     height = rospy.get_param('~height', 0)
 
     optimizer = SimulatedAnnealingOptimizer(step=step, alpha=alpha, parameter_range=parameter_range, it_count=it_count,
                                             quality_weight=quality_weight, time_weight=time_weight,
-                                            param_enum=param_enum, height=height)
+                                            param_enum=ParameterType[param_enum], height=height)
 
 
 if __name__ == "__main__":
