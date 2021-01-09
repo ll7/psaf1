@@ -61,9 +61,10 @@ namespace psaf_local_planner {
              */
             void fillPointBuffer();
             
-            void compute_magnitude_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location, float &magnitude, float &angle);
+            double compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location);
             void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
             bool check_distance_forward(double& distance);
+            geometry_msgs::PoseStamped& find_lookahead_target();
 
             costmap_2d::Costmap2DROS* costmap_ros;
             base_local_planner::LocalPlannerUtil planner_util;

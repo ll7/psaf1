@@ -11,7 +11,7 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), local_plan({}),
                                            bufferSize(150), initialized(false), closest_point_local_plan(3),
-                                           lookahead_factor(1), max_velocity(15), target_velocity(15), min_velocity(5),
+                                           lookahead_factor(3), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false)
     {
         std::cout << "Hi";
@@ -120,14 +120,13 @@ namespace psaf_local_planner
             else
             {
                 estimate_curvature_and_set_target_velocity(current_pose.pose);
-                int index = (target_velocity / lookahead_factor);
-                auto target_point = &local_plan[index];
+                // int index = (target_velocity / lookahead_factor) + 4;
+                // auto target_point = &local_plan[index];
 
-                float mag;
-                float angle;
+                auto target_point = find_lookahead_target();
+
+                double angle = compute_steering_angle(target_point.pose, current_pose.pose);
                 double distance;
-                compute_magnitude_angle(target_point->pose, current_pose.pose, mag, angle);
-
                 
                 if (target_velocity > 0 && !check_distance_forward(distance)) {
                     target_velocity *= boost::algorithm::clamp((distance - 5) / (pow(max_velocity * 0.36, 2)), 0, 1);
@@ -145,6 +144,32 @@ namespace psaf_local_planner
 
         return true;
     }
+
+    geometry_msgs::PoseStamped& PsafLocalPlanner::find_lookahead_target() {
+        tf2::Vector3 last_point, current_point, acutal_point;
+        tf2::convert(current_pose.pose.position, last_point);
+        acutal_point = last_point;
+
+        double desired_distance = (target_velocity / lookahead_factor) + 3;
+        double sum_distance = 0;
+
+        for (auto it = local_plan.begin(); it != local_plan.end(); ++it)
+        {
+            geometry_msgs::PoseStamped &w = *it;
+            tf2::convert(w.pose.position, current_point);
+            sum_distance += tf2::tf2Distance(last_point, current_point);
+
+            if (sum_distance > desired_distance) {
+                return w;
+            }
+
+            last_point = current_point;
+        }
+
+        auto &last_stamp = *local_plan.end();
+        return last_stamp;
+    }
+
 
     /**
      * Check if the goal pose has been achieved by the local planner.
@@ -179,7 +204,7 @@ namespace psaf_local_planner
     /**
      * Compute relative angle and distance between a target_location and a current_location
      */
-    void PsafLocalPlanner::compute_magnitude_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location, float &magnitude, float &angle)
+    double PsafLocalPlanner::compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location)
     {
         tf2::Transform target_transform;
         tf2::Transform current_transform;
@@ -190,9 +215,7 @@ namespace psaf_local_planner
         auto orientation = tf2::getYaw(current_transform.getRotation());
 
         // vector from vehicle to target point and distance
-        tf2::Vector3 target_vector = target_transform.getOrigin() - current_transform.getOrigin();
-        auto dist_target = target_vector.length();
-        target_vector.normalize();
+        tf2::Vector3 target_vector = (target_transform.getOrigin() - current_transform.getOrigin()).normalize();
 
         // vector of the car and absolut angle between vehicle and target point
         // angle = (a o b) / (|a|*|b|), here: |b| = 1
@@ -200,7 +223,8 @@ namespace psaf_local_planner
         tf2::Vector3 forward_vector = tf2::Vector3(cos(orientation), sin(orientation), 0);
         double unclamped_angle = atan2(
             forward_vector.getX() * target_vector.getY() - forward_vector.getY() * target_vector.getX(),
-            forward_vector.getX() * target_vector.getX() + forward_vector.getY() * target_vector.getY());
+            forward_vector.getX() * target_vector.getX() + forward_vector.getY() * target_vector.getY()
+        );
 
         // Limit angle to the limits of the car
         auto d_angle = boost::algorithm::clamp(unclamped_angle, -1.2, 1.2);
@@ -241,8 +265,7 @@ namespace psaf_local_planner
         markers.markers = {marker1, marker2};
         debug_pub.publish(markers);
 
-        magnitude = dist_target;
-        angle = d_angle;
+        return d_angle;
     }
 
     void PsafLocalPlanner::estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location)
