@@ -1,8 +1,17 @@
+import json
+import os
+from datetime import datetime
+from random import random
+from typing import Tuple
+
 import cv2
 import numpy as np
+import rospkg
 import rospy
 import torch
 from genpy import Time
+from torch.autograd import Variable
+from torchvision.transforms import transforms
 
 from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
@@ -22,21 +31,58 @@ class TrafficLightDetector(AbstractDetector):
         self.threshold = 0.7
         self.canny_threshold = 100
 
+        self.collect_more_data = False
+
+        rospack = rospkg.RosPack()
+        root_path = rospack.get_path('psaf_perception')
+
+        self.confidence_min = 0.70
+        self.threshold = 0.7
+        rospy.loginfo("init device")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
+        rospy.loginfo("Device:" + str(self.device))
+        # load our model
+        model_name = 'traffic-light-classifiers-11:12:22'
+        rospy.loginfo("loading classifier model from disk...")
+        model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
+
+        class_names = {}
+        with open(os.path.join(root_path, f"models/{model_name}.names")) as f:
+            class_names = json.load(f)
+        self.labels = {class_names['back']:Labels.TrafficLightUnknown, class_names['green']:Labels.TrafficLightGreen, class_names['red']:Labels.TrafficLightRed,
+                       class_names['yellow']:Labels.TrafficLightYellow}
+        self.transforms = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+        model.to(self.device)
+        self.net = model
+        self.net.eval()
+        torch.no_grad()  # reduce memory consumption and improve speed
 
         # init image source = combination of segmentation, rgb and depth camera
         self.combinedCamera = CameraDataFusion(role_name=role_name, time_threshold=0.08,
                                                visible_tags=set([SegmentationTag.TrafficLight]))
         self.combinedCamera.set_on_image_data_listener(self.__on_new_image_data)
 
-
-    def __extract_label(self, image) -> Labels:
+    def __extract_label(self, image) -> Tuple[Labels, float]:
         """
         Analyze the given image of the traffic light and returns the corresponding label
         :param image: the important part of the camera image
         :return: the Label
         """
+        image = self.transforms(image)
+        image = image.unsqueeze(dim=0)
+        imgblob = Variable(image)
+        imgblob = imgblob.to(self.device)
+        pred = torch.nn.functional.softmax(self.net(imgblob).cpu(), dim=1).detach().numpy()[0, :]
 
-        return TrafficLightClassifier.classify(image)
+        hit = np.argmax(pred)
+        label = self.labels.get(hit,Labels.TrafficLightUnknown)
+
+        return label, pred[hit]
 
     def __on_new_image_data(self, segmentation_image, rgb_image, depth_image, time):
         """
@@ -67,7 +113,7 @@ class TrafficLightDetector(AbstractDetector):
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                if (boxes[i][2] * boxes[i][3] * H * W) > 300:
+                if (boxes[i][2] * boxes[i][3] * H * W) > 150:
                     x1 = int(boxes[i][0] * W)
                     x2 = int((boxes[i][0] + boxes[i][2]) * W)
                     y1 = int(boxes[i][1] * H)
@@ -79,191 +125,30 @@ class TrafficLightDetector(AbstractDetector):
                     # get cropped depth image
                     crop_depth = depth_image[y1:y2, x1:x2]
                     # use mask to extract the traffic sign distances
-                    distance = np.average(crop_depth[mask[:,:,1]])
+                    distance = np.average(crop_depth[mask[:, :, 1]])
                     # get cropped rgb image
                     crop_rgb = rgb_image[y1:y2, x1:x2, :]
                     # use inverted mask to clear the background
                     crop_rgb[np.logical_not(mask)] = 0
-                    label = self.__extract_label(crop_rgb)
+                    label, confidence = self.__extract_label(crop_rgb)
+
+                    if not confidence >= self.confidence_min:
+                        label=Labels.TrafficLightUnknown
+                        confidence = 1.
                     detected.append(
                         DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3],
                                        distance=distance,
                                        label=label,
-                                       confidence=1.))
+                                       confidence=confidence))
+                    # Store traffic light data in folder to train a better network
+                    if self.collect_more_data and distance < 25:
+                        now = datetime.now().strftime("%H:%M:%S")
+                        folder = os.path.abspath(f"/home/psaf1/Documents/traffic_light_data/{label.name}")
+                        if not os.path.exists(folder):
+                            os.mkdir(folder)
+                        cv2.imwrite(os.path.join(folder,f"{now}-{i}.jpg"),cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
 
         self.inform_listener(detected)
-
-
-class TrafficLightClassifier:
-    """
-    Based on https://www.kaggle.com/photunix/classify-traffic-lights-with-pre-trained-cnn-model/comments,
-    Released under the apache 2.0 licence
-    """
-
-    @classmethod
-    def __high_saturation_region_mask(cls, hsv_image, s_thres=0.6):
-        """
-        Creates an numpy mask to filter for areas with a high saturation
-        :param hsv_image: the image
-        :param s_thres: the threshold [0;1]
-        :return: the mask
-        """
-        if hsv_image.dtype == np.int:
-            idx = (hsv_image[:, :, 1].astype(np.float) / 255.0) < s_thres
-        else:
-            idx = (hsv_image[:, :, 1].astype(np.float)) < s_thres
-        mask = np.ones_like(hsv_image[:, :, 1])
-        mask[idx] = 0
-        return mask
-
-    @classmethod
-    def __channel_percentile(cls, single_chan_image, percentile):
-        """
-        Wrapper for np.percentile for single channel images
-        :param single_chan_image: the single channel image
-        :param percentile: the percentile
-        :return: threshold value normed to 0-255
-        """
-        sq_image = np.squeeze(single_chan_image)
-        assert len(sq_image.shape) < 3
-
-        thres_value = np.percentile(sq_image.ravel(), percentile)
-
-        return float(thres_value) / 255.0
-
-    @classmethod
-    def __high_value_region_mask(cls, hsv_image, v_thres=0.6):
-        """
-        Creates an numpy mask to filter for areas with a high value
-        :param hsv_image: the hsv image
-        :param v_thres: the threshold [0;1]
-        :return: the numpy mask
-        """
-        if hsv_image.dtype == np.int:
-            idx = (hsv_image[:, :, 2].astype(np.float) / 255.0) < v_thres
-        else:
-            idx = (hsv_image[:, :, 2].astype(np.float)) < v_thres
-        mask = np.ones_like(hsv_image[:, :, 2])
-        mask[idx] = 0
-        return mask
-
-    @classmethod
-    def __get_masked_hue_values(cls, rgb_image):
-        """
-        Get the pixels in the RGB image that has high saturation (S) and value (V) in HSV chanels
-
-        :param rgb_image: image (height, width, channel)
-        :return: a 1-d array
-        """
-
-        hsv_test_image = cv2.cv2.cvtColor(rgb_image, cv2.COLOR_RGB2HSV)
-        s_thres_val = cls.__channel_percentile(hsv_test_image[:, :, 1], percentile=80)
-        v_thres_val = cls.__channel_percentile(hsv_test_image[:, :, 2], percentile=30)
-        val_mask = cls.__high_value_region_mask(hsv_test_image, v_thres=v_thres_val)
-        sat_mask = cls.__high_saturation_region_mask(hsv_test_image, s_thres=s_thres_val)
-        masked_hue_image = hsv_test_image[:, :, 0] * 180
-        # Note that the following statement is not equivalent to
-        # masked_hue_1d= (maksed_hue_image*np.logical_and(val_mask,sat_mask)).ravel()
-        # Because zero in hue channel means red, we cannot just set unused pixels to zero.
-        masked_hue_1d = masked_hue_image[np.logical_and(val_mask, sat_mask)].ravel()
-
-        return masked_hue_1d
-
-    @classmethod
-    def __convert_to_hue_angle(cls, hue_array):
-        """
-        Convert the hue values from [0,179] to radian degrees [-pi, pi]
-
-        :param hue_array: array-like, the hue values in degree [0,179]
-        :return: the angles of hue values in radians [-pi, pi]
-        """
-
-        hue_cos = np.cos(hue_array * np.pi / 90)
-        hue_sine = np.sin(hue_array * np.pi / 90)
-
-        hue_angle = np.arctan2(hue_sine, hue_cos)
-
-        return hue_angle
-
-    @classmethod
-    def __get_rgy_color_mask(cls, hue_value):
-        """
-        return a tuple of np.ndarray that sets the pixels with red, green and yellow matrices to be true
-
-        :param hue_value:
-        :return:
-        """
-
-        red_index = np.logical_and(hue_value > -0.4, hue_value < 0.9)
-        green_index = np.logical_and(hue_value > 1.2, hue_value < 2)
-        yellow_index = np.logical_and(hue_value > 1.9, hue_value < 2.2)
-
-        return red_index, green_index, yellow_index
-
-    @classmethod
-    def __classify_color_by_range(cls, hue_value):
-        """
-        Determine the color (red, yellow or green) in a hue value array
-
-        :param hue_value: hue_value is radians
-        :return: the color index ['red', 'yellow', 'green', '_', 'unknown']
-        """
-
-        red_index, green_index, yellow_index = cls.__get_rgy_color_mask(hue_value)
-
-        color_counts = np.array([np.sum(red_index) / len(hue_value),
-                                 np.sum(yellow_index) / len(hue_value),
-                                 np.sum(green_index) / len(hue_value)])
-
-        return color_counts
-
-    @classmethod
-    def __classify_color_cropped_image(cls, rgb_image):
-        """
-        Full pipeline of classifying the traffic light color from the traffic light image
-
-        :param rgb_image: the RGB image array (height,width, RGB channel)
-        :return: the count for every image
-        """
-
-        hue_1d_deg = cls.__get_masked_hue_values(rgb_image)
-
-        if len(hue_1d_deg) == 0:
-            return Labels.TrafficLightUnknown
-
-        hue_1d_rad = cls.__convert_to_hue_angle(hue_1d_deg)
-
-        count = cls.__classify_color_by_range(hue_1d_rad)
-
-        return count
-
-    @classmethod
-    def classify(cls, rgb_image):
-        H, W = rgb_image.shape[:2]
-        h = int(H / 3)
-        x1 = int(max([W / 3, 1]))
-        x2 = int(max([2 * W / 3, W]))
-
-        top = rgb_image[0:h, x1:x2, :]
-        center = rgb_image[h:h * 2, x1:x2, :]
-        bottom = rgb_image[h * 2:H, x1:x2, :]
-
-        top_values = cls.__classify_color_cropped_image(top)
-        center_values = cls.__classify_color_cropped_image(center)
-        bottom_values = cls.__classify_color_cropped_image(bottom)
-
-        red = top_values[0] > bottom_values[2] and np.argmax(top_values) == 0
-        yellow = np.argmax(center_values) == 1
-        green = top_values[0] < bottom_values[2]
-
-        if red:
-            return Labels.TrafficLightRed
-        if green:
-            return Labels.TrafficLightGreen
-        if yellow:
-            return Labels.TrafficLightYellow
-
-        return Labels.TrafficLightUnknown
 
 
 # Show case code
@@ -281,13 +166,14 @@ def show_image(title, image):
     cv2.imshow(title, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
     cv2.waitKey(1)
 
+
 if __name__ == "__main__":
     rospy.init_node("DetectionTest")
 
     detected_r = None
 
 
-    def store_image(image,_):
+    def store_image(image, _):
         global detected_r
 
         H, W = image.shape[:2]
@@ -299,8 +185,8 @@ if __name__ == "__main__":
                 (w, h) = (int(element.w * W), int(element.h * H))
                 # draw a bounding box rectangle and label on the image
                 color_map = {Labels.TrafficLightRed: (255, 0, 0), Labels.TrafficLightGreen: (0, 255, 0),
-                            Labels.TrafficLightYellow: (255, 255, 0), Labels.TrafficLightOff: (0, 0, 255),
-                            Labels.TrafficLightUnknown: (0, 0, 0)}
+                             Labels.TrafficLightYellow: (255, 255, 0), Labels.TrafficLightOff: (0, 0, 255),
+                             Labels.TrafficLightUnknown: (0, 0, 0)}
                 color = color_map.get(element.label, (0, 0, 0))
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
                 text = "{}-{:.1f}m: {:.4f}".format(element.label.label_text, element.distance, element.confidence)
