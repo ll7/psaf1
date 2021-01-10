@@ -161,26 +161,25 @@ class CameraDataFusion:
                         depth_images[filtered_depth_matches[key]])
                 except KeyError:
                     pass
-                    # step 3: remove all images that are older than the newest key
+            # step 3: remove all images that are older than the newest key
             time_border = key_intersection[-1]  # get the time stamp that is matched to the newest segmentation image
             for e in filter(lambda x: x <= time_border, segmentation_times):
                 del segmentation_images[e]
-            time_border = filtered_rgb_matches[
-                key_intersection[-1]]  # get the time stamp that is matched to the newest segmentation image
+            # get the time stamp that is matched to the newest segmentation image
+            time_border = filtered_rgb_matches[key_intersection[-1]]
             for e in filter(lambda x: x <= time_border, rgb_times):
                 del rgb_images[e]
-            time_border = filtered_depth_matches[
-                key_intersection[-1]]  # get the time stamp that is matched to the newest segmentation image
+            # get the time stamp that is matched to the newest segmentation image
+            time_border = filtered_depth_matches[key_intersection[-1]]
             for e in filter(lambda x: x <= time_border, depth_times):
                 del depth_images[e]
 
-            # stop if not corresponding images were found
             for time, (segmentation_image, rgb_image, depth_image) in result.items():
                 # Filter segmentation camera image for the given tags
                 if self.visible_tags is not None:
                     segmentation_image = SegmentationCamera.filter_for_tags(segmentation_image, self.visible_tags)
 
-                # Call abstract method
+                # Call listener method
                 if self.__listener is not None:
                     self.__listener(segmentation_image, rgb_image, depth_image, time)
 
