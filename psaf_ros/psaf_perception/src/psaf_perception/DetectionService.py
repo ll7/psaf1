@@ -6,7 +6,7 @@ import rospy
 from psaf_messages.msg import TrafficSignInfo, SpeedSign, StopMark, TrafficLight
 
 from psaf_perception.AbstractDetector import DetectedObject, Labels, LabelGroups
-from psaf_perception.SpeedSignDetector import SpeedSignDetector, CONV_FAC_MPH_TO_KMH
+from psaf_perception.SpeedSignDetector import SpeedSignDetector
 from psaf_perception.StopMarkDetector import StopMarkDetector
 from psaf_perception.TrafficLightDetector import TrafficLightDetector
 
@@ -59,7 +59,7 @@ class DetectionService:
                 msg.x = object.x + object.w / 2
                 msg.y = object.y + object.h / 2
                 msg.distance = object.distance
-                msg.limit = int(limit / CONV_FAC_MPH_TO_KMH)
+                msg.limit = int(limit)
                 self.speed_signs.append(msg)
 
     def __on_new_stop(self, detected: List[DetectedObject]):

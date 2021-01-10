@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 import os
 from typing import Tuple
@@ -6,6 +7,10 @@ import cv2
 import rospkg
 import rospy
 import numpy as np
+import torch
+from torch.autograd import Variable
+from torchvision.transforms import transforms
+
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 from psaf_perception.AbstractDetector import Labels, AbstractDetector, DetectedObject
 from psaf_perception.CameraDataFusion import CameraDataFusion, SegmentationTag
@@ -20,17 +25,39 @@ class SpeedSignDetector(AbstractDetector):
 
         rospack = rospkg.RosPack()
         root_path = rospack.get_path('psaf_perception')
-        self.descriptor_path = os.path.join(root_path, "models/speed_descriptors")
 
         self.confidence_min = 0.70
         self.threshold = 0.7
         self.canny_threshold = 100
 
-        self.labels = {'speed_limit_30': Labels.SpeedLimit30, 'speed_30': Labels.Speed30, 'speed_60': Labels.Speed60,
-                       'speed_90': Labels.Speed90}
+        self.data_collect_path = None # "/home/psaf1/Documents/speed_sign_data"
 
-        self.descriptors = {}
-        self.__load_descriptors()
+        self.confidence_min = 0.70
+        self.threshold = 0.7
+        rospy.loginfo("init device")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
+        rospy.loginfo("Device:" + str(self.device))
+        # load our model
+        model_name = 'speed_sign-classifiers-2021-01-10-14:55:44'
+        rospy.loginfo("loading classifier model from disk...")
+        model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
+
+        class_names = {}
+        with open(os.path.join(root_path, f"models/{model_name}.names")) as f:
+            class_names = json.load(f)
+        self.labels = {class_names['speed_30']: Labels.Speed30, class_names['speed_60']: Labels.Speed60,
+                       class_names['speed_90']: Labels.Speed90,
+                       class_names['speed_limit_30']: Labels.SpeedLimit30}
+        self.transforms = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+        model.to(self.device)
+        self.net = model
+        self.net.eval()
+        torch.no_grad()  # reduce memory consumption and improve speed
 
         self.collect_unlabeled_data = False
 
@@ -39,74 +66,23 @@ class SpeedSignDetector(AbstractDetector):
                                                visible_tags=set([SegmentationTag.TrafficSign]))
         self.combinedCamera.set_on_image_data_listener(self.__on_new_image_data)
 
-    def __load_descriptors(self):
-        """
-        Load the descriptors for comparing with currently captured descriptor
-        :return: None
-        """
-        self.descriptors.clear()
-
-        label_folders = []
-        for folder in os.listdir(self.descriptor_path):
-            folder = os.path.join(self.descriptor_path,folder)
-            if os.path.isdir(folder):
-                label = os.path.basename(folder)
-                if label in self.labels.keys():
-                    label_folders.append((folder,label))
-
-        for folder,label in label_folders:
-            self.descriptors[label] = []
-            for image_path in os.listdir(folder):
-                img = cv2.imread(os.path.join(folder,image_path))
-                kp_goal, des_goal = self.__compute_descriptor(img)
-                self.descriptors[label].append(des_goal)
-
-    def __compute_descriptor(self,image):
-        """
-        Compute the descriptor and return it
-        This method wraps around the image manipulation and the orb calculation 
-        :param image: the rgb image
-        :return: the descriptor
-        """
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        gray = cv2.GaussianBlur(gray, (5, 5), 0)
-
-        orb = cv2.ORB_create(patchSize=12,edgeThreshold=20)
-
-        return orb.detectAndCompute(gray, None)
-
-    def __classify(self, image) -> Tuple[Labels,float]:
+    def __classify(self, image) -> Tuple[Labels, float]:
         """
         Classifies the given image
         :param image: the rgb image
         :return: the Label and the confidence as a tuple
         """
 
-        kp_curr, des_curr = self.__compute_descriptor(image)
+        image = self.transforms(image)
+        image = image.unsqueeze(dim=0)
+        imgblob = Variable(image)
+        imgblob = imgblob.to(self.device)
+        pred = torch.nn.functional.softmax(self.net(imgblob).cpu(), dim=1).detach().numpy()[0, :]
 
-        matcher = cv2.BFMatcher()
-        if not (des_curr is None):
-            max_label_count = {}
-            for label, descriptor_list in self.descriptors.items():
-                max_label_count[label] = 0
-                for des_goal in descriptor_list:
-                    matches = matcher.knnMatch(des_goal, des_curr, k=2)
-                    good = []
-                    for i, values in enumerate(matches):
-                        if len(values) == 2: # ensure that match contains enough values
-                            (curr, goal) = values
-                            if curr.distance < 0.75 * goal.distance: # filter for "good" matches
-                                good.append([curr])
+        hit = np.argmax(pred)
+        label = self.labels.get(hit, None)
 
-                    if len(good) > max_label_count[label]: # store only the best match for the current label
-                        max_label_count[label] = len(good)
-
-                print(f"{label}: score={max_label_count[label]}")
-            # get best label
-            best_label = max(max_label_count.items(), default=("None",0), key=lambda x: x[1])
-            if best_label[1] >= 5:
-                return self.labels.get( best_label[0], None), float(best_label[1]/sum(max_label_count.values()))
-        return None, 0.0
+        return label, float(pred[hit])
 
     def __on_new_image_data(self, segmentation_image, rgb_image, depth_image, time):
         (H, W) = segmentation_image.shape[:2]
@@ -118,18 +94,32 @@ class SpeedSignDetector(AbstractDetector):
         contours, _ = cv2.findContours(canny_output, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         boxes = []
+        classes = []
+        confidences = []
         for i, c in enumerate(contours):
             contours_poly = cv2.approxPolyDP(c, 3, True)
-            boxes.append(cv2.boundingRect(contours_poly) / np.array([W, H, W, H]))
+            x1, y1, w, h = cv2.boundingRect(contours_poly)
+            boxes.append(np.array([x1, y1, w, h]) / np.array([W, H, W, H]))
+            x2 = x1 + w
+            y2 = y1 + h
+
+            mask = segmentation_image[y1:y2, x1:x2] == SegmentationTag.TrafficSign.color
+            # get cropped rgb image
+            crop_rgb = rgb_image[y1:y2, x1:x2, :]
+            # use inverted mask to clear the background
+            crop_rgb[np.logical_not(mask)] = 255
+            classification, confidence = self.__classify(crop_rgb)
+            classes.append(classification)
+            confidences.append(confidence)
 
         # apply non-maxima suppression to suppress weak, overlapping bounding boxes
-        idxs = cv2.dnn.NMSBoxes(boxes, ([1.] * len(boxes)), self.confidence_min, self.threshold)
+        idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_min, self.threshold)
 
         # ensure at least one detection exists
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                if (boxes[i][2] * boxes[i][3] * H * W) > 100:
+                if (boxes[i][2] * boxes[i][3] * H * W) > 50:
                     x1 = int(boxes[i][0] * W)
                     x2 = int((boxes[i][0] + boxes[i][2]) * W)
                     y1 = int(boxes[i][1] * H)
@@ -141,13 +131,10 @@ class SpeedSignDetector(AbstractDetector):
                     # get cropped depth image
                     crop_depth = depth_image[y1:y2, x1:x2]
                     # use mask to extract the traffic sign distances
-                    distance = np.average(crop_depth[mask[:,:,1]])
-                    # get cropped rgb image
-                    crop_rgb = rgb_image[y1:y2, x1:x2, :]
-                    # use inverted mask to clear the background
-                    crop_rgb[np.logical_not(mask)] = 255
-                    classification,confidence = self.__classify(crop_rgb)
-                    if classification is not None:
+                    distance = np.average(crop_depth[mask[:, :, 1]])
+                    classification = classes[i]
+                    confidence = confidences[i]
+                    if classification is not None and confidence > self.confidence_min:
                         detected.append(
                             DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3],
                                            distance=distance,
@@ -155,7 +142,16 @@ class SpeedSignDetector(AbstractDetector):
                                            confidence=confidence))
                     elif self.collect_unlabeled_data:
                         now = datetime.now().strftime("%H:%M:%S")
-                        cv2.imwrite(os.path.join(self.descriptor_path,f"unlabeled/{now}.jpg"),cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
+                        cv2.imwrite(os.path.join(self.descriptor_path, f"unlabeled/{now}.jpg"),
+                                    cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
+
+                    if self.data_collect_path is not None and distance < 25:
+                        now = datetime.now().strftime("%H:%M:%S")
+                        folder = os.path.abspath(
+                            f"{self.data_collect_path}/{classification.name if classification is not None else 'unknown'}")
+                        if not os.path.exists(folder):
+                            os.mkdir(folder)
+                        cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
 
         self.inform_listener(detected)
 
