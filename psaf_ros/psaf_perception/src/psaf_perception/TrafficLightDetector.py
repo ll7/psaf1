@@ -31,7 +31,7 @@ class TrafficLightDetector(AbstractDetector):
         self.threshold = 0.7
         self.canny_threshold = 100
 
-        self.collect_more_data = False
+        self.data_collect_path = None  # "/home/psaf1/Documents/traffic_light_data"
 
         rospack = rospkg.RosPack()
         root_path = rospack.get_path('psaf_perception')
@@ -42,7 +42,7 @@ class TrafficLightDetector(AbstractDetector):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
         rospy.loginfo("Device:" + str(self.device))
         # load our model
-        model_name = 'traffic-light-classifiers-11:12:22'
+        model_name = 'traffic-light-classifiers-2021-01-10-15:19:00'
         rospy.loginfo("loading classifier model from disk...")
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
@@ -141,9 +141,9 @@ class TrafficLightDetector(AbstractDetector):
                                        label=label,
                                        confidence=confidence))
                     # Store traffic light data in folder to train a better network
-                    if self.collect_more_data and distance < 25:
+                    if self.data_collect_path is not None and distance < 25:
                         now = datetime.now().strftime("%H:%M:%S")
-                        folder = os.path.abspath(f"/home/psaf1/Documents/traffic_light_data/{label.name}")
+                        folder = os.path.abspath(f"{self.data_collect_path}/{label.name}")
                         if not os.path.exists(folder):
                             os.mkdir(folder)
                         cv2.imwrite(os.path.join(folder,f"{now}-{i}.jpg"),cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
