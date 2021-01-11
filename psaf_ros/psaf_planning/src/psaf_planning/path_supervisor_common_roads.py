@@ -70,32 +70,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             return False
         # case at least one neighbouring lane and no solid line
         elif lanelet.adj_right_same_direction is not None or lanelet.adj_left_same_direction is not None:
-            rospy.logerr("HJI")
-            cur_lanelet = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
-            merged_lanelet: Lanelet = cur_lanelet
-            # collect all successor lanelet that lead to an intersection and create one long one
-            rospy.logerr("HJI2")
-            matching_lanelet: Lanelet = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
-            next_lane = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet._successor[0])
-            index = 0
-            for i in range(0, len(self.map.lanelet_network.lanelets)):
-                if self.map.lanelet_network.lanelets[i].lanelet_id == next_lane.lanelet_id:
-                    index = i
-            o = self.map.lanelet_network.lanelets[index]
-            o._predecessor = []
-            prev_lane = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet._predecessor[0])
-            for i in range(0, len(self.map.lanelet_network.lanelets)):
-                if self.map.lanelet_network.lanelets[i].lanelet_id == prev_lane.lanelet_id:
-                    index = i
-            o = self.map.lanelet_network.lanelets[index]
-            o._successor = []
-            self.map.lanelet_network.cleanup_lanelet_references()
-            for i in range(0, 5):
-            #while cur_lanelet.lanelet_id not in self.intersections:
-                if len(cur_lanelet.successor) == 0:
-                    break
-                cur_lanelet = self.map.lanelet_network.find_lanelet_by_id(cur_lanelet.successor[0])
-                merged_lanelet = Lanelet.merge_lanelets(merged_lanelet, cur_lanelet)
             static_obstacle_id = self.map.generate_object_id()
             rospy.logerr("HJI3")
             static_obstacle_type = ObstacleType.PARKED_VEHICLE
@@ -111,6 +85,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                                              static_obstacle_initial_state)
 
             # add the static obstacle to the scenario
+            self.map.lanelet_network.find_lanelet_by_id(132).add_static_obstacle_to_lanelet(static_obstacle_id)
             self.map.add_objects(static_obstacle)
             self._replan()
         return True
