@@ -6,7 +6,7 @@ import rospy
 from psaf_messages.msg import TrafficSignInfo, SpeedSign, StopMark, TrafficLight
 
 from psaf_perception.AbstractDetector import DetectedObject, Labels, LabelGroups
-from psaf_perception.SpeedSignDetector import SpeedSignDetector
+from psaf_perception.SpeedSignDetector import SpeedSignDetector, CONV_FAC_MPH_TO_KMH
 from psaf_perception.StopMarkDetector import StopMarkDetector
 from psaf_perception.TrafficLightDetector import TrafficLightDetector
 
@@ -39,6 +39,16 @@ class DetectionService:
         self.publish_timer = rospy.Timer(rospy.Duration(0.1), self.periodic_update)
         self.lock = asyncio.Lock()
 
+        # mapping between the traffic light states
+        self.traffic_light_state_mapper = {
+            Labels.TrafficLightUnknown: TrafficLight.STATE_UNKNOWN,
+            Labels.TrafficLightOff: TrafficLight.STATE_OFF,
+            Labels.TrafficLightRed: TrafficLight.STATE_RED,
+            Labels.TrafficLightYellowRed: TrafficLight.STATE_YELLOW_RED,
+            Labels.TrafficLightYellow: TrafficLight.STATE_YELLOW,
+            Labels.TrafficLightGreen: TrafficLight.STATE_GREEN,
+        }
+
         # Collect detection
         self.detectors["speed"].set_on_detection_listener(self.__on_new_speed_sign)
         self.detectors["stop"].set_on_detection_listener(self.__on_new_stop)
@@ -55,6 +65,13 @@ class DetectionService:
                     limit = 60
                 elif object.label == Labels.Speed90:
                     limit = 90
+                elif object.label == Labels.SpeedLimit30:
+                    limit = 30 * CONV_FAC_MPH_TO_KMH
+                elif object.label == Labels.SpeedLimit40:
+                    limit = 40 * CONV_FAC_MPH_TO_KMH
+                elif object.label == Labels.SpeedLimit60:
+                    limit = 60 * CONV_FAC_MPH_TO_KMH
+
                 msg = SpeedSign()
                 msg.x = object.x + object.w / 2
                 msg.y = object.y + object.h / 2
@@ -79,16 +96,7 @@ class DetectionService:
                 msg.x = object.x + object.w / 2
                 msg.y = object.y + object.h / 2
                 msg.distance = object.distance
-                # mapping between the traffic light states
-                state_mapper = {
-                    Labels.TrafficLightUnknown : TrafficLight.STATE_UNKNOWN,
-                    Labels.TrafficLightOff : TrafficLight.STATE_OFF,
-                    Labels.TrafficLightRed : TrafficLight.STATE_RED,
-                    Labels.TrafficLightYellowRed : TrafficLight.STATE_YELLOW_RED,
-                    Labels.TrafficLightYellow : TrafficLight.STATE_YELLOW,
-                    Labels.TrafficLightGreen : TrafficLight.STATE_GREEN,
-                }
-                msg.state = state_mapper.get(object.label,lambda: TrafficLight.STATE_UNKNOWN)
+                msg.state = self.traffic_light_state_mapper.get(object.label, lambda: TrafficLight.STATE_UNKNOWN)
                 # Add to list
                 self.trafficLights.append(msg)
 

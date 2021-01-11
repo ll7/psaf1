@@ -15,7 +15,7 @@ from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 from psaf_perception.AbstractDetector import Labels, AbstractDetector, DetectedObject
 from psaf_perception.CameraDataFusion import CameraDataFusion, SegmentationTag
 
-CONV_FAC_MPH_TO_KMH = 0.621371
+CONV_FAC_MPH_TO_KMH = 1.60934
 
 
 class SpeedSignDetector(AbstractDetector):
@@ -26,28 +26,30 @@ class SpeedSignDetector(AbstractDetector):
         rospack = rospkg.RosPack()
         root_path = rospack.get_path('psaf_perception')
 
-        self.confidence_min = 0.70
+        self.confidence_min = 0.7
         self.threshold = 0.7
         self.canny_threshold = 100
 
-        self.data_collect_path = None # "/home/psaf1/Documents/speed_sign_data"
+        self.data_collect_path = "/home/psaf1/Documents/speed_sign_data"
 
-        self.confidence_min = 0.70
-        self.threshold = 0.7
         rospy.loginfo("init device")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
         rospy.loginfo("Device:" + str(self.device))
         # load our model
-        model_name = 'speed_sign-classifiers-2021-01-10-14:55:44'
+        model_name = 'speed_sign-classifiers-2021-01-11-09:14:28'
         rospy.loginfo("loading classifier model from disk...")
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
         class_names = {}
         with open(os.path.join(root_path, f"models/{model_name}.names")) as f:
             class_names = json.load(f)
-        self.labels = {class_names['speed_30']: Labels.Speed30, class_names['speed_60']: Labels.Speed60,
+        self.labels = {class_names['speed_30']: Labels.Speed30,
+                       class_names['speed_60']: Labels.Speed60,
                        class_names['speed_90']: Labels.Speed90,
-                       class_names['speed_limit_30']: Labels.SpeedLimit30}
+                       class_names['speed_limit_30']: Labels.SpeedLimit30,
+                       class_names['speed_limit_40']: Labels.SpeedLimit40,
+                       class_names['speed_limit_60']: Labels.SpeedLimit60,
+                       }
         self.transforms = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize((224, 224)),
@@ -58,8 +60,6 @@ class SpeedSignDetector(AbstractDetector):
         self.net = model
         self.net.eval()
         torch.no_grad()  # reduce memory consumption and improve speed
-
-        self.collect_unlabeled_data = False
 
         # init image source = combination of segmentation, rgb and depth camera
         self.combinedCamera = CameraDataFusion(role_name=role_name, time_threshold=0.08,
@@ -140,13 +140,9 @@ class SpeedSignDetector(AbstractDetector):
                                            distance=distance,
                                            label=classification,
                                            confidence=confidence))
-                    elif self.collect_unlabeled_data:
-                        now = datetime.now().strftime("%H:%M:%S")
-                        cv2.imwrite(os.path.join(self.descriptor_path, f"unlabeled/{now}.jpg"),
-                                    cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
 
                     if self.data_collect_path is not None and distance < 25:
-                        now = datetime.now().strftime("%H:%M:%S")
+                        now = datetime.now().strftime("%H:%M:%S-%s")
                         folder = os.path.abspath(
                             f"{self.data_collect_path}/{classification.name if classification is not None else 'unknown'}")
                         if not os.path.exists(folder):

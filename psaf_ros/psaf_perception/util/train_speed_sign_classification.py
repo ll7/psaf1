@@ -22,13 +22,13 @@ data_dir = "/home/psaf1/project-files/training_data/speed_signs"
 
 # Generate path where the model will be stored
 now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-store_path =os.path.abspath(f"../models/speed_sign-classifiers-{now}")
+store_path = os.path.abspath(f"../models/speed_sign-classifiers-{now}")
 
 # Number of classes in the dataset
-classes = ['back','speed_limit_30','speed_30','speed_60','speed_90']
+classes = ['back', 'speed_limit_30', 'speed_limit_40', 'speed_limit_60', 'speed_30', 'speed_60', 'speed_90']
 
 # Batch size for training (change depending on how much memory you have)
-batch_size = 256
+batch_size = 640
 
 # Number of epochs to train for
 num_epochs = 500
@@ -37,7 +37,8 @@ num_epochs = 500
 #   when True we only update the reshaped layer params
 feature_extract = True
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
+
+def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
     since = time.time()
 
     val_acc_history = []
@@ -45,13 +46,13 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
-    for epoch in tqdm(range(num_epochs),desc="Train..."):
+    for epoch in tqdm(range(num_epochs), desc="Train..."):
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
                 model.train()  # Set model to training mode
             else:
-                model.eval()   # Set model to evaluate mode
+                model.eval()  # Set model to evaluate mode
 
             running_loss = 0.0
             running_corrects = 0
@@ -71,15 +72,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                     # Special case for inception because in training it has an auxiliary output. In train
                     #   mode we calculate the loss by summing the final output and the auxiliary output
                     #   but in testing we only consider the final output.
-                    if is_inception and phase == 'train':
-                        # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
-                        outputs, aux_outputs = model(inputs)
-                        loss1 = criterion(outputs, labels)
-                        loss2 = criterion(aux_outputs, labels)
-                        loss = loss1 + 0.4*loss2
-                    else:
-                        outputs = model(inputs)
-                        loss = criterion(outputs, labels)
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
 
                     _, preds = torch.max(outputs, 1)
 
@@ -105,14 +99,15 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 val_acc_history.append(epoch_acc)
 
     time_elapsed = time.time() - since
-    print('-'*20)
+    print('-' * 20)
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
-    print('-'*20)
+    print('-' * 20)
 
     # load best model weights
     model.load_state_dict(best_model_wts)
     return model, val_acc_history
+
 
 def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
@@ -120,10 +115,9 @@ def set_parameter_requires_grad(model, feature_extracting):
             param.requires_grad = False
 
 
-def initialize_model( num_classes, feature_extract, use_pretrained=True):
+def initialize_model(num_classes, feature_extract, use_pretrained=True):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
-
 
     """ Resnet
     """
@@ -134,6 +128,7 @@ def initialize_model( num_classes, feature_extract, use_pretrained=True):
     input_size = 224
     return model_ft, input_size
 
+
 if __name__ == "__main__":
 
     model_ft, input_size = initialize_model(len(classes), feature_extract, use_pretrained=True)
@@ -141,9 +136,9 @@ if __name__ == "__main__":
     # Just normalization for validation
     data_transforms = {
         'train': transforms.Compose([
-            transforms.Resize((input_size,input_size)),
-            transforms.RandomRotation([-15,15], resample=False, expand=False, center=None, fill=None),
-            transforms.ColorJitter(brightness=0.1,contrast=0.2,saturation=0.05,hue=0),
+            transforms.Resize((input_size, input_size)),
+            transforms.RandomRotation([-15, 15], resample=False, expand=False, center=None, fill=None),
+            transforms.ColorJitter(brightness=0.1, contrast=0.2, saturation=0.05, hue=0),
             transforms.RandomPerspective(distortion_scale=0.5, p=0.5, interpolation=2, fill=0),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -158,14 +153,24 @@ if __name__ == "__main__":
 
     print("Initializing Datasets and Dataloaders...")
 
-    def filter_classes(string:str) -> bool:
+
+    def filter_classes(string: str) -> bool:
+        """
+        Filter the data to train only the given classes
+        :param string:
+        :return:
+        """
         return any(class_name in string for class_name in classes)
 
 
     # Create training and validation datasets
-    image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x],is_valid_file=filter_classes) for x in ['train', 'val']}
+    image_datasets = {
+        x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x], is_valid_file=filter_classes) for x in
+        ['train', 'val']}
     # Create training and validation dataloaders
-    dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in ['train', 'val']}
+    dataloaders_dict = {
+        x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in
+        ['train', 'val']}
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -182,14 +187,14 @@ if __name__ == "__main__":
     print("Params to learn:")
     if feature_extract:
         params_to_update = []
-        for name,param in model_ft.named_parameters():
+        for name, param in model_ft.named_parameters():
             if param.requires_grad == True:
                 params_to_update.append(param)
-                print("\t",name)
+                print("\t", name)
     else:
-        for name,param in model_ft.named_parameters():
+        for name, param in model_ft.named_parameters():
             if param.requires_grad == True:
-                print("\t",name)
+                print("\t", name)
 
     # Observe that all parameters are being optimized
     optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
@@ -197,20 +202,26 @@ if __name__ == "__main__":
     # Setup the loss fxn
     criterion = nn.CrossEntropyLoss()
 
+    print(f"Start training with {len(image_datasets['train'])} images.")
+
     # Train and evaluate
-    model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=False)
+    model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs)
 
     print(f"Save model to '{store_path}'...")
     torch.save(model_ft, f"{store_path}.pt")
     names = image_datasets['train'].class_to_idx
     with open(f"{store_path}.names", 'w') as f:
         json.dump(names, f)
-    states_parameters = {
-        'epochs':num_epochs,
+    results = {
+        'epochs': num_epochs,
+        'batch size': batch_size,
         'feature_extract': feature_extract,
-        'validation_accuracy' : float(max(hist).cpu()),
+        'validation_accuracy': float(max(hist).cpu()),
+        'number of training images': len(image_datasets['train']),
+        'number of validation images': len(image_datasets['val']),
+
     }
     with open(f"{store_path}.config", 'w') as f:
-        json.dump(states_parameters, f)
+        json.dump(results, f)
 
     print("...Done saving")
