@@ -8,7 +8,7 @@ uint8 id
 # action for the obstacle see constants
 uint8 action
 
-#The relative position seen from the car position
+#The position relative to the car position
 float32 x
 float32 y
 
