@@ -24,8 +24,15 @@ class TrafficLightDetector(AbstractDetector):
     Detector for traffic lights
     """
 
-    def __init__(self, role_name: str = "ego_vehicle"):
+    def __init__(self, role_name: str = "ego_vehicle", use_gpu: bool = True):
+        """
+        Init the speed sign detector
+        :param role_name: the name of the vehicle to access the cameras
+        :param use_gpu: whether the classification model should be loaded to the gpu
+        """
         super().__init__()
+
+        self.logger_name = "TrafficLightDetector"
 
         self.confidence_min = 0.65
         self.threshold = 0.7
@@ -38,12 +45,13 @@ class TrafficLightDetector(AbstractDetector):
 
         self.confidence_min = 0.70
         self.threshold = 0.7
-        rospy.loginfo("init device")
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
-        rospy.loginfo("Device:" + str(self.device))
+        rospy.loginfo(f"init device (use gpu={use_gpu})",logger_name=self.logger_name)
+        # select the gpu if allowed and a gpu is available
+        self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
+        rospy.loginfo("Device:" + str(self.device),logger_name=self.logger_name)
         # load our model
         model_name = 'traffic-light-classifiers-2021-01-10-15:19:00'
-        rospy.loginfo("loading classifier model from disk...")
+        rospy.loginfo("loading classifier model from disk...",logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
         class_names = {}

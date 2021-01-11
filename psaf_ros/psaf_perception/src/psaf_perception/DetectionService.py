@@ -20,10 +20,11 @@ class DetectionService:
         self.detectors = {}
         rospy.init_node("DetectionService")
         role_name = rospy.get_param("role_name", "ego_vehicle")
-        # Add detector here
-        self.detectors.update({"speed": SpeedSignDetector(role_name)})
-        self.detectors.update({"stop": StopMarkDetector(role_name)})
-        self.detectors.update({"trafficLight": TrafficLightDetector(role_name)})
+        use_gpu = rospy.get_param("use_gpu")
+        # Add detectors here
+        self.detectors.update({"speed": SpeedSignDetector(role_name=role_name,use_gpu=use_gpu)})
+        self.detectors.update({"stop": StopMarkDetector(role_name=role_name,use_gpu=use_gpu)})
+        self.detectors.update({"trafficLight": TrafficLightDetector(role_name=role_name,use_gpu=use_gpu)})
 
         # Data
         # store all speed signs

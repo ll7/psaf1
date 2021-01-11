@@ -20,8 +20,14 @@ CONV_FAC_MPH_TO_KMH = 1.60934
 
 class SpeedSignDetector(AbstractDetector):
 
-    def __init__(self, role_name: str = "ego_vehicle"):
+    def __init__(self, role_name: str = "ego_vehicle",use_gpu:bool = True):
+        """
+        Init the speed sign detector
+        :param role_name: the name of the vehicle to access the cameras
+        :param use_gpu: whether the classification model should be loaded to the gpu
+        """
         super().__init__()
+        self.logger_name = "SpeedSignDetector"
 
         rospack = rospkg.RosPack()
         root_path = rospack.get_path('psaf_perception')
@@ -32,12 +38,13 @@ class SpeedSignDetector(AbstractDetector):
 
         self.data_collect_path = None #"/home/psaf1/Documents/speed_sign_data"
 
-        rospy.loginfo("init device")
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
-        rospy.loginfo("Device:" + str(self.device))
+        rospy.loginfo(f"init device (use gpu={use_gpu})",logger_name=self.logger_name)
+        # select the gpu if allowed and a gpu is available
+        self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
+        rospy.loginfo("Device:" + str(self.device),logger_name=self.logger_name)
         # load our model
         model_name = 'speed_sign-classifiers-2021-01-11-17:07:10'
-        rospy.loginfo("loading classifier model from disk...")
+        rospy.loginfo("loading classifier model from disk...",logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
         class_names = {}

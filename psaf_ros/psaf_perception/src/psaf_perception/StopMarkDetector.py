@@ -40,11 +40,17 @@ class SingleImage(Dataset):
 
 
 class StopMarkDetector(AbstractDetector):
-    def __init__(self, role_name: str = "ego_vehicle"):
+    def __init__(self, role_name: str = "ego_vehicle", use_gpu: bool = False):
+        """
+        Init the speed sign detector
+        :param role_name: the name of the vehicle to access the cameras
+        :param use_gpu: whether the classification model should be loaded to the gpu
+        """
         super().__init__()
 
         rospack = rospkg.RosPack()
         root_path = rospack.get_path('psaf_perception')
+        self.logger_name = "StopMarkDetector"
 
         self.confidence_min = 0.6
         self.threshold = 0.6
@@ -59,15 +65,16 @@ class StopMarkDetector(AbstractDetector):
             for row in csv_in:
                self.labels.append(row[0])
 
-        rospy.loginfo("loading YOLO from disk...")
-        # Set up model
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
+        rospy.loginfo(f"init device (use gpu={use_gpu})",logger_name=self.logger_name)
+        # select the gpu if allowed and a gpu is available
+        self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
         self.img_size = 416;
+        rospy.loginfo("loading classifier model from disk...",logger_name=self.logger_name)
         model = Darknet(config_path,self.img_size).to(self.device)
         model.load_darknet_weights(weights_path)
         model.eval()
 
-        self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+        self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() and use_gpu else torch.FloatTensor
 
         torch.no_grad()
         self.net = model
@@ -85,7 +92,6 @@ class StopMarkDetector(AbstractDetector):
             shuffle=False,
             num_workers=0,
         )
-
         output =[]
         for batch_i, (input_imgs) in enumerate(dataloader):
             input_img = Variable(input_imgs.type(self.Tensor))

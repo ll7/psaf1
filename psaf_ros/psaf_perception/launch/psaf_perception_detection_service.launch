@@ -1,5 +1,10 @@
 <!-- -->
 <launch>
+<!--  Arguments begin-->
+  <arg name='use_gpu' default='True'/>
+<!-- Arguments end-->
+
+  <param name="use_gpu" type="bool" value="$(arg use_gpu)" />
   <node pkg="psaf_perception" type="DetectionService.py" name="detection_service" output="screen">
   </node>
 </launch>
