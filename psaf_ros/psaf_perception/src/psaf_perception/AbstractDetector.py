@@ -39,7 +39,7 @@ class Labels(Enum):
     def label_text(self) -> str:
         """
         Returns the label name
-        :return: ł
+        :return:
         """
         return self._label
 

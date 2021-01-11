@@ -24,14 +24,14 @@ data_dir = "/home/psaf1/project-files/training_data/speed_signs"
 now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 store_path = os.path.abspath(f"../models/speed_sign-classifiers-{now}")
 
-# Number of classes in the dataset
+# classes in the dataset
 classes = ['back', 'speed_limit_30', 'speed_limit_40', 'speed_limit_60', 'speed_30', 'speed_60', 'speed_90']
 
 # Batch size for training (change depending on how much memory you have)
 batch_size = 640
 
 # Number of epochs to train for
-num_epochs = 500
+num_epochs = 1500
 
 # Flag for feature extracting. When False, we finetune the whole model,
 #   when True we only update the reshaped layer params

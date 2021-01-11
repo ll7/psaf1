@@ -30,13 +30,13 @@ class SpeedSignDetector(AbstractDetector):
         self.threshold = 0.7
         self.canny_threshold = 100
 
-        self.data_collect_path = "/home/psaf1/Documents/speed_sign_data"
+        self.data_collect_path = None #"/home/psaf1/Documents/speed_sign_data"
 
         rospy.loginfo("init device")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # for using the GPU in pytorch
         rospy.loginfo("Device:" + str(self.device))
         # load our model
-        model_name = 'speed_sign-classifiers-2021-01-11-09:14:28'
+        model_name = 'speed_sign-classifiers-2021-01-11-17:07:10'
         rospy.loginfo("loading classifier model from disk...")
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
