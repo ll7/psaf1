@@ -52,6 +52,7 @@ add_message_files(
    SpeedSign.msg
    StopMark.msg
    TrafficLight.msg
+   Obstacle.msg
 )
 
 ## Generate services in the 'srv' folder
