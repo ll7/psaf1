@@ -9,7 +9,7 @@ PLUGINLIB_EXPORT_CLASS(psaf_local_planner::PsafLocalPlanner, nav_core::BaseLocal
 
 namespace psaf_local_planner
 {
-    PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), local_plan({}),
+    PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), local_plan({}), global_plan({}),
                                            bufferSize(1000), initialized(false), closest_point_local_plan(3),
                                            lookahead_factor(2), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false)
@@ -110,7 +110,7 @@ namespace psaf_local_planner
             fillPointBuffer();
             publishLocalPlan(local_plan);
 
-            if (local_plan.empty() && global_plan.empty())
+            if (local_plan.size() <= 1 && global_plan.empty())
             {
                 ROS_INFO("Goal reached");
                 cmd_vel.linear.x = 0;
@@ -187,18 +187,21 @@ namespace psaf_local_planner
         planner_util.setPlan(plan);
         publishGlobalPlan(plan);
         global_plan = plan;
+        local_plan.clear();
         goal_reached = false;
         return true;
     }
 
     void PsafLocalPlanner::publishLocalPlan(const std::vector<geometry_msgs::PoseStamped> &path)
     {
-        base_local_planner::publishPlan(path, l_plan_pub);
+        if (!path.empty())
+            base_local_planner::publishPlan(path, l_plan_pub);
     }
 
     void PsafLocalPlanner::publishGlobalPlan(const std::vector<geometry_msgs::PoseStamped> &path)
     {
-        base_local_planner::publishPlan(path, g_plan_pub);
+        if (!path.empty())
+            base_local_planner::publishPlan(path, g_plan_pub);
     }
 
     /**
@@ -276,7 +279,7 @@ namespace psaf_local_planner
         tf2::convert(current_location.position, point1);
         const geometry_msgs::PoseStamped &w = *it;
         tf2::convert(w.pose.position, point2);
-
+        
         ++it;
         double sum_distance = tf2::tf2Distance2(point1, point2);
         double sum_angle = 0;
