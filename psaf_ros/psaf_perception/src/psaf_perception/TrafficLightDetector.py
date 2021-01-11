@@ -49,8 +49,12 @@ class TrafficLightDetector(AbstractDetector):
         class_names = {}
         with open(os.path.join(root_path, f"models/{model_name}.names")) as f:
             class_names = json.load(f)
-        self.labels = {class_names['back']:Labels.TrafficLightUnknown, class_names['green']:Labels.TrafficLightGreen, class_names['red']:Labels.TrafficLightRed,
-                       class_names['yellow']:Labels.TrafficLightYellow}
+        self.labels = {
+            class_names['back']: None,
+            class_names['green']: Labels.TrafficLightGreen,
+            class_names['red']: Labels.TrafficLightRed,
+            class_names['yellow']: Labels.TrafficLightYellow
+        }
         self.transforms = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize((224, 224)),
@@ -80,7 +84,7 @@ class TrafficLightDetector(AbstractDetector):
         pred = torch.nn.functional.softmax(self.net(imgblob).cpu(), dim=1).detach().numpy()[0, :]
 
         hit = np.argmax(pred)
-        label = self.labels.get(hit,Labels.TrafficLightUnknown)
+        label = self.labels.get(hit, Labels.TrafficLightUnknown)
 
         return label, pred[hit]
 
@@ -113,7 +117,7 @@ class TrafficLightDetector(AbstractDetector):
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                if (boxes[i][2] * boxes[i][3] * H * W) > 150:
+                if boxes[i][2] < boxes[i][3] and boxes[i][2] * W > 3 and boxes[i][3] * H > 10:
                     x1 = int(boxes[i][0] * W)
                     x2 = int((boxes[i][0] + boxes[i][2]) * W)
                     y1 = int(boxes[i][1] * H)
@@ -133,20 +137,21 @@ class TrafficLightDetector(AbstractDetector):
                     label, confidence = self.__extract_label(crop_rgb)
 
                     if not confidence >= self.confidence_min:
-                        label=Labels.TrafficLightUnknown
+                        label = Labels.TrafficLightUnknown
                         confidence = 1.
-                    detected.append(
-                        DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3],
-                                       distance=distance,
-                                       label=label,
-                                       confidence=confidence))
+                    if label is not None:
+                        detected.append(
+                            DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3],
+                                           distance=distance,
+                                           label=label,
+                                           confidence=confidence))
                     # Store traffic light data in folder to train a better network
                     if self.data_collect_path is not None and distance < 25:
                         now = datetime.now().strftime("%H:%M:%S")
                         folder = os.path.abspath(f"{self.data_collect_path}/{label.name}")
                         if not os.path.exists(folder):
                             os.mkdir(folder)
-                        cv2.imwrite(os.path.join(folder,f"{now}-{i}.jpg"),cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
+                        cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
 
         self.inform_listener(detected)
 
