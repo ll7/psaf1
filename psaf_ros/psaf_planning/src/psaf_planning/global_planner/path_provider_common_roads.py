@@ -18,6 +18,7 @@ import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
 from psaf_abstraction_layer.sensors.GPS import GPS_Position
 from geometry_msgs.msg import Point, PoseStamped
+import sys
 
 import rospy
 
@@ -49,7 +50,10 @@ class PathProviderCommonRoads(PathProviderAbstract):
             scenario = self.map_provider.convert_od_to_lanelet()
             r.sleep()
             iter_cnt += 1
-
+        if not scenario:
+            rospy.logerr("PathProvider: Couldn't load the map, shutting down ...")
+            self.status_pub.publish("Couldn't load the map, shutting down")
+            sys.exit(-1)
         return scenario
 
     def _find_nearest_lanlet(self, goal: Point) -> Lanelet:

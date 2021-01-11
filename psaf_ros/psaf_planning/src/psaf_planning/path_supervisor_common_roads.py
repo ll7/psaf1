@@ -7,7 +7,7 @@ from geometry_msgs.msg import Point
 from std_msgs.msg import String
 import numpy as np
 from commonroad.scenario.lanelet import Lanelet, LineMarking
-# import necesary classes from different modules
+# import necessary classes from different modules
 from commonroad.geometry.shape import Rectangle
 from commonroad.scenario.obstacle import StaticObstacle, ObstacleType
 from commonroad.scenario.trajectory import State
@@ -15,17 +15,16 @@ from commonroad.scenario.trajectory import State
 
 class PathSupervisorCommonRoads(PathProviderCommonRoads):
     def __init__(self, init_rospy: bool = False, enable_debug: bool = False):
+        rospy.init_node('TEST2', anonymous=True)
         super(PathSupervisorCommonRoads, self).__init__(init_rospy=not init_rospy, enable_debug=enable_debug)
-        if init_rospy:
-            # initialize node
-            rospy.init_node('PathSupervisor', anonymous=True)
         self.busy: bool = False
+        self.intersections = self._map_intersection_and_lanelets()
         rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle)
-        self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
         self.obstacles = {}
 
     def _callback_obstacle(self, data: Obstacle):
-        if not self.busy and self.map is not None:
+        rospy.logerr("PathSupervisor: TEst")
+        if not self.busy and self.map is not None and len(self.path.poses) > 0:
             self.busy = True
             if data.action is data.ACTION_ADD:
                 self.status_pub.publish("Start Replanning")
@@ -39,6 +38,9 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 rospy.logerr("PathSupervisor: replanning aborted, unknown action !!")
                 self.status_pub.publish("Replanning aborted, unknown action")
             self.busy = False
+        else:
+            rospy.logerr("PathSupervisor: replanning aborted, unknown action !!")
+            self.status_pub.publish("Replanning aborted, unknown action")
 
     def _add_obstacle(self, obstacle: Obstacle):
         """
@@ -60,23 +62,58 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             rospy.logerr("PathSupervisor: Replanning aborted, obstacle not in a lanelet -> no interfering !!")
             self.status_pub.publish("Replanning aborted, obstacle not in a lanelet -> no interfering")
             return False
-        lanelet: Lanelet = car_lanelet[0][0]
+        lanelet: Lanelet = self.map.lanelet_network.find_lanelet_by_id(car_lanelet[0][0])
         # case single road in current direction
         if lanelet.adj_left_same_direction is False or lanelet.adj_right_same_direction is False:
             rospy.logerr("PathSupervisor: Replanning aborted, single road in current direction !!")
             self.status_pub.publish("Replanning aborted, single road in current direction")
             return False
         # case at least one neighbouring lane and no solid line
-        elif lanelet.line_marking_left_vertices is not None and \
-                lanelet.line_marking_left_vertices is not LineMarking.SOLID or \
-                lanelet.line_marking_right_vertices is not None and \
-                lanelet.line_marking_right_vertices is not LineMarking.SOLID:
-            # generate the static obstacle according to the specification, refer to API for details of input parameters
+        elif lanelet.adj_right_same_direction is not None or lanelet.adj_left_same_direction is not None:
+            rospy.logerr("HJI")
+            cur_lanelet = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
+            merged_lanelet: Lanelet = cur_lanelet
+            # collect all successor lanelet that lead to an intersection and create one long one
+            rospy.logerr("HJI2")
+            matching_lanelet: Lanelet = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
+            next_lane = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet._successor[0])
+            index = 0
+            for i in range(0, len(self.map.lanelet_network.lanelets)):
+                if self.map.lanelet_network.lanelets[i].lanelet_id == next_lane.lanelet_id:
+                    index = i
+            o = self.map.lanelet_network.lanelets[index]
+            o._predecessor = []
+            prev_lane = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet._predecessor[0])
+            for i in range(0, len(self.map.lanelet_network.lanelets)):
+                if self.map.lanelet_network.lanelets[i].lanelet_id == prev_lane.lanelet_id:
+                    index = i
+            o = self.map.lanelet_network.lanelets[index]
+            o._successor = []
+            self.map.lanelet_network.cleanup_lanelet_references()
+            for i in range(0, 5):
+            #while cur_lanelet.lanelet_id not in self.intersections:
+                if len(cur_lanelet.successor) == 0:
+                    break
+                cur_lanelet = self.map.lanelet_network.find_lanelet_by_id(cur_lanelet.successor[0])
+                merged_lanelet = Lanelet.merge_lanelets(merged_lanelet, cur_lanelet)
             static_obstacle_id = self.map.generate_object_id()
+            rospy.logerr("HJI3")
             static_obstacle_type = ObstacleType.PARKED_VEHICLE
-            static_obstacle_shape = Rectangle(width=2.0, length=4.5)
+            #static_obstacle_shape = merged_lanelet.convert_to_polygon()
+            static_obstacle_shape = Rectangle(width = 4.5, length = 4.5)
             orientation = self.vehicle_status.get_status().get_orientation_as_euler()[2]
-            static_obstacle_initial_state = State(position=np.array([obs_pos_x, obs_pos_y]), orientation=orientation, time_step=0)
+            rospy.logerr("PathSupervisor: x{} y{} !!".format(obs_pos_x, obs_pos_y))
+            static_obstacle_initial_state = State(position=np.array([obs_pos_x, obs_pos_y]),
+                                                  orientation=orientation, time_step=0)
+
+            # feed in the required components to construct a static obstacle
+            static_obstacle = StaticObstacle(static_obstacle_id, static_obstacle_type, static_obstacle_shape,
+                                             static_obstacle_initial_state)
+
+            # add the static obstacle to the scenario
+            self.map.add_objects(static_obstacle)
+            self._replan()
+        return True
 
     def _remove_obstacle(self, obstacle: Obstacle):
         rospy.loginfo("PathSupervisor: Remove obstacle")
@@ -106,9 +143,22 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         rospy.loginfo("PathSupervisor: global planner plugin triggered")
         self.status_pub.publish("Replanning done")
 
+    def _map_intersection_and_lanelets(self):
+        """
+        Function to map the id of a lanelet to the associated intersection id
+        :return: dict with [str: "#lanelet id"] -> int: intersection id
+        """
+        lanelet_intersection_map = {}
+        for intersection in self.map.lanelet_network.intersections:
+            for incoming in intersection.incomings:
+                for lanelet in incoming.incoming_lanelets:
+                    lanelet_intersection_map[str(lanelet)] = intersection.intersection_id
+
+        return lanelet_intersection_map
+
 
 def main():
-    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
+    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=True)
     rospy.spin()
 
 
