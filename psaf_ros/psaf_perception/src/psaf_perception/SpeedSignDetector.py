@@ -43,7 +43,7 @@ class SpeedSignDetector(AbstractDetector):
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
         rospy.loginfo("Device:" + str(self.device),logger_name=self.logger_name)
         # load our model
-        model_name = 'speed_sign-classifiers-2021-01-11-17:07:10'
+        model_name = 'speed_sign-classifiers-2021-01-11-20:45:39'
         rospy.loginfo("loading classifier model from disk...",logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 

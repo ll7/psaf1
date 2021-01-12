@@ -28,14 +28,14 @@ store_path = os.path.abspath(f"../models/speed_sign-classifiers-{now}")
 classes = ['back', 'speed_limit_30', 'speed_limit_40', 'speed_limit_60', 'speed_30', 'speed_60', 'speed_90']
 
 # Batch size for training (change depending on how much memory you have)
-batch_size = 640
+batch_size = 256
 
 # Number of epochs to train for
-num_epochs = 1500
+num_epochs = 10000
 
 # Flag for feature extracting. When False, we finetune the whole model,
 #   when True we only update the reshaped layer params
-feature_extract = True
+feature_extract = False
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
@@ -137,9 +137,9 @@ if __name__ == "__main__":
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize((input_size, input_size)),
-            transforms.RandomRotation([-15, 15], resample=False, expand=False, center=None, fill=None),
+            # transforms.RandomRotation([-15, 15], resample=False, expand=False, center=None, fill=None),
             transforms.ColorJitter(brightness=0.1, contrast=0.2, saturation=0.05, hue=0),
-            transforms.RandomPerspective(distortion_scale=0.5, p=0.5, interpolation=2, fill=0),
+            # transforms.RandomPerspective(distortion_scale=0.5, p=0.5, interpolation=2, fill=0),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
