@@ -100,8 +100,8 @@ class RoutePlanner:
         """
 
         # Binding variables
-       # if backend not in RoutePlanner.Backend.values():
-        #    backend = RoutePlanner.Backend.NETWORKX
+        if backend.value not in RoutePlanner.Backend.values():
+            backend = RoutePlanner.Backend.NETWORKX
         self.backend = backend
 
         self.scenario = scenario
@@ -566,7 +566,7 @@ class RoutePlanner:
     def _calc_cost_travel(current: Lanelet) -> float:
         # use the length of the lanelet as the travel cost
         if len(current.static_obstacles_on_lanelet) > 0:
-            return 10000
+            return float("inf")
         return current.distance[-1]
 
     @staticmethod
