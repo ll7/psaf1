@@ -1,7 +1,6 @@
 import json
 import os
 from datetime import datetime
-from random import random
 from typing import Tuple
 
 import cv2
@@ -9,11 +8,9 @@ import numpy as np
 import rospkg
 import rospy
 import torch
-from genpy import Time
 from torch.autograd import Variable
 from torchvision.transforms import transforms
 
-from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 from psaf_perception.AbstractDetector import DetectedObject, AbstractDetector, Labels
 from psaf_perception.CameraDataFusion import CameraDataFusion, SegmentationTag
@@ -50,7 +47,7 @@ class TrafficLightDetector(AbstractDetector):
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
         rospy.loginfo("Device:" + str(self.device),logger_name=self.logger_name)
         # load our model
-        model_name = 'traffic-light-classifiers-2021-01-10-15:19:00'
+        model_name = 'traffic-light-classifiers-2021-01-12-15:38:22'
         rospy.loginfo("loading classifier model from disk...",logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
@@ -156,7 +153,7 @@ class TrafficLightDetector(AbstractDetector):
                     # Store traffic light data in folder to train a better network
                     if self.data_collect_path is not None and distance < 25:
                         now = datetime.now().strftime("%H:%M:%S")
-                        folder = os.path.abspath(f"{self.data_collect_path}/{label.name}")
+                        folder = os.path.abspath(f"{self.data_collect_path}/{label.name if label is not None else 'unknown' }")
                         if not os.path.exists(folder):
                             os.mkdir(folder)
                         cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))

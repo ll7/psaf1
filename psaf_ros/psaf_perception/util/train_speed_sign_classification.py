@@ -215,7 +215,7 @@ if __name__ == "__main__":
     results = {
         'epochs': num_epochs,
         'batch size': batch_size,
-        'feature_extract': feature_extract,
+        'freeze feature extraction layers': feature_extract,
         'validation_accuracy': float(max(hist).cpu()),
         'number of training images': len(image_datasets['train']),
         'number of validation images': len(image_datasets['val']),
