@@ -87,11 +87,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
             # add the static obstacle to the scenario
             self.map.lanelet_network.lanelets[matching_lanelet[0][0]].add_static_obstacle_to_lanelet(static_obstacle_id)
-            # make a local copy of the lanelet
-            lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
-            # delete copied lanelet
-            del self.map.lanelet_network._lanelets[matching_lanelet[0][0]]
-            # add two new lanelets
+            self._modify_lanelet(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0))
             self.map.lanelet_network.cleanup_lanelet_references()
             self.map.add_objects(static_obstacle)
             self._replan()
@@ -116,6 +112,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         # delete lanelet
         del self.map.lanelet_network._lanelets[lanelet_id]
         # bounds lanelet1
+        sep_index = lanelet_copy.center_vertices.tolist().index(min(lanelet_copy.center_vertices, key=lambda
+            pos: self._euclidean_2d_distance_from_to_position(pos, modify_point, use_posestamped=False)))
         left_1 = np.array()
         center_1 = np.array()
         right_1 = np.array()
@@ -162,6 +160,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             rospy.logerr("PathSupervisor: replanning aborted, obstacle doesn't exists !!")
             self.status_pub.publish("Replanning aborted, obstacle doesn't exists")
             return False
+
 
     def _get_current_position(self) -> Point:
         curr_pos_gps = self.GPS_Sensor.get_position()

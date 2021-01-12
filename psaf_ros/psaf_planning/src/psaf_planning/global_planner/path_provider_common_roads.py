@@ -163,15 +163,20 @@ class PathProviderCommonRoads(PathProviderAbstract):
         plt.savefig("route_"+str(num)+".png")
         plt.close()
 
-    def _euclidean_2d_distance_from_to_position(self, route_point: PoseStamped, compare_point: Point):
+    def _euclidean_2d_distance_from_to_position(self, route_point, compare_point: Point, use_posestamped: bool = True):
         """
         This helper function calculates the euclidean distance between 2 Points
         :param route_point: Has to be the point entry in path. -> PoseStamped
         :param compare_point: Point to compare the route_point -> Type Point
+        :param use_posestamped:  route_point is a PoseStamped-> Type Bool
         :return:
         """
-        return ((route_point.pose.position.x - compare_point.x) ** 2 +
-                (route_point.pose.position.y - compare_point.y) ** 2) ** 0.5
+        if use_posestamped:
+            return ((route_point.pose.position.x - compare_point.x) ** 2 +
+                    (route_point.pose.position.y - compare_point.y) ** 2) ** 0.5
+        else:
+            return ((route_point[1] - compare_point.x) ** 2 +
+                    (route_point[0] - compare_point.y) ** 2) ** 0.5
 
     def _get_shortest_route(self, routes_list: list):
         """
