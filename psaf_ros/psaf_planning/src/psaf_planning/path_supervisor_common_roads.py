@@ -86,10 +86,9 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                                              static_obstacle_initial_state)
 
             # add the static obstacle to the scenario
-            self.map.lanelet_network.lanelets[matching_lanelet[0][0]].add_static_obstacle_to_lanelet(static_obstacle_id)
-            self._modify_lanelet(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0))
+            front_split_id = self._update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0), static_obstacle)
+            self._update_network(front_split_id, curr_pos, None)
             self.map.lanelet_network.cleanup_lanelet_references()
-            self.map.add_objects(static_obstacle)
             self._replan()
         return True
 
@@ -103,6 +102,40 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             if self.map.lanelet_network.find_lanelet_by_id(lane_id) is None and lane_id is not exclude:
                 return lane_id
 
+    def _update_network(self, matching_lanelet_id: int, modify_point: Point, static_obstacle):
+        # new neighbourhood
+        right_1 = None
+        right_2 = None
+        left_1 = None
+        left_2 = None
+        # also split neighbours
+        if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_left is None:
+            right_1, right_2 = self._modify_lanelet(
+                self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right,
+                modify_point)
+        if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right is None:
+            left_1, left_2 = self._modify_lanelet(
+                self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_left,
+                modify_point)
+        # split obstacle lanelet
+        matching_1, matching_2 = self._modify_lanelet(matching_lanelet_id, modify_point)
+        # update neighbourhood
+        if right_1 is not None:
+            self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = matching_1
+            self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_left = matching_2
+            self.map.lanelet_network.find_lanelet_by_id(matching_1)._adj_right = right_1
+            self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_right = right_2
+        if left_1 is not None:
+            self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = matching_1
+            self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_right = matching_2
+            self.map.lanelet_network.find_lanelet_by_id(matching_1)._adj_left = left_1
+            self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_left = left_2
+        if static_obstacle is not None:
+            self.map.lanelet_network.find_lanelet_by_id(matching_2).add_static_obstacle_to_lanelet(
+                static_obstacle.obstacle_id)
+            self.map.add_objects(static_obstacle)
+        return matching_1
+
     def _modify_lanelet(self, lanelet_id: int, modify_point: Point):
         # create new ids
         id_lane_1 = self._generate_lanelet_id(id_start=lanelet_id)
@@ -115,46 +148,49 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         lanelet_center_list = lanelet_copy.center_vertices.tolist()
         sep_index = lanelet_center_list.index(min(lanelet_center_list, key=lambda
             pos: self._euclidean_2d_distance_from_to_position(pos, modify_point, use_posestamped=False)))
-        left_1 = lanelet_copy.left_vertices[:sep_index-1]
-        center_1 = lanelet_copy.center_vertices[:sep_index-1]
-        right_1 = lanelet_copy.right_vertices[:sep_index-1]
-        # bounds lanelet2
-        left_2 = lanelet_copy.left_vertices[sep_index:]
-        center_2 = lanelet_copy.center_vertices[sep_index:]
-        right_2 = lanelet_copy.right_vertices[sep_index:]
-        # create new lanelets lanelet_1 in front of obstacle; lanelet_2 behind obstacle
-        lanelet_1 = Lanelet(lanelet_id=id_lane_1, predecessor=lanelet_copy.predecessor,
-                            left_vertices=left_1, center_vertices=center_1, right_vertices=right_1,
-                            successor=[id_lane_2], adjacent_left=lanelet_copy.adj_left,
-                            adjacent_right=lanelet_copy.adj_right,
-                            adjacent_right_same_direction=lanelet_copy.adj_right_same_direction,
-                            adjacent_left_same_direction=lanelet_copy.adj_left_same_direction,
-                            line_marking_left_vertices=lanelet_copy.line_marking_left_vertices,
-                            line_marking_right_vertices=lanelet_copy.line_marking_right_vertices,
-                            stop_line=lanelet_copy.stop_line,
-                            lanelet_type=lanelet_copy.lanelet_type,
-                            user_one_way=lanelet_copy.user_one_way,
-                            user_bidirectional=lanelet_copy.user_bidirectional,
-                            traffic_signs=lanelet_copy.traffic_signs,
-                            traffic_lights=lanelet_copy.traffic_lights)
+        if sep_index > 1:
+            left_1 = lanelet_copy.left_vertices[:sep_index + 1]
+            center_1 = lanelet_copy.center_vertices[:sep_index + 1]
+            right_1 = lanelet_copy.right_vertices[:sep_index + 1]
+            # bounds lanelet2
+            left_2 = lanelet_copy.left_vertices[sep_index:]
+            center_2 = lanelet_copy.center_vertices[sep_index:]
+            right_2 = lanelet_copy.right_vertices[sep_index:]
+            # create new lanelets lanelet_1 in front of obstacle; lanelet_2 behind obstacle
+            lanelet_1 = Lanelet(lanelet_id=id_lane_1, predecessor=lanelet_copy.predecessor,
+                                left_vertices=left_1, center_vertices=center_1, right_vertices=right_1,
+                                successor=[id_lane_2], adjacent_left=lanelet_copy.adj_left,
+                                adjacent_right=lanelet_copy.adj_right,
+                                adjacent_right_same_direction=lanelet_copy.adj_right_same_direction,
+                                adjacent_left_same_direction=lanelet_copy.adj_left_same_direction,
+                                line_marking_left_vertices=lanelet_copy.line_marking_left_vertices,
+                                line_marking_right_vertices=lanelet_copy.line_marking_right_vertices,
+                                stop_line=lanelet_copy.stop_line,
+                                lanelet_type=lanelet_copy.lanelet_type,
+                                user_one_way=lanelet_copy.user_one_way,
+                                user_bidirectional=lanelet_copy.user_bidirectional,
+                                traffic_signs=lanelet_copy.traffic_signs,
+                                traffic_lights=lanelet_copy.traffic_lights)
 
-        lanelet_2 = Lanelet(lanelet_id=id_lane_2, predecessor=[id_lane_1],
-                            left_vertices=left_2, center_vertices=center_2, right_vertices=right_2,
-                            successor=lanelet_copy.successor, adjacent_left=lanelet_copy.adj_left,
-                            adjacent_right=lanelet_copy.adj_right,
-                            adjacent_right_same_direction=lanelet_copy.adj_right_same_direction,
-                            adjacent_left_same_direction=lanelet_copy.adj_left_same_direction,
-                            line_marking_left_vertices=lanelet_copy.line_marking_left_vertices,
-                            line_marking_right_vertices=lanelet_copy.line_marking_right_vertices,
-                            stop_line=lanelet_copy.stop_line,
-                            lanelet_type=lanelet_copy.lanelet_type,
-                            user_one_way=lanelet_copy.user_one_way,
-                            user_bidirectional=lanelet_copy.user_bidirectional,
-                            traffic_signs=lanelet_copy.traffic_signs,
-                            traffic_lights=lanelet_copy.traffic_lights)
-        # then add "back" to the lanelet_network
-        self.map.lanelet_network.add_lanelet(lanelet_1)
-        self.map.lanelet_network.add_lanelet(lanelet_2)
+            lanelet_2 = Lanelet(lanelet_id=id_lane_2, predecessor=[id_lane_1],
+                                left_vertices=left_2, center_vertices=center_2, right_vertices=right_2,
+                                successor=lanelet_copy.successor, adjacent_left=lanelet_copy.adj_left,
+                                adjacent_right=lanelet_copy.adj_right,
+                                adjacent_right_same_direction=lanelet_copy.adj_right_same_direction,
+                                adjacent_left_same_direction=lanelet_copy.adj_left_same_direction,
+                                line_marking_left_vertices=lanelet_copy.line_marking_left_vertices,
+                                line_marking_right_vertices=lanelet_copy.line_marking_right_vertices,
+                                stop_line=lanelet_copy.stop_line,
+                                lanelet_type=lanelet_copy.lanelet_type,
+                                user_one_way=lanelet_copy.user_one_way,
+                                user_bidirectional=lanelet_copy.user_bidirectional,
+                                traffic_signs=lanelet_copy.traffic_signs,
+                                traffic_lights=lanelet_copy.traffic_lights)
+            # then add "back" to the lanelet_network
+            self.map.lanelet_network.add_lanelet(lanelet_1)
+            self.map.lanelet_network.add_lanelet(lanelet_2)
+
+            return id_lane_1, id_lane_2
 
     def _remove_obstacle(self, obstacle: Obstacle):
         rospy.loginfo("PathSupervisor: Remove obstacle")
@@ -163,7 +199,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             rospy.logerr("PathSupervisor: replanning aborted, obstacle doesn't exists !!")
             self.status_pub.publish("Replanning aborted, obstacle doesn't exists")
             return False
-
 
     def _get_current_position(self) -> Point:
         curr_pos_gps = self.GPS_Sensor.get_position()

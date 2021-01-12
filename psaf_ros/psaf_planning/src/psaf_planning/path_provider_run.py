@@ -9,7 +9,7 @@ from psaf_messages.msg import Obstacle
 
 def main():
     rospy.init_node('TEST', anonymous=True)
-    ob = Obstacle(1, 0, 10, 0, 0)
+    ob = Obstacle(1, 0, 0, -10, 0)
     pub = rospy.Publisher("/psaf/planning/obstacle", Obstacle, queue_size=10)
     while pub.get_num_connections() == 0:
         rospy.sleep(1)

@@ -566,7 +566,7 @@ class RoutePlanner:
     def _calc_cost_travel(current: Lanelet) -> float:
         # use the length of the lanelet as the travel cost
         if len(current.static_obstacles_on_lanelet) > 0:
-            return float("inf")
+            return 100000#float("inf")
         return current.distance[-1]
 
     @staticmethod
