@@ -112,16 +112,17 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         # delete lanelet
         del self.map.lanelet_network._lanelets[lanelet_id]
         # bounds lanelet1
-        sep_index = lanelet_copy.center_vertices.tolist().index(min(lanelet_copy.center_vertices, key=lambda
+        lanelet_center_list = lanelet_copy.center_vertices.tolist()
+        sep_index = lanelet_center_list.index(min(lanelet_center_list, key=lambda
             pos: self._euclidean_2d_distance_from_to_position(pos, modify_point, use_posestamped=False)))
-        left_1 = np.array()
-        center_1 = np.array()
-        right_1 = np.array()
+        left_1 = lanelet_copy.left_vertices[:sep_index-1]
+        center_1 = lanelet_copy.center_vertices[:sep_index-1]
+        right_1 = lanelet_copy.right_vertices[:sep_index-1]
         # bounds lanelet2
-        left_2 = np.array()
-        center_2 = np.array()
-        right_2 = np.array()
-        # create new lanelets
+        left_2 = lanelet_copy.left_vertices[sep_index:]
+        center_2 = lanelet_copy.center_vertices[sep_index:]
+        right_2 = lanelet_copy.right_vertices[sep_index:]
+        # create new lanelets lanelet_1 in front of obstacle; lanelet_2 behind obstacle
         lanelet_1 = Lanelet(lanelet_id=id_lane_1, predecessor=lanelet_copy.predecessor,
                             left_vertices=left_1, center_vertices=center_1, right_vertices=right_1,
                             successor=[id_lane_2], adjacent_left=lanelet_copy.adj_left,
@@ -151,7 +152,9 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                             user_bidirectional=lanelet_copy.user_bidirectional,
                             traffic_signs=lanelet_copy.traffic_signs,
                             traffic_lights=lanelet_copy.traffic_lights)
-
+        # then add "back" to the lanelet_network
+        self.map.lanelet_network.add_lanelet(lanelet_1)
+        self.map.lanelet_network.add_lanelet(lanelet_2)
 
     def _remove_obstacle(self, obstacle: Obstacle):
         rospy.loginfo("PathSupervisor: Remove obstacle")
