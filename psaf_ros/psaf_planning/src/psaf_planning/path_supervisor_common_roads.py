@@ -1,3 +1,5 @@
+import sys
+
 from psaf_messages.msg import Obstacle
 from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
 from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads
@@ -15,7 +17,8 @@ from commonroad.scenario.trajectory import State
 
 class PathSupervisorCommonRoads(PathProviderCommonRoads):
     def __init__(self, init_rospy: bool = False, enable_debug: bool = False):
-        rospy.init_node('TEST2', anonymous=True)
+        if init_rospy:
+            rospy.init_node('PathSupervisorCommonRoads', anonymous=True)
         super(PathSupervisorCommonRoads, self).__init__(init_rospy=not init_rospy, enable_debug=enable_debug)
         self.busy: bool = False
         self.intersections = self._map_intersection_and_lanelets()
@@ -71,10 +74,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         # case at least one neighbouring lane and no solid line
         elif lanelet.adj_right_same_direction is not None or lanelet.adj_left_same_direction is not None:
             static_obstacle_id = self.map.generate_object_id()
-            rospy.logerr("HJI3")
             static_obstacle_type = ObstacleType.PARKED_VEHICLE
-            #static_obstacle_shape = merged_lanelet.convert_to_polygon()
-            static_obstacle_shape = Rectangle(width = 4.5, length = 4.5)
+            static_obstacle_shape = Rectangle(width=2, length=4.5)
             orientation = self.vehicle_status.get_status().get_orientation_as_euler()[2]
             rospy.logerr("PathSupervisor: x{} y{} !!".format(obs_pos_x, obs_pos_y))
             static_obstacle_initial_state = State(position=np.array([obs_pos_x, obs_pos_y]),
@@ -85,10 +86,74 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                                              static_obstacle_initial_state)
 
             # add the static obstacle to the scenario
-            self.map.lanelet_network.find_lanelet_by_id(132).add_static_obstacle_to_lanelet(static_obstacle_id)
+            self.map.lanelet_network.lanelets[matching_lanelet[0][0]].add_static_obstacle_to_lanelet(static_obstacle_id)
+            # make a local copy of the lanelet
+            lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
+            # delete copied lanelet
+            del self.map.lanelet_network._lanelets[matching_lanelet[0][0]]
+            # add two new lanelets
+            self.map.lanelet_network.cleanup_lanelet_references()
             self.map.add_objects(static_obstacle)
             self._replan()
         return True
+
+    def _generate_lanelet_id(self, id_start=-1, exclude: int = -1) -> int:
+        while True:
+            lane_id = 0
+            if id_start == -1:
+                lane_id = np.random.randint(0, sys.maxsize)
+            else:
+                lane_id = np.random.randint(id_start, sys.maxsize)
+            if self.map.lanelet_network.find_lanelet_by_id(lane_id) is None and lane_id is not exclude:
+                return lane_id
+
+    def _modify_lanelet(self, lanelet_id: int, modify_point: Point):
+        # create new ids
+        id_lane_1 = self._generate_lanelet_id(id_start=lanelet_id)
+        id_lane_2 = self._generate_lanelet_id(id_start=lanelet_id, exclude=id_lane_1)
+        # make a local copy of the lanelet to be removed
+        lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(lanelet_id)
+        # delete lanelet
+        del self.map.lanelet_network._lanelets[lanelet_id]
+        # bounds lanelet1
+        left_1 = np.array()
+        center_1 = np.array()
+        right_1 = np.array()
+        # bounds lanelet2
+        left_2 = np.array()
+        center_2 = np.array()
+        right_2 = np.array()
+        # create new lanelets
+        lanelet_1 = Lanelet(lanelet_id=id_lane_1, predecessor=lanelet_copy.predecessor,
+                            left_vertices=left_1, center_vertices=center_1, right_vertices=right_1,
+                            successor=[id_lane_2], adjacent_left=lanelet_copy.adj_left,
+                            adjacent_right=lanelet_copy.adj_right,
+                            adjacent_right_same_direction=lanelet_copy.adj_right_same_direction,
+                            adjacent_left_same_direction=lanelet_copy.adj_left_same_direction,
+                            line_marking_left_vertices=lanelet_copy.line_marking_left_vertices,
+                            line_marking_right_vertices=lanelet_copy.line_marking_right_vertices,
+                            stop_line=lanelet_copy.stop_line,
+                            lanelet_type=lanelet_copy.lanelet_type,
+                            user_one_way=lanelet_copy.user_one_way,
+                            user_bidirectional=lanelet_copy.user_bidirectional,
+                            traffic_signs=lanelet_copy.traffic_signs,
+                            traffic_lights=lanelet_copy.traffic_lights)
+
+        lanelet_2 = Lanelet(lanelet_id=id_lane_2, predecessor=[id_lane_1],
+                            left_vertices=left_2, center_vertices=center_2, right_vertices=right_2,
+                            successor=lanelet_copy.successor, adjacent_left=lanelet_copy.adj_left,
+                            adjacent_right=lanelet_copy.adj_right,
+                            adjacent_right_same_direction=lanelet_copy.adj_right_same_direction,
+                            adjacent_left_same_direction=lanelet_copy.adj_left_same_direction,
+                            line_marking_left_vertices=lanelet_copy.line_marking_left_vertices,
+                            line_marking_right_vertices=lanelet_copy.line_marking_right_vertices,
+                            stop_line=lanelet_copy.stop_line,
+                            lanelet_type=lanelet_copy.lanelet_type,
+                            user_one_way=lanelet_copy.user_one_way,
+                            user_bidirectional=lanelet_copy.user_bidirectional,
+                            traffic_signs=lanelet_copy.traffic_signs,
+                            traffic_lights=lanelet_copy.traffic_lights)
+
 
     def _remove_obstacle(self, obstacle: Obstacle):
         rospy.loginfo("PathSupervisor: Remove obstacle")
