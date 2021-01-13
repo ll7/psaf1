@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import asyncio
 from typing import List
 
 import rospy
@@ -22,9 +21,9 @@ class DetectionService:
         role_name = rospy.get_param("role_name", "ego_vehicle")
         use_gpu = rospy.get_param("use_gpu")
         # Add detectors here
-        self.detectors.update({"speed": SpeedSignDetector(role_name=role_name,use_gpu=use_gpu)})
-        self.detectors.update({"stop": StopMarkDetector(role_name=role_name,use_gpu=use_gpu)})
-        self.detectors.update({"trafficLight": TrafficLightDetector(role_name=role_name,use_gpu=use_gpu)})
+        self.detectors.update({"speed": SpeedSignDetector(role_name=role_name, use_gpu=use_gpu)})
+        self.detectors.update({"stop": StopMarkDetector(role_name=role_name, use_gpu=use_gpu)})
+        self.detectors.update({"trafficLight": TrafficLightDetector(role_name=role_name, use_gpu=use_gpu)})
 
         # Data
         # store all speed signs
@@ -38,7 +37,6 @@ class DetectionService:
         self.traffic_sign_publisher = rospy.Publisher(ROOT_TOPIC + "traffic_signs", TrafficSignInfo, queue_size=1)
         # Helpers
         self.publish_timer = rospy.Timer(rospy.Duration(0.1), self.periodic_update)
-        self.lock = asyncio.Lock()
 
         # mapping between the traffic light states
         self.traffic_light_state_mapper = {

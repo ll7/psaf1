@@ -20,7 +20,7 @@ CONV_FAC_MPH_TO_KMH = 1.60934
 
 class SpeedSignDetector(AbstractDetector):
 
-    def __init__(self, role_name: str = "ego_vehicle",use_gpu:bool = True):
+    def __init__(self, role_name: str = "ego_vehicle", use_gpu: bool = True):
         """
         Init the speed sign detector
         :param role_name: the name of the vehicle to access the cameras
@@ -36,15 +36,15 @@ class SpeedSignDetector(AbstractDetector):
         self.threshold = 0.7
         self.canny_threshold = 100
 
-        self.data_collect_path = None #"/home/psaf1/Documents/speed_sign_data"
+        self.data_collect_path = None  # "/home/psaf1/Documents/speed_sign_data"
 
-        rospy.loginfo(f"init device (use gpu={use_gpu})",logger_name=self.logger_name)
+        rospy.loginfo(f"init device (use gpu={use_gpu})", logger_name=self.logger_name)
         # select the gpu if allowed and a gpu is available
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
-        rospy.loginfo("Device:" + str(self.device),logger_name=self.logger_name)
+        rospy.loginfo("Device:" + str(self.device), logger_name=self.logger_name)
         # load our model
         model_name = 'speed_sign-classifiers-2021-01-11-20:45:39'
-        rospy.loginfo("loading classifier model from disk...",logger_name=self.logger_name)
+        rospy.loginfo("loading classifier model from disk...", logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
         class_names = {}
@@ -80,10 +80,8 @@ class SpeedSignDetector(AbstractDetector):
         :return: the Label and the confidence as a tuple
         """
 
-        image = self.transforms(image)
-        image = image.unsqueeze(dim=0)
-        imgblob = Variable(image)
-        imgblob = imgblob.to(self.device)
+        image = self.transforms(image).unsqueeze(dim=0)
+        imgblob = Variable(image).to(self.device)
         pred = torch.nn.functional.softmax(self.net(imgblob).cpu(), dim=1).detach().numpy()[0, :]
 
         hit = np.argmax(pred)
@@ -92,11 +90,20 @@ class SpeedSignDetector(AbstractDetector):
         return label, float(pred[hit])
 
     def __on_new_image_data(self, segmentation_image, rgb_image, depth_image, time):
+        """
+        Handles the new image data from the cameras
+        :param segmentation_image: the segmentation image
+        :param rgb_image: the rgb image
+        :param depth_image: the depth data
+        :param time: time stamp when the images where taken
+        :return: none
+        """
         (H, W) = segmentation_image.shape[:2]
 
         # List oif detected elements
         detected = []
 
+        # Detect edges
         canny_output = cv2.Canny(segmentation_image, self.canny_threshold, self.canny_threshold * 2)
         contours, _ = cv2.findContours(canny_output, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 

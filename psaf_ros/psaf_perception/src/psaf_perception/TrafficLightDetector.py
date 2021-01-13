@@ -42,13 +42,13 @@ class TrafficLightDetector(AbstractDetector):
 
         self.confidence_min = 0.70
         self.threshold = 0.7
-        rospy.loginfo(f"init device (use gpu={use_gpu})",logger_name=self.logger_name)
+        rospy.loginfo(f"init device (use gpu={use_gpu})", logger_name=self.logger_name)
         # select the gpu if allowed and a gpu is available
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
-        rospy.loginfo("Device:" + str(self.device),logger_name=self.logger_name)
+        rospy.loginfo("Device:" + str(self.device), logger_name=self.logger_name)
         # load our model
         model_name = 'traffic-light-classifiers-2021-01-12-15:38:22'
-        rospy.loginfo("loading classifier model from disk...",logger_name=self.logger_name)
+        rospy.loginfo("loading classifier model from disk...", logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
         class_names = {}
@@ -82,16 +82,14 @@ class TrafficLightDetector(AbstractDetector):
         :param image: the important part of the camera image
         :return: the Label
         """
-        image = self.transforms(image)
-        image = image.unsqueeze(dim=0)
-        imgblob = Variable(image)
-        imgblob = imgblob.to(self.device)
+        image = self.transforms(image).unsqueeze(dim=0)
+        imgblob = Variable(image).to(self.device)
         pred = torch.nn.functional.softmax(self.net(imgblob).cpu(), dim=1).detach().numpy()[0, :]
 
         hit = np.argmax(pred)
         label = self.labels.get(hit, Labels.TrafficLightUnknown)
 
-        return label, pred[hit]
+        return label, float(pred[hit])
 
     def __on_new_image_data(self, segmentation_image, rgb_image, depth_image, time):
         """
@@ -111,12 +109,26 @@ class TrafficLightDetector(AbstractDetector):
         contours, _ = cv2.findContours(canny_output, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         boxes = []
+        classes = []
+        confidences = []
         for i, c in enumerate(contours):
             contours_poly = cv2.approxPolyDP(c, 3, True)
-            boxes.append(cv2.boundingRect(contours_poly) / np.array([W, H, W, H]))
+            x1, y1, w, h = cv2.boundingRect(contours_poly)
+            boxes.append(np.array([x1, y1, w, h]) / np.array([W, H, W, H]))
+            x2 = x1 + w
+            y2 = y1 + h
+
+            mask = segmentation_image[y1:y2, x1:x2] == SegmentationTag.TrafficLight.color
+            # get cropped rgb image
+            crop_rgb = rgb_image[y1:y2, x1:x2, :]
+            # use inverted mask to clear the background
+            crop_rgb[np.logical_not(mask)] = 0
+            label, confidence = self.__extract_label(crop_rgb)
+            classes.append(label)
+            confidences.append(confidence)
 
         # apply non-maxima suppression to suppress weak, overlapping bounding boxes
-        idxs = cv2.dnn.NMSBoxes(boxes, ([1.] * len(boxes)), self.confidence_min, self.threshold)
+        idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_min, self.threshold)
 
         # ensure at least one detection exists
         if len(idxs) > 0:
@@ -139,7 +151,8 @@ class TrafficLightDetector(AbstractDetector):
                     crop_rgb = rgb_image[y1:y2, x1:x2, :]
                     # use inverted mask to clear the background
                     crop_rgb[np.logical_not(mask)] = 0
-                    label, confidence = self.__extract_label(crop_rgb)
+                    label = classes[i]
+                    confidence = confidences[i]
 
                     if not confidence >= self.confidence_min:
                         label = Labels.TrafficLightUnknown
@@ -153,7 +166,8 @@ class TrafficLightDetector(AbstractDetector):
                     # Store traffic light data in folder to train a better network
                     if self.data_collect_path is not None and distance < 25:
                         now = datetime.now().strftime("%H:%M:%S")
-                        folder = os.path.abspath(f"{self.data_collect_path}/{label.name if label is not None else 'unknown' }")
+                        folder = os.path.abspath(
+                            f"{self.data_collect_path}/{label.name if label is not None else 'unknown'}")
                         if not os.path.exists(folder):
                             os.mkdir(folder)
                         cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
