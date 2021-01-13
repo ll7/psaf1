@@ -1,11 +1,13 @@
 from enum import Enum, EnumMeta
 
+import numpy
 import numpy as np
 import rospy
 import cv2
 from sensor_msgs.msg import Image
+from std_msgs.msg import Time
 from cv_bridge.core import CvBridge
-from typing import Set
+from typing import Set, Callable
 
 
 class Tag(Enum):
@@ -77,7 +79,7 @@ class SegmentationCamera:
         self.image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding='rgb8')
 
         if self.__listener != None:
-            self.__listener(self.image)
+            self.__listener(self.image,image_msg.header.stamp)
 
     def get_image(self):
         """
@@ -86,7 +88,7 @@ class SegmentationCamera:
         """
         return self.position
 
-    def set_on_image_listener(self, func):
+    def set_on_image_listener(self, func:Callable[[numpy.ndarray,Time],None]):
         """
         Set function to be called with the segmentation image as parameter
         :param func: the function
@@ -120,7 +122,7 @@ if __name__ == "__main__":
     rospy.init_node("SegmentationTest")
 
 
-    def show_image(image):
+    def show_image(image,_):
         (H, W) = image.shape[:2]
         max_width = 800
         new_width = int(max_width)
