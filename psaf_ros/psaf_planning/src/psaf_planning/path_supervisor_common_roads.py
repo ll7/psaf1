@@ -88,7 +88,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             front_split_id = self._update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0),
                                                   static_obstacle)
             self._update_network(front_split_id[0], curr_pos, None)
-            #self.map.lanelet_network.cleanup_lanelet_references()
             # add obstacle to dict
             self.obstacles[obstacle.id] = static_obstacle
             self._replan()
@@ -210,11 +209,11 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                                 user_bidirectional=lanelet_copy.user_bidirectional,
                                 traffic_signs=lanelet_copy.traffic_signs,
                                 traffic_lights=lanelet_copy.traffic_lights)
-            # update predecessor and successor of surrounding prev/nect lanes
+            # update predecessor and successor of surrounding prev/next lanes
             for succ in lanelet_copy.successor:
-                self.map.lanelet_network.find_lanelet_by_id(succ).predecessor.append(id_lane_1)
+                self.map.lanelet_network.find_lanelet_by_id(succ)._predecessor.append(id_lane_2)
             for pred in lanelet_copy.predecessor:
-                self.map.lanelet_network.find_lanelet_by_id(pred).successor.append(id_lane_2)
+                self.map.lanelet_network.find_lanelet_by_id(pred)._successor.append(id_lane_1)
             # update neigbourhood
             self._add_to_neighbourhood(id_lane_1, list([[id_lane_2], lanelet_copy.predecessor]))
             self._add_to_neighbourhood(id_lane_2, list([lanelet_copy.successor, [id_lane_1]]))
@@ -224,7 +223,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             # clean references
             self._fast_reference_cleanup(lanelet_id)
             return id_lane_1, id_lane_2
-        return None,None
+        return None, None
 
     def _remove_obstacle(self, obstacle: Obstacle):
         """
@@ -279,9 +278,9 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         rospy.loginfo("PathSupervisor: Removing {} from references!".format(lanelet_id))
         # remove lanelet_id from all successors
         for succ in self.neighbourhood[lanelet_id][0]:
-            self.map.lanelet_network.find_lanelet_by_id(succ).predecessor.remove(lanelet_id)
+            self.map.lanelet_network.find_lanelet_by_id(succ)._predecessor.remove(lanelet_id)
         for pred in self.neighbourhood[lanelet_id][1]:
-            self.map.lanelet_network.find_lanelet_by_id(pred).successor.remove(lanelet_id)
+            self.map.lanelet_network.find_lanelet_by_id(pred)._successor.remove(lanelet_id)
         # remove lanelet_id from neighbourhood dict
         del self.neighbourhood[lanelet_id]
 
