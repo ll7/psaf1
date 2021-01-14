@@ -22,6 +22,9 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.intersections = self._map_intersection_and_lanelets()
         rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle)
         self.obstacles = {}
+        self.neighbourhood = {}
+        self._analyze_neighbourhood()
+        self.status_pub.publish("Init Done")
 
     def _callback_obstacle(self, data: Obstacle):
         if not self.busy and self.map is not None and len(self.path.poses) > 0:
@@ -82,9 +85,10 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                                              static_obstacle_initial_state)
 
             # add the static obstacle to the scenario
-            front_split_id = self._update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0), static_obstacle)
+            front_split_id = self._update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0),
+                                                  static_obstacle)
             self._update_network(front_split_id[0], curr_pos, None)
-            self.map.lanelet_network.cleanup_lanelet_references()
+            #self.map.lanelet_network.cleanup_lanelet_references()
             # add obstacle to dict
             self.obstacles[obstacle.id] = static_obstacle
             self._replan()
@@ -168,7 +172,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         lanelet_center_list = lanelet_copy.center_vertices.tolist()
         sep_index = lanelet_center_list.index(min(lanelet_center_list, key=lambda
             pos: self._euclidean_2d_distance_from_to_position(pos, modify_point, use_posestamped=False)))
-        if sep_index > 1:
+        if sep_index > 1 and len(lanelet_center_list) - sep_index > 1:
             left_1 = lanelet_copy.left_vertices[:sep_index + 1]
             center_1 = lanelet_copy.center_vertices[:sep_index + 1]
             right_1 = lanelet_copy.right_vertices[:sep_index + 1]
@@ -206,11 +210,21 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                                 user_bidirectional=lanelet_copy.user_bidirectional,
                                 traffic_signs=lanelet_copy.traffic_signs,
                                 traffic_lights=lanelet_copy.traffic_lights)
+            # update predecessor and successor of surrounding prev/nect lanes
+            for succ in lanelet_copy.successor:
+                self.map.lanelet_network.find_lanelet_by_id(succ).predecessor.append(id_lane_1)
+            for pred in lanelet_copy.predecessor:
+                self.map.lanelet_network.find_lanelet_by_id(pred).successor.append(id_lane_2)
+            # update neigbourhood
+            self._add_to_neighbourhood(id_lane_1, list([[id_lane_2], lanelet_copy.predecessor]))
+            self._add_to_neighbourhood(id_lane_2, list([lanelet_copy.successor, [id_lane_1]]))
             # then add "back" to the lanelet_network
             self.map.lanelet_network.add_lanelet(lanelet_1)
             self.map.lanelet_network.add_lanelet(lanelet_2)
-
+            # clean references
+            self._fast_reference_cleanup(lanelet_id)
             return id_lane_1, id_lane_2
+        return None,None
 
     def _remove_obstacle(self, obstacle: Obstacle):
         """
@@ -261,6 +275,34 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
         return lanelet_intersection_map
 
+    def _fast_reference_cleanup(self, lanelet_id: int):
+        rospy.loginfo("PathSupervisor: Removing {} from references!".format(lanelet_id))
+        # remove lanelet_id from all successors
+        for succ in self.neighbourhood[lanelet_id][0]:
+            self.map.lanelet_network.find_lanelet_by_id(succ).predecessor.remove(lanelet_id)
+        for pred in self.neighbourhood[lanelet_id][1]:
+            self.map.lanelet_network.find_lanelet_by_id(pred).successor.remove(lanelet_id)
+        # remove lanelet_id from neighbourhood dict
+        del self.neighbourhood[lanelet_id]
+
+    def _add_to_neighbourhood(self, lanelet_id: int, entry: list):
+        if len(entry) != 2:
+            rospy.logerr("PathSupervisor: invalid neighbourhood update!")
+        self.neighbourhood[lanelet_id] = entry
+
+    def _analyze_neighbourhood(self):
+        # init reference dict
+        for lane in self.map.lanelet_network.lanelets:
+            entry = list()
+            entry.append(list())  # successor list
+            entry.append(list())  # predecessor list
+            self.neighbourhood[lane.lanelet_id] = entry
+        # document references
+        for lane in self.map.lanelet_network.lanelets:
+            for entry in lane.successor:
+                self.neighbourhood[lane.lanelet_id][0].append(entry)
+            for entry in lane.predecessor:
+                self.neighbourhood[lane.lanelet_id][1].append(entry)
 
 def main():
     provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=True)
