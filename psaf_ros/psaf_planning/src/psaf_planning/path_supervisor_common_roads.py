@@ -6,10 +6,8 @@ from psaf_planning.global_planner.path_provider_common_roads import PathProvider
 import rospy
 from lanelet2.core import GPSPoint
 from geometry_msgs.msg import Point
-from std_msgs.msg import String
 import numpy as np
-from commonroad.scenario.lanelet import Lanelet, LineMarking
-# import necessary classes from different modules
+from commonroad.scenario.lanelet import Lanelet
 from commonroad.geometry.shape import Rectangle
 from commonroad.scenario.obstacle import StaticObstacle, ObstacleType
 from commonroad.scenario.trajectory import State
@@ -26,7 +24,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.obstacles = {}
 
     def _callback_obstacle(self, data: Obstacle):
-        rospy.logerr("PathSupervisor: TEst")
         if not self.busy and self.map is not None and len(self.path.poses) > 0:
             self.busy = True
             if data.action is data.ACTION_ADD:
@@ -77,7 +74,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             static_obstacle_type = ObstacleType.PARKED_VEHICLE
             static_obstacle_shape = Rectangle(width=2, length=4.5)
             orientation = self.vehicle_status.get_status().get_orientation_as_euler()[2]
-            rospy.logerr("PathSupervisor: x{} y{} !!".format(obs_pos_x, obs_pos_y))
             static_obstacle_initial_state = State(position=np.array([obs_pos_x, obs_pos_y]),
                                                   orientation=orientation, time_step=0)
 
@@ -87,12 +83,20 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
             # add the static obstacle to the scenario
             front_split_id = self._update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0), static_obstacle)
-            self._update_network(front_split_id, curr_pos, None)
+            self._update_network(front_split_id[0], curr_pos, None)
             self.map.lanelet_network.cleanup_lanelet_references()
+            # add obstacle to dict
+            self.obstacles[obstacle.id] = static_obstacle
             self._replan()
         return True
 
     def _generate_lanelet_id(self, id_start=-1, exclude: int = -1) -> int:
+        """
+        generates new unique lanelet id
+        :param id_start: starting point for id selection
+        :param exclude: id that should not be used
+        :return: new unique lanelet id
+        """
         while True:
             lane_id = 0
             if id_start == -1:
@@ -103,6 +107,15 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 return lane_id
 
     def _update_network(self, matching_lanelet_id: int, modify_point: Point, static_obstacle):
+        """
+        Splits a lanelet and it's neighbouring lanelets in half at a certain point, updates the reference graph
+        and optionally adds a obstacle to the split lanelet
+
+        :param matching_lanelet_id: lanelet to be split
+        :param modify_point: point of split
+        :param static_obstacle: obstacle to be added
+        :return: ids of the split lanelet
+        """
         # new neighbourhood
         right_1 = None
         right_2 = None
@@ -130,13 +143,20 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_right = matching_2
             self.map.lanelet_network.find_lanelet_by_id(matching_1)._adj_left = left_1
             self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_left = left_2
+        # add obstacle
         if static_obstacle is not None:
             self.map.lanelet_network.find_lanelet_by_id(matching_2).add_static_obstacle_to_lanelet(
                 static_obstacle.obstacle_id)
             self.map.add_objects(static_obstacle)
-        return matching_1
+        return matching_1, matching_2
 
     def _modify_lanelet(self, lanelet_id: int, modify_point: Point):
+        """Splits a lanelet ata certain point
+
+        :param lanelet_id: lanelet to be split
+        :param modify_point: point of split
+        :return: ids of the split lanelet
+        """
         # create new ids
         id_lane_1 = self._generate_lanelet_id(id_start=lanelet_id)
         id_lane_2 = self._generate_lanelet_id(id_start=lanelet_id, exclude=id_lane_1)
@@ -193,14 +213,22 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             return id_lane_1, id_lane_2
 
     def _remove_obstacle(self, obstacle: Obstacle):
+        """
+        Removes an obstacle from the scenario
+        """
         rospy.loginfo("PathSupervisor: Remove obstacle")
         curr_pos_gps: Point = self._get_current_position()
         if obstacle.id not in self.obstacles:
             rospy.logerr("PathSupervisor: replanning aborted, obstacle doesn't exists !!")
             self.status_pub.publish("Replanning aborted, obstacle doesn't exists")
             return False
+        self.map.remove_obstacle(obstacle.id)
 
     def _get_current_position(self) -> Point:
+        """
+        Returns the current x, y and z position of the car
+        :return: Point of the car
+        """
         curr_pos_gps = self.GPS_Sensor.get_position()
         gps_point = GPSPoint(curr_pos_gps.latitude, curr_pos_gps.longitude, curr_pos_gps.altitude)
         position_3d = self.projector.forward(gps_point)
