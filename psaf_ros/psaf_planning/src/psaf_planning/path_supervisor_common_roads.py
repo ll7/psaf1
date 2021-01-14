@@ -19,7 +19,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             rospy.init_node('PathSupervisorCommonRoads', anonymous=True)
         super(PathSupervisorCommonRoads, self).__init__(init_rospy=not init_rospy, enable_debug=enable_debug)
         self.busy: bool = False
-        self.intersections = self._map_intersection_and_lanelets()
         rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle)
         self.obstacles = {}
         self.neighbourhood = {}
@@ -260,19 +259,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self._trigger_move_base(self.path.poses[-1])
         rospy.loginfo("PathSupervisor: global planner plugin triggered")
         self.status_pub.publish("Replanning done")
-
-    def _map_intersection_and_lanelets(self):
-        """
-        Function to map the id of a lanelet to the associated intersection id
-        :return: dict with [str: "#lanelet id"] -> int: intersection id
-        """
-        lanelet_intersection_map = {}
-        for intersection in self.map.lanelet_network.intersections:
-            for incoming in intersection.incomings:
-                for lanelet in incoming.incoming_lanelets:
-                    lanelet_intersection_map[str(lanelet)] = intersection.intersection_id
-
-        return lanelet_intersection_map
 
     def _fast_reference_cleanup(self, lanelet_id: int):
         rospy.loginfo("PathSupervisor: Removing {} from references!".format(lanelet_id))
