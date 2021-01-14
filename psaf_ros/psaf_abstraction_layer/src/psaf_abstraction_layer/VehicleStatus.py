@@ -56,7 +56,7 @@ class VehicleStatusProvider:
         :param func: the function
         :return: None
         """
-        self.__listener = func;
+        self.__listener = func
 
     def get_status(self) -> VehicleStatus:
         """
