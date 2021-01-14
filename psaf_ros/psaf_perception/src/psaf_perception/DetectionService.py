@@ -4,10 +4,10 @@ from typing import List
 import rospy
 from psaf_messages.msg import TrafficSignInfo, SpeedSign, StopMark, TrafficLight
 
-from psaf_perception.AbstractDetector import DetectedObject, Labels, LabelGroups
-from psaf_perception.SpeedSignDetector import SpeedSignDetector, CONV_FAC_MPH_TO_KMH
-from psaf_perception.StopMarkDetector import StopMarkDetector
-from psaf_perception.TrafficLightDetector import TrafficLightDetector
+from psaf_perception.detectors.AbstractDetector import DetectedObject, Labels, LabelGroups
+from psaf_perception.detectors.SpeedSignDetector import SpeedSignDetector
+from psaf_perception.detectors.StopMarkDetector import StopMarkDetector
+from psaf_perception.detectors.TrafficLightDetector import TrafficLightDetector
 
 ROOT_TOPIC = "/psaf/perception/"
 
@@ -65,11 +65,11 @@ class DetectionService:
                 elif object.label == Labels.Speed90:
                     limit = 90
                 elif object.label == Labels.SpeedLimit30:
-                    limit = 30 * CONV_FAC_MPH_TO_KMH
+                    limit = 30
                 elif object.label == Labels.SpeedLimit40:
-                    limit = 40 * CONV_FAC_MPH_TO_KMH
+                    limit = 40
                 elif object.label == Labels.SpeedLimit60:
-                    limit = 60 * CONV_FAC_MPH_TO_KMH
+                    limit = 60
 
                 msg = SpeedSign()
                 msg.x = object.x + object.w / 2

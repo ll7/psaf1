@@ -12,10 +12,8 @@ from torch.autograd import Variable
 from torchvision.transforms import transforms
 
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
-from psaf_perception.AbstractDetector import Labels, AbstractDetector, DetectedObject
+from psaf_perception.detectors.AbstractDetector import Labels, AbstractDetector, DetectedObject
 from psaf_perception.CameraDataFusion import CameraDataFusion, SegmentationTag
-
-CONV_FAC_MPH_TO_KMH = 1.60934
 
 
 class SpeedSignDetector(AbstractDetector):

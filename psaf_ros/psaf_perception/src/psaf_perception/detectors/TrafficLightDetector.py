@@ -12,7 +12,7 @@ from torch.autograd import Variable
 from torchvision.transforms import transforms
 
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
-from psaf_perception.AbstractDetector import DetectedObject, AbstractDetector, Labels
+from psaf_perception.detectors.AbstractDetector import DetectedObject, AbstractDetector, Labels
 from psaf_perception.CameraDataFusion import CameraDataFusion, SegmentationTag
 
 

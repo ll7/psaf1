@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
-from psaf_perception.AbstractDetector import AbstractDetector, DetectedObject, Labels
+from psaf_perception.detectors.AbstractDetector import AbstractDetector, DetectedObject, Labels
 
 
 class SingleImage(Dataset):
