@@ -30,7 +30,7 @@ from psaf_steering.cfg import EgoVehicleControlParameterConfig
 from geometry_msgs.msg import Twist
 import carla_control_physics as phys
 
-plot = True  # plot target and current vel
+plot = False  # plot target and current vel
 # Alternative way of plotting: 
 # rqt_plot /carla/ego_vehicle/ackermann_control/control_info/target/steering_angle:speed carla/ego_vehicle/ackermann_control/control_info/current/speed carla/ego_vehicle/ackermann_control/control_info/output/steer:brake
 

@@ -12,7 +12,11 @@ from tf.transformations import euler_from_quaternion
 
 # curvature estimation of local_plan
 def callback_curvature(data):
+    global x1,y1,x2,y2
+
     print('Curvature: ' + str(data) + ' °')
+
+
 
 
 # control cmds that pid_controller sends to vehicle
@@ -24,7 +28,7 @@ def callback_cmd(data: CarlaEgoVehicleControl):
     print('Throttle: ' + str(data.throttle))
 
     width = 0.34
-    x1 = data.steer * 0.1 + 0.5
+    x1 = data.steer * (0.3 if data.steer>0 else 0.6) + 0.5
 
     # Calculate coordinates
     x2 = min([x1 + width,1])
@@ -35,21 +39,22 @@ def callback_cmd(data: CarlaEgoVehicleControl):
 # vehicle current status (speed, abs. orientation in world)
 def callback_odom(data: CarlaEgoVehicleStatus):
     current_speed = data.velocity * (-1 if data.control.reverse else 1)
-    print('Speed: ' + str(current_speed) + ' m/s')  # speed in m/s
+    # print('Speed: ' + str(current_speed) + ' m/s')  # speed in m/s
 
     q = (data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w)
     _, _, yaw = euler_from_quaternion(q)
     orientation = math.degrees(yaw)
-    print('Abs. Orientation: ' + str(orientation) + ' °')
+    # print('Abs. Orientation: ' + str(orientation) + ' °')
 
 
 # speed, angle setpoint from local_planner to pid_controller
 def callback_setpoint(data: Twist):
     global x1,y1,x2,y2
     steering_angle = math.degrees(data.angular.z)
-    print('Steering Angle Setpoint: ' + str(steering_angle) + ' °')
+    # print('Steering Angle Setpoint: ' + str(steering_angle) + ' °')
     speed_setpoint = data.linear.x
-    print('Speed Setpoint: ' + str(speed_setpoint) + ' m/s')
+    # print('Speed Setpoint: ' + str(speed_setpoint) + ' m/s')
+
 
 
 
@@ -90,7 +95,7 @@ def listener():
     global x1,y1,x2,y2
     rospy.init_node('listener', anonymous=True)
 
-    rospy.Subscriber("/pasf/local_planner/curvature", Float64, callback_curvature)
+    rospy.Subscriber("/psaf/local_planner/curvature", Float64, callback_curvature)
     rospy.Subscriber("/carla/ego_vehicle/vehicle_control_cmd", CarlaEgoVehicleControl, callback_cmd)
     rospy.Subscriber("/carla/ego_vehicle/vehicle_status", CarlaEgoVehicleStatus, callback_odom)
     rospy.Subscriber("/carla/ego_vehicle/twist_pid", Twist, callback_setpoint)

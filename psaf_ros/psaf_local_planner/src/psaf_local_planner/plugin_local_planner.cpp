@@ -65,7 +65,7 @@ namespace psaf_local_planner
         }
     }
 
-    void velocityCallback(const geometry_msgs::Twist &msg)
+    void velocityCallback(const std_msgs::UInt8 &msg)
     {
 
     }
@@ -102,7 +102,7 @@ namespace psaf_local_planner
             ros::NodeHandle private_nh("~/" + name);
             g_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_global_plan", 1);
             l_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_local_plan", 1);
-            curvature_pub = private_nh.advertise<std_msgs::Float64>("psaf/local_planner/curvature", 1);
+            curvature_pub = private_nh.advertise<std_msgs::Float64>("/psaf/local_planner/curvature", 1);
             debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
 
             vel_sub = private_nh.subscribe("psaf_velocity_plan", 10, velocityCallback);

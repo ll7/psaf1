@@ -9,6 +9,7 @@
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Quaternion.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/UInt8.h>
 #include <nav_msgs/Path.h>
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
