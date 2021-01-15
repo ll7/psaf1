@@ -1,0 +1,71 @@
+<launch>
+
+    <!-- Arguments begin-->
+
+    <!-- Perception settings-->
+    <arg name='use_gpu' default='True'/>
+
+    <!-- CARLA connection -->
+    <arg name='host' default='localhost'/>
+    <arg name='port' default='2000'/>
+    <arg name='timeout' default='10'/>
+
+    <!-- Ego vehicle -->
+    <arg name='role_name' default='ego_vehicle'/>
+    <arg name="vehicle_filter" default='vehicle.bmw.grandtourer'/>
+    <arg name="spawn_point" default=""/>
+    <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
+    <arg name="sensor_definition_file" default='$(find psaf_starter)/config/sensors.json'/>
+    <!-- Map to load on startup (either a predefined CARLA town (e.g. 'Town01'), or a OpenDRIVE map file) -->
+    <arg name="town" default=''/>
+    <!-- Synchronous mode-->
+    <arg name='synchronous_mode' default=''/>
+    <arg name='synchronous_mode_wait_for_vehicle_control_command' default=''/>
+    <!-- Run at 50 fps-->
+    <arg name='fixed_delta_seconds' default='0.05'/>
+
+    <!-- Arguments end-->
+
+    <master auto="start"/>
+    <!-- Run the map server -->
+    <!--<node name="map_server" pkg="map_server" type="map_server" args="$(find my_map_package)/my_map.pgm my_map_resolution"/>-->
+
+    <!--- Run AMCL -->
+    <!--<include file="$(find amcl)/examples/amcl_omni.launch" />-->
+
+    <remap from="/cmd_vel" to="/carla/ego_vehicle/twist_pid"/>
+
+    <include file="$(find psaf_steering)/launch/psaf_steering_with_vehicle.launch">
+        <arg name='host' value='$(arg host)'/>
+        <arg name='port' value='$(arg port)'/>
+        <arg name='town' value='$(arg town)'/>
+        <arg name='timeout' value='$(arg timeout)'/>
+        <arg name='synchronous_mode' value='$(arg synchronous_mode)'/>
+        <arg name='synchronous_mode_wait_for_vehicle_control_command'
+             value='$(arg synchronous_mode_wait_for_vehicle_control_command)'/>
+        <arg name='fixed_delta_seconds' value='$(arg fixed_delta_seconds)'/>
+    </include>
+
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <rosparam file="$(find psaf_steering)/config/costmap_common_params.yaml" command="load" ns="global_costmap"/>
+        <rosparam file="$(find psaf_steering)/config/costmap_common_params.yaml" command="load" ns="local_costmap"/>
+        <rosparam file="$(find psaf_steering)/config/local_costmap_params.yaml" command="load"/>
+        <rosparam file="$(find psaf_steering)/config/global_costmap_params.yaml" command="load"/>
+        <rosparam file="$(find psaf_steering)/config/base_local_planner_params.yaml" command="load"/>
+
+        <param name="base_local_planner" value="psaf_local_planner/PsafLocalPlanner"/>
+
+        <param name="base_global_planner" value="psaf_planning/GlobalPlanner"/>
+        <param name="controller_frequency" value="20.0"/>
+    </node>
+
+    <include file="$(find psaf_planning)/launch/psaf_planning_path_provider.launch"/>
+
+    <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch"/>
+
+     <include file="$(find psaf_perception)/launch/psaf_perception_detection_service.launch">
+        <arg name='use_gpu' value='$(arg use_gpu)'/>
+
+    </include>
+
+</launch> 
