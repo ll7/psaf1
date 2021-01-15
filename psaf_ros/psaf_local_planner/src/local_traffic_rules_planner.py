@@ -1,8 +1,10 @@
 #!/usr/bin/env python
+from typing import List
+
 import rospy
 from std_msgs.msg import UInt8
 from carla_msgs.msg import CarlaEgoVehicleControl
-from psaf_messages.msg import TrafficSignInfo
+from psaf_messages.msg import TrafficSignInfo, SpeedSign
 import numpy as np
 
 class Local_Traffic_Rules_Planner:
@@ -19,7 +21,7 @@ class Local_Traffic_Rules_Planner:
 
         self.publish_timer = rospy.Timer(rospy.Duration(0.1), self.periodic_planner_input_update)
 
-        self.acceptance_area = np.zeros([3,3],dtype=float)
+        self.speed_acceptance_area = np.zeros([3, 3], dtype=float)
 
         # Current speed in km/h
         self.current_speed = default_speed
@@ -31,7 +33,17 @@ class Local_Traffic_Rules_Planner:
 
         # Calculate coordinates
         x2 = min([x1 + width, 1.])
-        self.acceptance_area = np.array([x1,0.2,x2,0.8],dtype=float)
+        self.speed_acceptance_area = np.array([x1, 0.2, x2, 0.8], dtype=float)
+
+    def look_for_speed_limit(self,speed_signs:List[SpeedSign]):
+        edited_speed_list = sorted(filter(lambda x: x.distance < 15, speed_signs), key=lambda x: x.distance)
+
+        area = self.speed_acceptance_area
+        matches = list(
+            filter(lambda sign: area[0] <= sign.x <= area[2] and area[1] <= sign.y <= area[3], edited_speed_list))
+
+        if len(matches) > 0:
+            self.current_speed = matches[0].limit
 
     def callback_traffic_signs(self,traffic_signs:TrafficSignInfo):
         """
@@ -39,16 +51,8 @@ class Local_Traffic_Rules_Planner:
         :param traffic_signs: the message
         :return: None
         """
+        self.look_for_speed_limit(traffic_signs.speedSigns)
 
-        speed_signs = traffic_signs.speedSigns
-
-        edited_speed_list = sorted(filter(lambda x: x.distance < 15,speed_signs),key=lambda x:x.distance)
-
-        area = self.acceptance_area
-        matches = list(filter(lambda sign: area[0] <= sign.x <= area[2] and area[1] <= sign.y <= area[3],edited_speed_list))
-
-        if len(matches)>0:
-            self.current_speed = matches[0].limit
 
     def periodic_planner_input_update(self,event):
         """
