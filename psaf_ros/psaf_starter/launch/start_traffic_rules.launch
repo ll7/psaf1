@@ -17,7 +17,7 @@
     <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
     <arg name="sensor_definition_file" default='$(find psaf_starter)/config/sensors.json'/>
     <!-- Map to load on startup (either a predefined CARLA town (e.g. 'Town01'), or a OpenDRIVE map file) -->
-    <arg name="town" default=''/>
+    <arg name="town" default='Town03'/>
     <!-- Synchronous mode-->
     <arg name='synchronous_mode' default=''/>
     <arg name='synchronous_mode_wait_for_vehicle_control_command' default=''/>
