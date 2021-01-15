@@ -71,6 +71,7 @@ namespace psaf_local_planner {
             bool check_distance_forward(double& distance);
 
             void trafficSignCallback(const psaf_messages::TrafficSignInfo::ConstPtr &msg);
+            void velocityCallback(const std_msgs::UInt8::ConstPtr &msg);
 
             geometry_msgs::PoseStamped& find_lookahead_target();
 

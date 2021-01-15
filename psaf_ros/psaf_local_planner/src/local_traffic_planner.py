@@ -11,7 +11,7 @@ class Local_Traffic_Planner:
     """
 
     def __init__(self,default_speed= 50):
-        self.velocity_publisher = rospy.Publisher("psaf_velocity_plan", UInt8, queue_size=1)
+        self.velocity_publisher = rospy.Publisher("/psaf/local_planner/speed_limit", UInt8, queue_size=1)
 
         rospy.Subscriber("/carla/ego_vehicle/vehicle_control_cmd", CarlaEgoVehicleControl, self.callback_ego_vehicle_cmd)
         rospy.Subscriber("/psaf/perception/traffic_signs", TrafficSignInfo, self.callback_traffic_signs)

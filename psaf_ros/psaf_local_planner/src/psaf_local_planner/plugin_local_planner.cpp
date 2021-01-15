@@ -65,9 +65,10 @@ namespace psaf_local_planner
         }
     }
 
-    void velocityCallback(const std_msgs::UInt8 &msg)
+    void PsafLocalPlanner::velocityCallback(const std_msgs::UInt8::ConstPtr &msg)
     {
-
+        max_velocity = msg->data;
+        ROS_WARN("new speed limit: %f", max_velocity);
     }
 
     void PsafLocalPlanner::trafficSignCallback(const psaf_messages::TrafficSignInfo::ConstPtr &msg)
@@ -105,8 +106,8 @@ namespace psaf_local_planner
             curvature_pub = private_nh.advertise<std_msgs::Float64>("/psaf/local_planner/curvature", 1);
             debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
 
-            vel_sub = private_nh.subscribe("psaf_velocity_plan", 10, velocityCallback);
-            traffic_sign_sub = private_nh.subscribe("/psaf/perception/traffic_signs", 10, &PsafLocalPlanner::trafficSignCallback, this);
+            vel_sub = private_nh.subscribe("/psaf/local_planner/speed_limit", 10, &PsafLocalPlanner::velocityCallback, this);
+            //traffic_sign_sub = private_nh.subscribe("/psaf/perception/traffic_signs", 10, &PsafLocalPlanner::trafficSignCallback, this);
 
             planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
             this->costmap_ros = costmap_ros;
