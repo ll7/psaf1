@@ -137,7 +137,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
             if start_index > end_index:
                 # split lanelet in between those two points to fix that issue for a further iteration
                 # which is triggered after a BadLanelet status is received by the compute_route algorithm
-                split_index = start_index - ((start_index - end_index) // 2)
+                split_index = start_index - ((start_index - end_index) // 4)
                 split_point = Point(start_lanelet.center_vertices[split_index][0],
                                     start_lanelet.center_vertices[split_index][0], 0)
 
@@ -208,7 +208,8 @@ class PathProviderCommonRoads(PathProviderAbstract):
         plt.savefig("route_" + str(num) + ".png")
         plt.close()
 
-    def _find_nearest_path_index(self, route, compare_point: Point, use_posestamped: bool = True):
+    def _find_nearest_path_index(self, route, compare_point: Point, use_posestamped: bool = True,
+                                 reversed: bool = False, prematured_stop: bool = False):
         """
         Get index of the a point x in path which is next to a given point y
         :param route: List of route points, which are eather of type [x][y] or PoseStamped
@@ -218,12 +219,22 @@ class PathProviderCommonRoads(PathProviderAbstract):
         """
         min_distance = float("inf")
         min_index = -1
-        for i, point in enumerate(route):
-            temp_distance = self._euclidean_2d_distance_from_to_position(route_point=point, compare_point=compare_point,
+        higher_cnt = 0
+
+        for i in range(0, len(route)):
+            index = i
+            if reversed:
+                index = len(route) - 1 - i
+            temp_distance = self._euclidean_2d_distance_from_to_position(route_point=route[index], compare_point=compare_point,
                                                                          use_posestamped=use_posestamped)
             if temp_distance < min_distance:
                 min_distance = temp_distance
-                min_index = i
+                min_index = index
+            elif prematured_stop:
+                higher_cnt += 1
+                if higher_cnt == 5:
+                    break
+
         return min_index
 
     def _euclidean_2d_distance_from_to_position(self, route_point, compare_point: Point, use_posestamped: bool = True):
@@ -322,10 +333,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
             # Path was found!
             # Prune path to get exact start and end points
-            real_start_index = self._find_nearest_path_index(path_poses, start_point)
-            real_end_index = self._find_nearest_path_index(path_poses, target_point)
+            real_start_index = self._find_nearest_path_index(path_poses, start_point, prematured_stop=True)
+            real_end_index = self._find_nearest_path_index(path_poses, target_point, True, True)
             path_poses_shortened = path_poses[real_start_index:real_end_index]
 
+            rospy.loginfo("PathProvider: Points in path: {}".format(len(path_poses_shortened)))
             # check if you are already closer to end point than to start point (rare condition)
             if len(path_poses_shortened) == 0:
                 path_poses_shortened.append(path_poses[real_end_index])
