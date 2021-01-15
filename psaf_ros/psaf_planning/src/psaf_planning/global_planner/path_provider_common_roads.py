@@ -30,6 +30,7 @@ class ProblemStatus(Enum):
     BadTarget = 2
     BadStart = 3
     BadLanelet = 4
+    BadMap = 5
 
 
 class PathProviderCommonRoads(PathProviderAbstract):
@@ -106,7 +107,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
             # No map -> generating of planning problem not possible
             self.status_pub.publish("No map -> Planning aborted")
             self.planning_problem = None
-            return ProblemStatus.BadTarget
+            return ProblemStatus.BadMap
 
         # check if the car is already on a lanelet, if not get nearest lanelet to start
         start_lanelet: Lanelet
@@ -302,6 +303,10 @@ class PathProviderCommonRoads(PathProviderAbstract):
             return
         elif status is ProblemStatus.BadLanelet:
             rospy.logerr("PathProvider: Path computation aborted, Lanelet Network Error -> Contact Support")
+            self._create_path_message([self._get_pose_stamped(start_point, start_point)])
+            return
+        elif status is ProblemStatus.BadMap:
+            rospy.logerr("PathProvider: Path computation aborted, Map not (yet) loaded")
             self._create_path_message([self._get_pose_stamped(start_point, start_point)])
             return
 
