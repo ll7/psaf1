@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import asyncio
 from typing import List
 
 import rospy
@@ -20,10 +19,11 @@ class DetectionService:
         self.detectors = {}
         rospy.init_node("DetectionService")
         role_name = rospy.get_param("role_name", "ego_vehicle")
-        # Add detector here
-        self.detectors.update({"speed": SpeedSignDetector(role_name)})
-        self.detectors.update({"stop": StopMarkDetector(role_name)})
-        self.detectors.update({"trafficLight": TrafficLightDetector(role_name)})
+        use_gpu = rospy.get_param("use_gpu")
+        # Add detectors here
+        self.detectors.update({"speed": SpeedSignDetector(role_name=role_name, use_gpu=use_gpu)})
+        self.detectors.update({"stop": StopMarkDetector(role_name=role_name, use_gpu=use_gpu)})
+        self.detectors.update({"trafficLight": TrafficLightDetector(role_name=role_name, use_gpu=use_gpu)})
 
         # Data
         # store all speed signs
@@ -37,7 +37,16 @@ class DetectionService:
         self.traffic_sign_publisher = rospy.Publisher(ROOT_TOPIC + "traffic_signs", TrafficSignInfo, queue_size=1)
         # Helpers
         self.publish_timer = rospy.Timer(rospy.Duration(0.1), self.periodic_update)
-        self.lock = asyncio.Lock()
+
+        # mapping between the traffic light states
+        self.traffic_light_state_mapper = {
+            Labels.TrafficLightUnknown: TrafficLight.STATE_UNKNOWN,
+            Labels.TrafficLightOff: TrafficLight.STATE_OFF,
+            Labels.TrafficLightRed: TrafficLight.STATE_RED,
+            Labels.TrafficLightYellowRed: TrafficLight.STATE_YELLOW_RED,
+            Labels.TrafficLightYellow: TrafficLight.STATE_YELLOW,
+            Labels.TrafficLightGreen: TrafficLight.STATE_GREEN,
+        }
 
         # Collect detection
         self.detectors["speed"].set_on_detection_listener(self.__on_new_speed_sign)
@@ -55,11 +64,18 @@ class DetectionService:
                     limit = 60
                 elif object.label == Labels.Speed90:
                     limit = 90
+                elif object.label == Labels.SpeedLimit30:
+                    limit = 30 * CONV_FAC_MPH_TO_KMH
+                elif object.label == Labels.SpeedLimit40:
+                    limit = 40 * CONV_FAC_MPH_TO_KMH
+                elif object.label == Labels.SpeedLimit60:
+                    limit = 60 * CONV_FAC_MPH_TO_KMH
+
                 msg = SpeedSign()
                 msg.x = object.x + object.w / 2
                 msg.y = object.y + object.h / 2
                 msg.distance = object.distance
-                msg.limit = int(limit / CONV_FAC_MPH_TO_KMH)
+                msg.limit = int(limit)
                 self.speed_signs.append(msg)
 
     def __on_new_stop(self, detected: List[DetectedObject]):
@@ -79,16 +95,7 @@ class DetectionService:
                 msg.x = object.x + object.w / 2
                 msg.y = object.y + object.h / 2
                 msg.distance = object.distance
-                # mapping between the traffic light states
-                state_mapper = {
-                    Labels.TrafficLightUnknown : TrafficLight.STATE_UNKNOWN,
-                    Labels.TrafficLightOff : TrafficLight.STATE_OFF,
-                    Labels.TrafficLightRed : TrafficLight.STATE_RED,
-                    Labels.TrafficLightYellowRed : TrafficLight.STATE_YELLOW_RED,
-                    Labels.TrafficLightYellow : TrafficLight.STATE_YELLOW,
-                    Labels.TrafficLightGreen : TrafficLight.STATE_GREEN,
-                }
-                msg.state = state_mapper.get(object.label,lambda: TrafficLight.STATE_UNKNOWN)
+                msg.state = self.traffic_light_state_mapper.get(object.label, lambda: TrafficLight.STATE_UNKNOWN)
                 # Add to list
                 self.trafficLights.append(msg)
 

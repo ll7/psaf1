@@ -1,7 +1,11 @@
+from typing import Callable
+
 import cv2
+import numpy
 import rospy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
+from std_msgs.msg import Time
 
 
 class DepthCamera:
@@ -32,7 +36,7 @@ class DepthCamera:
         self.image = self.bridge.imgmsg_to_cv2(image_msg,desired_encoding='passthrough')
 
         if self.__listener != None:
-            self.__listener(self.image)
+            self.__listener(self.image,image_msg.header.stamp)
 
     def get_image(self):
         """
@@ -41,7 +45,7 @@ class DepthCamera:
         """
         return self.position
 
-    def set_on_image_listener(self, func):
+    def set_on_image_listener(self, func:Callable[[numpy.ndarray,Time],None]):
         """
         Set function to be called with the depth image as parameter
         :param func: the function
@@ -56,7 +60,7 @@ class DepthCamera:
 if __name__ == "__main__":
     rospy.init_node("DepthCameraTest")
 
-    def show_image(image):
+    def show_image(image,_):
 
         show = (image/DepthCamera.MAX_METERS * 255).astype('uint8')
         # show the output image
