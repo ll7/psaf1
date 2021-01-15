@@ -17,7 +17,7 @@
     <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
     <arg name="sensor_definition_file" default='$(find psaf_starter)/config/sensors.json'/>
     <!-- Map to load on startup (either a predefined CARLA town (e.g. 'Town01'), or a OpenDRIVE map file) -->
-    <arg name="town" default='Town03'/>
+    <arg name="town" default='Town04'/>
     <!-- Synchronous mode-->
     <arg name='synchronous_mode' default=''/>
     <arg name='synchronous_mode_wait_for_vehicle_control_command' default=''/>
@@ -62,6 +62,8 @@
     <include file="$(find psaf_planning)/launch/psaf_planning_path_provider.launch"/>
 
     <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch"/>
+
+    <include file="$(find psaf_local_planner)/launch/psaf_local_traffic_planner_service.launch"/>
 
      <include file="$(find psaf_perception)/launch/psaf_perception_detection_service.launch">
         <arg name='use_gpu' value='$(arg use_gpu)'/>

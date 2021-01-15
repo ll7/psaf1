@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import rospy
 from std_msgs.msg import UInt8
 from carla_msgs.msg import CarlaEgoVehicleControl
@@ -15,6 +16,8 @@ class Local_Traffic_Rules_Planner:
 
         rospy.Subscriber("/carla/ego_vehicle/vehicle_control_cmd", CarlaEgoVehicleControl, self.callback_ego_vehicle_cmd)
         rospy.Subscriber("/psaf/perception/traffic_signs", TrafficSignInfo, self.callback_traffic_signs)
+
+        self.publish_timer = rospy.Timer(rospy.Duration(0.1), self.periodic_planner_input_update)
 
         self.acceptance_area = np.zeros([3,3],dtype=float)
 
@@ -47,7 +50,7 @@ class Local_Traffic_Rules_Planner:
         if len(matches)>0:
             self.current_speed = matches[0].limit
 
-    def periodic_planner_input_update(self):
+    def periodic_planner_input_update(self,event):
         """
         Function that should be run periodically to update the local planner control topics
         :return: None
