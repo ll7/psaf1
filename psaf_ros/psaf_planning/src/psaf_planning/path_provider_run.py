@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 
 from psaf_planning.global_planner.path_provider_lanelet2 import PathProviderLanelet2
