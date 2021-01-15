@@ -4,7 +4,7 @@ from carla_msgs.msg import CarlaEgoVehicleControl
 from psaf_messages.msg import TrafficSignInfo
 import numpy as np
 
-class Local_Traffic_Planner:
+class Local_Traffic_Rules_Planner:
     """
         Planner for the traffic rules
           e.g. the speed limits
@@ -55,13 +55,13 @@ class Local_Traffic_Planner:
         msg = UInt8(self.current_speed)
 
         self.velocity_publisher.publish(msg)
-        print(f"I updated the velocity to {msg}")
+        print(f"I updated the velocity to {msg}") # TODO remove
 
 
 
 if __name__ == '__main__':
-    rospy.init_node("Traffic_Local_planner")
-    planner = Local_Traffic_Planner()
+    rospy.init_node("Local_Traffic_Rules_planner")
+    planner = Local_Traffic_Rules_Planner()
     rospy.spin()
 
 
