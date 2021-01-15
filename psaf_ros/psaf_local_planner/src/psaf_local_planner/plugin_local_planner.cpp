@@ -67,8 +67,8 @@ namespace psaf_local_planner
 
     void PsafLocalPlanner::velocityCallback(const std_msgs::UInt8::ConstPtr &msg)
     {
-        max_velocity = msg->data;
-        ROS_WARN("new speed limit: %f", max_velocity);
+        max_velocity = msg->data / 3.6;
+        ROS_INFO("new speed limit: %f", max_velocity);
     }
 
     void PsafLocalPlanner::trafficSignCallback(const psaf_messages::TrafficSignInfo::ConstPtr &msg)
