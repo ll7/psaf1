@@ -52,6 +52,10 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.path_poses = []
         self.planning_problem = None
 
+        # create neighbourhood dicts for efficient access to that information
+        self.neighbourhood = self._analyze_neighbourhood(self.original_map)
+        self.original_neighbourhood = deepcopy(self.neighbourhood)
+
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
         Gets the scenario of the converted .xodr map
