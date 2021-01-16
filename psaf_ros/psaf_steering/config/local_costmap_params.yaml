@@ -9,5 +9,5 @@ local_costmap:
   height: 75.0
   origin_x: 0.0
   origin_y: 0.0
-  resolution: 0.5
+  resolution: 1
   transform_tolerance: 1.0

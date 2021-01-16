@@ -142,6 +142,10 @@ namespace psaf_local_planner
             ROS_WARN("Called compute velocity before being inited");
         }
 
+        /*auto x = costmap_ros->getCostmap()->getSizeInCellsX();
+        auto y = costmap_ros->getCostmap()->getSizeInCellsY();
+        costmap_ros->getCostmap()->resetMaps();*/
+
         return true;
     }
 

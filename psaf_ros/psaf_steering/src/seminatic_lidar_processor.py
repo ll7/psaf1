@@ -29,7 +29,7 @@ def cmd_callback(data: PointCloud2):
     points_clearing = []
     for p in pc2.read_points(data, skip_nans=True):
         # print("%f %f %f: %i", p[0], p[1], p[2], p[3], p[4], p[5])
-        if (p[5] == 6 or p[5] == 7):
+        if (p[5] in [6, 7, 8]):
             # skip += 1
             points_clearing.append([p[0], p[1], p[2]])
             continue
@@ -59,13 +59,16 @@ def cmd_callback(data: PointCloud2):
 
 if __name__ == '__main__':
     try:
+        
 
         rospy.init_node('semantic_lidar_processor')
+        # print(rospy.get_name())
+        # rospy.init_node(rospy.get_name())        
 
-        rospy.Subscriber("/carla/ego_vehicle/semantic_lidar/lidar1/point_cloud", PointCloud2, cmd_callback, queue_size=1)
-        rospy.Subscriber("/carla/ego_vehicle/odometry", Odometry, odo_callback, queue_size=1)
-        pub_marking = rospy.Publisher("/carla/ego_vehicle/processed_semantic_lidar/marking/point_cloud/", PointCloud2, queue_size=1)
-        pub_clearing = rospy.Publisher("/carla/ego_vehicle/processed_semantic_lidar/clearing/point_cloud/", PointCloud2, queue_size=1)
+        rospy.Subscriber(rospy.get_param("~lidar_topic"), PointCloud2, cmd_callback, queue_size=1)
+        rospy.Subscriber(rospy.get_param("~odom_topic"), Odometry, odo_callback, queue_size=1)
+        pub_marking = rospy.Publisher(rospy.get_param("~marking_topic"), PointCloud2, queue_size=1)
+        pub_clearing = rospy.Publisher(rospy.get_param("~clearing_topic"), PointCloud2, queue_size=1)
 
         # rospy.loginfo("Node 'semantic_lidar_processor' started.\nListening to %s, publishing to %s. Frame id: %s, wheelbase: %f", "/cmd_vel", ackermann_cmd_topic, frame_id, wheelbase)
 

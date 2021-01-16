@@ -121,8 +121,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES psaf_local_planner
-  CATKIN_DEPENDS roscpp rospy std_msgs
+  LIBRARIES psaf_local_planner psaf_obstacle_layer
+  CATKIN_DEPENDS roscpp rospy std_msgs costmap_2d
 #  DEPENDS system_lib
 )
 
@@ -139,7 +139,8 @@ include_directories(
 
 ## Declare a C++ library
 add_library(psaf_local_planner src/psaf_local_planner/plugin_local_planner.cpp)
-target_link_libraries(psaf_local_planner ${catkin_LIBRARIES})
+add_library(psaf_obstacle_layer src/psaf_local_planner/plugin_obstacle_layer.cpp)
+target_link_libraries(psaf_local_planner psaf_obstacle_layer ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

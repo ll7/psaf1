@@ -109,5 +109,7 @@
   <export>
     <!-- Other tools can request additional information be placed here -->
     <nav_core plugin="${prefix}/blp_plugin.xml"/>
+
+    <costmap_2d plugin="${prefix}/c2d_plugin.xml" />
   </export>
 </package>
