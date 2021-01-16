@@ -94,24 +94,27 @@
         },
         {
             "type": "sensor.lidar.ray_cast_semantic",
-            "id": "lidar1",
-            "x": 0.0, "y": 0.0, "z": 2.4, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
+            "id": "lidar_outer",
+            "x": 0.0, "y": 0.0, "z": 3, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
             "range": 50,
             "channels": 32,
-            "points_per_second": 320000,
-            "upper_fov": 2.0,
-            "lower_fov": -26.8,
-            "rotation_frequency": 20,
-            "sensor_tick": 0.05
+            "points_per_second": 30000,
+            "upper_fov": 0.0,
+            "lower_fov": -10.0,
+            "rotation_frequency": 18,
+            "sensor_tick": 0.1
         },
         {
-            "type": "sensor.other.radar",
-            "id": "front",
-            "x": 2.0, "y": 0.0, "z": 1.5, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
-            "horizontal_fov": 30.0,
-            "vertical_fov": 10.0,
-            "points_per_second": 1500,
-            "range": 100.0
+            "type": "sensor.lidar.ray_cast_semantic",
+            "id": "lidar_inner",
+            "x": 0.0, "y": 0.0, "z": 3, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
+            "range": 50,
+            "channels": 32,
+            "points_per_second": 30000,
+            "upper_fov": -10.0,
+            "lower_fov": -37.0,
+            "rotation_frequency": 18,
+            "sensor_tick": 0.1
         },
         {
             "type": "sensor.camera.semantic_segmentation",
