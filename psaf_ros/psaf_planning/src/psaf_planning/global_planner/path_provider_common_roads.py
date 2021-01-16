@@ -556,11 +556,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_right = right_1
                     self.map.lanelet_network.find_lanelet_by_id(right_2_old)._adj_right = right_2
-                    next_dir = self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right_same_direction
+                    next_dir = self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_right_same_direction
                 else:
                     self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_left = right_1
                     self.map.lanelet_network.find_lanelet_by_id(right_2_old)._adj_left = right_2
-                    next_dir = self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_left_same_direction
+                    next_dir = self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_left_same_direction
 
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = right_1_old
