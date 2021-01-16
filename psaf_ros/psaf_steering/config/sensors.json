@@ -98,11 +98,11 @@
             "x": 0.0, "y": 0.0, "z": 3, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
             "range": 50,
             "channels": 32,
-            "points_per_second": 60000,
+            "points_per_second": 30000,
             "upper_fov": 0.0,
             "lower_fov": -10.0,
             "rotation_frequency": 18,
-            "sensor_tick": 0.05
+            "sensor_tick": 0.1
         },
         {
             "type": "sensor.lidar.ray_cast_semantic",
@@ -110,11 +110,11 @@
             "x": 0.0, "y": 0.0, "z": 3, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
             "range": 50,
             "channels": 32,
-            "points_per_second": 60000,
+            "points_per_second": 30000,
             "upper_fov": -10.0,
             "lower_fov": -37.0,
             "rotation_frequency": 18,
-            "sensor_tick": 0.05
+            "sensor_tick": 0.1
         },
         {
             "type": "sensor.camera.semantic_segmentation",

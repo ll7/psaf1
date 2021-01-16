@@ -25,7 +25,7 @@ namespace psaf_local_planner
         std::vector<geometry_msgs::PoseStamped>::iterator it = local_plan.begin();
 
         // std::string s = (std::string)"x: " + std::to_string(current_pose.pose.position.x) + "z: " + std::to_string(current_pose.pose.position.z) + "z: " + std::to_string(current_pose.pose.position.z);
-
+        double last_dist = 0;
         while (it != local_plan.end())
         {
             const geometry_msgs::PoseStamped &w = *it;
