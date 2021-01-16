@@ -19,7 +19,7 @@ from SMP.route_planner.route_planner.utils_visualization import draw_route, get_
 from psaf_abstraction_layer.sensors.GPS import GPS_Position
 from geometry_msgs.msg import Point, PoseStamped
 import sys
-
+from copy import deepcopy
 import rospy
 
 from enum import Enum
@@ -99,8 +99,8 @@ class PathProviderCommonRoads(PathProviderAbstract):
     def _generate_planning_problem(self, start: Point, target: Point) -> ProblemStatus:
         """
         Generate the planning problem by setting the starting point and generating a target region
-        :param start:
-        :param target:
+        :param start:  x,y,z coordinates of the current staring position
+        :param target: x,y,z coordinates of the current goal position
         :return: status of the generated problem
         """
         if self.map is None:
@@ -138,12 +138,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
             if start_index > end_index:
                 # split lanelet in between those two points to fix that issue for a further iteration
                 # which is triggered after a BadLanelet status is received by the compute_route algorithm
-                split_index = start_index - ((start_index - end_index) // 4)
-                split_point = Point(start_lanelet.center_vertices[split_index][0],
-                                    start_lanelet.center_vertices[split_index][0], 0)
+                split_point = Point(start_lanelet.center_vertices[start_index][0],
+                                    start_lanelet.center_vertices[start_index][0], 0)
 
                 self._update_network(matching_lanelet_id=goal_lanelet.lanelet_id, modify_point=split_point,
-                                     static_obstacle=None)
+                                     start_point=start, static_obstacle=None)
 
                 self.planning_problem = None
                 return ProblemStatus.BadLanelet
@@ -226,7 +225,8 @@ class PathProviderCommonRoads(PathProviderAbstract):
             index = i
             if reversed:
                 index = len(route) - 1 - i
-            temp_distance = self._euclidean_2d_distance_from_to_position(route_point=route[index], compare_point=compare_point,
+            temp_distance = self._euclidean_2d_distance_from_to_position(route_point=route[index],
+                                                                         compare_point=compare_point,
                                                                          use_posestamped=use_posestamped)
             if temp_distance < min_distance:
                 min_distance = temp_distance
@@ -362,7 +362,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         # create self.path messages
         self._create_path_message(path_poses, debug)
 
-    def _modify_lanelet(self, lanelet_id: int, modify_point: Point):
+    def _modify_lanelet(self, lanelet_id: int, modify_point: Point, start_point: Point):
         """Splits a lanelet at a certain point
 
         :param lanelet_id: lanelet to be split
@@ -375,8 +375,14 @@ class PathProviderCommonRoads(PathProviderAbstract):
         # make a local copy of the lanelet to be removed
         lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(lanelet_id)
         # bounds lanelet1
+        sep_index = 0
         lanelet_center_list = lanelet_copy.center_vertices.tolist()
-        sep_index = self._find_nearest_path_index(lanelet_center_list, modify_point, use_posestamped=False)
+        end_index = self._find_nearest_path_index(lanelet_center_list, modify_point, use_posestamped=False)
+        start_index = self._find_nearest_path_index(lanelet_center_list, start_point, use_posestamped=False)
+        if end_index > start_index:
+            sep_index = end_index - (abs(end_index - start_index) // 6)
+        else:
+            sep_index = end_index + (abs(end_index - start_index) // 6)
         if sep_index > 1 and len(lanelet_center_list) - sep_index > 1:
 
             # delete lanelet
@@ -480,7 +486,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         # remove lanelet_id from neighbourhood dict
         del self.neighbourhood[lanelet_id]
 
-    def _update_network(self, matching_lanelet_id: int, modify_point: Point, static_obstacle):
+    def _update_network(self, matching_lanelet_id: int, modify_point: Point, start_point: Point, static_obstacle):
         """
         Splits a lanelet and it's neighbouring lanelets in half at a certain point, updates the reference graph
         and optionally adds a obstacle to the split lanelet
@@ -508,10 +514,45 @@ class PathProviderCommonRoads(PathProviderAbstract):
         matching_1, matching_2 = self._modify_lanelet(matching_lanelet_id, modify_point)
         # update neighbourhood
         if right_1 is not None:
-            self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = matching_1
-            self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_left = matching_2
+            # update right side of current lanelet
             self.map.lanelet_network.find_lanelet_by_id(matching_1)._adj_right = right_1
             self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_right = right_2
+            next = None
+            next_dir = None
+            self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = matching_1
+            self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_left = matching_2
+            if self.map.lanelet_network.find_lanelet_by_id(matching_1).adj_right_same_direction:
+                next = self.map.lanelet_network.find_lanelet_by_id(right_1).adj_right
+                next_dir = True
+            else:
+                next = self.map.lanelet_network.find_lanelet_by_id(right_1).adj_left
+                next_dir = False
+
+            # make sure that the changes propagate through, but only in the same direction
+            while next is not None:
+                right_1_old = right_1
+                right_2_old = right_2
+                right_1, right_2 = self._modify_lanelet(
+                    next,
+                    modify_point, start_point)
+                if next_dir:
+                    self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_right = right_1
+                    self.map.lanelet_network.find_lanelet_by_id(right_2_old)._adj_right = right_2
+                    next_dir = self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right_same_direction
+                else:
+                    self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_left = right_1
+                    self.map.lanelet_network.find_lanelet_by_id(right_2_old)._adj_left = right_2
+                    next_dir = self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_left_same_direction
+
+                if next_dir:
+                    self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = right_1_old
+                    self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_left = right_2_old
+                    next =self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_right
+                else:
+                    self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_right = right_1_old
+                    self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_right = right_2_old
+                    next =self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left
+
         if left_1 is not None:
             self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = matching_1
             self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_right = matching_2
