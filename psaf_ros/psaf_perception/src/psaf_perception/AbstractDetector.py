@@ -1,5 +1,5 @@
 from enum import Enum, Flag
-from typing import Set
+from typing import Set, List, Callable
 
 
 class LabelGroups(Enum):
@@ -39,7 +39,7 @@ class Labels(Enum):
     def label_text(self) -> str:
         """
         Returns the label name
-        :return: ł
+        :return:
         """
         return self._label
 
@@ -49,15 +49,17 @@ class Labels(Enum):
     Unlabeled = (0, "Unlabeled")
     Stop = (1, "Stop", {LabelGroups.RightOfWay})
     SpeedLimit30 = (2, "Speed limit 30", {LabelGroups.Speed})
-    Speed30 = (3, "Speed 30", {LabelGroups.Speed})
-    Speed60 = (4, "Speed 60", {LabelGroups.Speed})
-    Speed90 = (5, "Speed 90", {LabelGroups.Speed})
-    TrafficLightUnknown = (6, "Traffic light unknown", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
-    TrafficLightRed = (7, "Traffic light red",{LabelGroups.TrafficLight, LabelGroups.RightOfWay})
-    TrafficLightYellow = (8, "Traffic light yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
-    TrafficLightYellowRed = (9, "Traffic light red-yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
-    TrafficLightGreen = (10, "Traffic light green", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
-    TrafficLightOff = (11, "Traffic light off", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    SpeedLimit40 = (3, "Speed limit 40", {LabelGroups.Speed})
+    SpeedLimit60 = (4, "Speed limit 60", {LabelGroups.Speed})
+    Speed30 = (5, "Speed 30", {LabelGroups.Speed})
+    Speed60 = (6, "Speed 60", {LabelGroups.Speed})
+    Speed90 = (7, "Speed 90", {LabelGroups.Speed})
+    TrafficLightUnknown = (8, "Traffic light unknown", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightRed = (9, "Traffic light red",{LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightYellow = (10, "Traffic light yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightYellowRed = (11, "Traffic light red-yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightGreen = (12, "Traffic light green", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightOff = (13, "Traffic light off", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
 
     Other = (99, "Other")
 
@@ -103,9 +105,9 @@ class AbstractDetector:
         if self.__listener is not None:
             self.__listener(detected_list)
 
-    def set_on_detection_listener(self, func):
+    def set_on_detection_listener(self, func:Callable[[List[DetectedObject]],None]):
         """
-        Set function to be called with detected bounding boxes
+        Set function to be called with detected objects
         :param func: the function
         :return: None
         """
