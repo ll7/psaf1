@@ -44,17 +44,24 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.radius = initial_search_radius
         self.step_size = step_size
         self.max_radius = max_radius
+
+        # load map and store the original_map which is not going to be altered
         self.map = self._load_scenario(polling_rate, timeout_iter)
-        self.neighbourhood = {}
+        self.original_map = deepcopy(self.map)
+
         self.path_poses = []
         self.planning_problem = None
+
+        # create neighbourhood dicts for efficient access to that information
+        self.neighbourhood = self._analyze_neighbourhood(self.original_map)
+        self.original_neighbourhood = deepcopy(self.neighbourhood)
 
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
         Gets the scenario of the converted .xodr map
         :param polling_rate: Polling Rate in [Hz]
         :param timeout_iter: Number of polling iterations until timeout occurs
-        :return: absolute path of temporary map file
+        :return: loaded scenario file
         """
         iter_cnt = 0  # counts the number of polling iterations
         r = rospy.Rate(polling_rate)  # 1Hz -> Try once a second
@@ -462,19 +469,28 @@ class PathProviderCommonRoads(PathProviderAbstract):
             rospy.logerr("PathSupervisor: invalid neighbourhood update!")
         self.neighbourhood[lanelet_id] = entry
 
-    def _analyze_neighbourhood(self):
+    def _analyze_neighbourhood(self, scenario_map: Scenario):
+        """
+        Analyze the neighbourhood of the given lanelet_network stored in the given map
+        Therefore creating a dict, which stores for every lanelet all lanelets that know their relationship
+        to the original lanelet
+        :param scenario_map: commonroads scenario file
+        """
         # init reference dict
-        for lane in self.map.lanelet_network.lanelets:
+        neighbourhood = {}
+        for lane in scenario_map.lanelet_network.lanelets:
             entry = list()
             entry.append(list())  # successor list
             entry.append(list())  # predecessor list
-            self.neighbourhood[lane.lanelet_id] = entry
+            neighbourhood[lane.lanelet_id] = entry
         # document references
-        for lane in self.map.lanelet_network.lanelets:
+        for lane in scenario_map.lanelet_network.lanelets:
             for entry in lane.successor:
-                self.neighbourhood[lane.lanelet_id][0].append(entry)
+                neighbourhood[lane.lanelet_id][0].append(entry)
             for entry in lane.predecessor:
-                self.neighbourhood[lane.lanelet_id][1].append(entry)
+                neighbourhood[lane.lanelet_id][1].append(entry)
+
+        return neighbourhood
 
     def _fast_reference_cleanup(self, lanelet_id: int):
         rospy.loginfo("PathSupervisor: Removing {} from references!".format(lanelet_id))
@@ -502,16 +518,18 @@ class PathProviderCommonRoads(PathProviderAbstract):
         left_1 = None
         left_2 = None
         # also split neighbours
-        if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_left is None:
+        if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right is not None:
             right_1, right_2 = self._modify_lanelet(
                 self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right,
-                modify_point)
-        if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right is None:
+                modify_point, start_point)
+        if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_left is not None:
             left_1, left_2 = self._modify_lanelet(
                 self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_left,
-                modify_point)
+                modify_point, start_point)
+
         # split obstacle lanelet
-        matching_1, matching_2 = self._modify_lanelet(matching_lanelet_id, modify_point)
+        matching_1, matching_2 = self._modify_lanelet(matching_lanelet_id, modify_point, start_point)
+
         # update neighbourhood
         if right_1 is not None:
             # update right side of current lanelet
@@ -554,10 +572,45 @@ class PathProviderCommonRoads(PathProviderAbstract):
                     next =self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left
 
         if left_1 is not None:
-            self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = matching_1
-            self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_right = matching_2
+            # update left side of current lanelet
             self.map.lanelet_network.find_lanelet_by_id(matching_1)._adj_left = left_1
             self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_left = left_2
+            next = None
+            next_dir = None
+            self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = matching_1
+            self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_right = matching_2
+            if self.map.lanelet_network.find_lanelet_by_id(matching_1).adj_left_same_direction:
+                next = self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_left
+                next_dir = True
+            else:
+                next = self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right
+                next_dir = False
+
+            # make sure that the changes propagate through, but only in the same direction
+            while next is not None:
+                left_1_old = left_1
+                left_2_old = left_2
+                left_1, left_2 = self._modify_lanelet(
+                    next,
+                    modify_point, start_point)
+                if next_dir:
+                    self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_left = left_1
+                    self.map.lanelet_network.find_lanelet_by_id(left_2_old)._adj_left = left_2
+                    next_dir = self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_left_same_direction
+                else:
+                    self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right = left_1
+                    self.map.lanelet_network.find_lanelet_by_id(left_2_old)._adj_right = left_2
+                    next_dir = self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right_same_direction
+
+                if next_dir:
+                    self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = left_1_old
+                    self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_right = left_2_old
+                    next =self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_left
+                else:
+                    self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_left = left_1_old
+                    self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_left = left_2_old
+                    next =self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right
+
         # add obstacle
         if static_obstacle is not None:
             self.map.lanelet_network.find_lanelet_by_id(matching_2).add_static_obstacle_to_lanelet(
