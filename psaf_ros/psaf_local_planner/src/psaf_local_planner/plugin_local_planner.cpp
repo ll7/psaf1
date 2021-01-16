@@ -11,7 +11,7 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), local_plan({}), global_plan({}),
                                            bufferSize(1000), initialized(false), closest_point_local_plan(3),
-                                           lookahead_factor(2), max_velocity(15), target_velocity(15), min_velocity(5),
+                                           lookahead_factor(4), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false)
     {
         std::cout << "Hi";
@@ -129,8 +129,15 @@ namespace psaf_local_planner
                 double distance;
                 
                 if (target_velocity > 0 && !check_distance_forward(distance)) {
-                    target_velocity *= boost::algorithm::clamp((distance - 5) / (pow(max_velocity * 0.36, 2)), 0, 1);
-                    ROS_INFO("distance forward: %f, max distance: %f", distance, pow(max_velocity * 0.36, 2));
+                    if (distance < 5) {
+                        ROS_INFO("attempting to stop");
+                        target_velocity = 0;
+                    } else {
+                        target_velocity = std::min(target_velocity, 25/18 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
+                    }
+                    
+                    // target_velocity *= boost::algorithm::clamp((distance - 5) / (pow(max_velocity * 0.36, 2)), 0, 1);
+                    ROS_INFO("distance forward: %f, max velocity: %f", distance, target_velocity);
                 }
 
                 cmd_vel.linear.x = target_velocity;
@@ -152,9 +159,10 @@ namespace psaf_local_planner
     geometry_msgs::PoseStamped& PsafLocalPlanner::find_lookahead_target() {
         tf2::Vector3 last_point, current_point, acutal_point;
         tf2::convert(current_pose.pose.position, last_point);
+        last_point.setZ(0);
         acutal_point = last_point;
 
-        double desired_distance = (target_velocity / lookahead_factor) + 3;
+        double desired_distance = std::pow(target_velocity / lookahead_factor, 1.2) + 3;
         double sum_distance = 0;
 
         for (auto it = local_plan.begin(); it != local_plan.end(); ++it)
@@ -317,6 +325,7 @@ namespace psaf_local_planner
     {
         tf2::Vector3 last_point, current_point, acutal_point;
         tf2::convert(current_pose.pose.position, last_point);
+        last_point.setZ(0);
         acutal_point = last_point;
 
         double sum_distance = 0;
