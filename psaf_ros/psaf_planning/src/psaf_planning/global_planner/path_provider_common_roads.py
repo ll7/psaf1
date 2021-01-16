@@ -52,10 +52,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.path_poses = []
         self.planning_problem = None
 
-        # create neighbourhood dicts for efficient access to that information
-        self.neighbourhood = self._analyze_neighbourhood(self.original_map)
-        self.original_neighbourhood = deepcopy(self.neighbourhood)
-
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
         Gets the scenario of the converted .xodr map
@@ -387,9 +383,9 @@ class PathProviderCommonRoads(PathProviderAbstract):
         end_index = self._find_nearest_path_index(lanelet_center_list, modify_point, use_posestamped=False)
         start_index = self._find_nearest_path_index(lanelet_center_list, start_point, use_posestamped=False)
         if end_index > start_index:
-            sep_index = end_index - (abs(end_index - start_index) // 6)
+            sep_index = end_index - (abs(end_index - start_index) // 2)
         else:
-            sep_index = end_index + (abs(end_index - start_index) // 6)
+            sep_index = end_index + (abs(end_index - start_index) // 2)
         if sep_index > 1 and len(lanelet_center_list) - sep_index > 1:
 
             # delete lanelet
@@ -540,10 +536,12 @@ class PathProviderCommonRoads(PathProviderAbstract):
             if self.map.lanelet_network.find_lanelet_by_id(matching_1).adj_right_same_direction:
                 next = self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_right
                 self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = matching_1
+                self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_left = matching_2
                 next_dir = True
             else:
                 next = self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left
                 self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_right = matching_2
+                self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_right = matching_1
                 next_dir = False
 
             # make sure that the changes propagate through, but only in the same direction
@@ -580,10 +578,12 @@ class PathProviderCommonRoads(PathProviderAbstract):
             if self.map.lanelet_network.find_lanelet_by_id(matching_1).adj_left_same_direction:
                 next = self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_left
                 self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = matching_1
+                self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_right = matching_2
                 next_dir = True
             else:
                 next = self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right
                 self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_left = matching_2
+                self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_left = matching_1
                 next_dir = False
 
             # make sure that the changes propagate through, but only in the same direction
