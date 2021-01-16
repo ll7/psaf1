@@ -9,6 +9,7 @@ project(psaf_messages)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   std_msgs
+  geometry_msgs
   message_generation
 )
 
@@ -74,6 +75,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   psaf_messages
+  geometry_msgs
 )
 
 ################################################
