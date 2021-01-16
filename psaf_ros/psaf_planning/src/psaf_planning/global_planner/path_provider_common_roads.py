@@ -537,13 +537,13 @@ class PathProviderCommonRoads(PathProviderAbstract):
             self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_right = right_2
             next = None
             next_dir = None
-            self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = matching_1
-            self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_left = matching_2
             if self.map.lanelet_network.find_lanelet_by_id(matching_1).adj_right_same_direction:
-                next = self.map.lanelet_network.find_lanelet_by_id(right_1).adj_right
+                next = self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_right
+                self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = matching_1
                 next_dir = True
             else:
-                next = self.map.lanelet_network.find_lanelet_by_id(right_1).adj_left
+                next = self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left
+                self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_right = matching_2
                 next_dir = False
 
             # make sure that the changes propagate through, but only in the same direction
@@ -577,22 +577,20 @@ class PathProviderCommonRoads(PathProviderAbstract):
             self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_left = left_2
             next = None
             next_dir = None
-            self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = matching_1
-            self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_right = matching_2
             if self.map.lanelet_network.find_lanelet_by_id(matching_1).adj_left_same_direction:
                 next = self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_left
+                self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = matching_1
                 next_dir = True
             else:
                 next = self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right
+                self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_left = matching_2
                 next_dir = False
 
             # make sure that the changes propagate through, but only in the same direction
             while next is not None:
                 left_1_old = left_1
                 left_2_old = left_2
-                left_1, left_2 = self._modify_lanelet(
-                    next,
-                    modify_point, start_point)
+                left_1, left_2 = self._modify_lanelet(next, modify_point, start_point)
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_left = left_1
                     self.map.lanelet_network.find_lanelet_by_id(left_2_old)._adj_left = left_2
