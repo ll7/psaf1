@@ -5,7 +5,7 @@ footprint: [[-2, -1], [-2, 1], [2, 1], [2, -1]]
 inflation_radius: 0.50
 
 plugins:
- - {name: obstacle, type: "psaf_local_planner::PsafObstacleLayer"}
+ - {name: obstacle, type: "psaf_obstacle_layer::PsafObstacleLayer"}
  #- {name: obstacle, type: "costmap_2d::ObstacleLayer"}
  - {name: inflation, type: "costmap_2d::InflationLayer"}
 

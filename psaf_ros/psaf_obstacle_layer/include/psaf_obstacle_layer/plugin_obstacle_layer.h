@@ -7,7 +7,7 @@
 #include <costmap_2d/obstacle_layer.h>
 
 
-namespace psaf_local_planner {
+namespace psaf_obstacle_layer {
     class PsafObstacleLayer : public costmap_2d::ObstacleLayer {
         void updateCosts (costmap_2d::Costmap2D &master_grid, int min_i, int min_j, int max_i, int max_j) override;
     };

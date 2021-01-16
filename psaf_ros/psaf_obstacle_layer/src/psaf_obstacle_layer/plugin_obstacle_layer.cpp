@@ -1,9 +1,9 @@
-#include "psaf_local_planner/plugin_obstacle_layer.h"
+#include "psaf_obstacle_layer/plugin_obstacle_layer.h"
 #include <pluginlib/class_list_macros.h>
 
-PLUGINLIB_EXPORT_CLASS(psaf_local_planner::PsafObstacleLayer, costmap_2d::Layer)
+PLUGINLIB_EXPORT_CLASS(psaf_obstacle_layer::PsafObstacleLayer, costmap_2d::Layer)
 
-namespace psaf_local_planner
+namespace psaf_obstacle_layer
 {
     void PsafObstacleLayer::updateCosts (costmap_2d::Costmap2D &master_grid, int min_i, int min_j, int max_i, int max_j) {
         // costmap_2d::ObstacleLayer::resetMaps();

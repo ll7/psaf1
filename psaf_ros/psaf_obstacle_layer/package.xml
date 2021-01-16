@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>psaf_local_planner</name>
+  <name>psaf_obstacle_layer</name>
   <version>0.0.0</version>
   <description>The psaf_local_planner package</description>
 
@@ -108,6 +108,6 @@
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
-    <nav_core plugin="${prefix}/blp_plugin.xml"/>
+    <costmap_2d plugin="${prefix}/c2d_plugin.xml" />
   </export>
 </package>
