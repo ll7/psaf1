@@ -17,7 +17,7 @@ from SMP.route_planner.route_planner.route_planner import RoutePlanner
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
 from psaf_abstraction_layer.sensors.GPS import GPS_Position
-from geometry_msgs.msg import Point, PoseStamped
+from geometry_msgs.msg import Point
 import sys
 from copy import deepcopy
 import rospy
@@ -437,6 +437,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 self.map.lanelet_network.find_lanelet_by_id(succ)._predecessor.append(id_lane_2)
             for pred in lanelet_copy.predecessor:
                 self.map.lanelet_network.find_lanelet_by_id(pred)._successor.append(id_lane_1)
+
             # update neigbourhood
             self._add_to_neighbourhood(id_lane_1, list([[id_lane_2], lanelet_copy.predecessor]))
             self._add_to_neighbourhood(id_lane_2, list([lanelet_copy.successor, [id_lane_1]]))
@@ -552,9 +553,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
             while next is not None:
                 right_1_old = right_1
                 right_2_old = right_2
-                right_1, right_2 = self._modify_lanelet(
-                    next,
-                    modify_point, start_point)
+                right_1, right_2 = self._modify_lanelet(next, modify_point, start_point)
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_right = right_1
                     self.map.lanelet_network.find_lanelet_by_id(right_2_old)._adj_right = right_2
