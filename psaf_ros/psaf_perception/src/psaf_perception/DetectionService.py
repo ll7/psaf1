@@ -2,10 +2,10 @@
 from typing import List
 
 import rospy
-from psaf_messages.msg import TrafficSignInfo, SpeedSign, StopMark, TrafficLight
+from psaf_messages.msg import TrafficSignInfo, SpeedSign, StopMark, StopSign, TrafficLight
 
 from psaf_perception.detectors.AbstractDetector import DetectedObject, Labels, LabelGroups
-from psaf_perception.detectors.SpeedSignDetector import SpeedSignDetector
+from psaf_perception.detectors.TrafficSignDetector import TrafficSignDetector
 from psaf_perception.detectors.StopMarkDetector import StopMarkDetector
 from psaf_perception.detectors.TrafficLightDetector import TrafficLightDetector
 
@@ -13,7 +13,7 @@ ROOT_TOPIC = "/psaf/perception/"
 
 
 class DetectionService:
-    """Stores the detected object from all detector"""
+    """Stores the detected object from all detectors"""
 
     def __init__(self):
         self.detectors = {}
@@ -21,13 +21,15 @@ class DetectionService:
         role_name = rospy.get_param("role_name", "ego_vehicle")
         use_gpu = rospy.get_param("use_gpu")
         # Add detectors here
-        self.detectors.update({"speed": SpeedSignDetector(role_name=role_name, use_gpu=use_gpu)})
-        self.detectors.update({"stop": StopMarkDetector(role_name=role_name, use_gpu=use_gpu)})
+        self.detectors.update({"trafficSign": TrafficSignDetector(role_name=role_name, use_gpu=use_gpu)})
+        self.detectors.update({"stopMarking": StopMarkDetector(role_name=role_name, use_gpu=use_gpu)})
         self.detectors.update({"trafficLight": TrafficLightDetector(role_name=role_name, use_gpu=use_gpu)})
 
         # Data
         # store all speed signs
         self.speed_signs: List[SpeedSign] = []
+        # store all stop signs
+        self.stop_signs: List[StopSign] = []
         # store all stop marks
         self.stop_marks: List[StopMark] = []
         # store all traffic lights
@@ -49,12 +51,13 @@ class DetectionService:
         }
 
         # Collect detection
-        self.detectors["speed"].set_on_detection_listener(self.__on_new_speed_sign)
-        self.detectors["stop"].set_on_detection_listener(self.__on_new_stop)
+        self.detectors["trafficSign"].set_on_detection_listener(self.__on_new_speed_sign)
+        self.detectors["stopMarking"].set_on_detection_listener(self.__on_new_stop)
         self.detectors["trafficLight"].set_on_detection_listener(self.__on_new_traffic_light)
 
     def __on_new_speed_sign(self, detected: List[DetectedObject]):
         self.speed_signs.clear()
+        self.stop_signs.clear()
         for object in detected:
             if LabelGroups.Speed in object.label.groups:
                 limit = 30
@@ -78,10 +81,18 @@ class DetectionService:
                 msg.limit = int(limit)
                 self.speed_signs.append(msg)
 
+            elif object.label == Labels.StopSign:
+                msg = StopSign()
+                msg.x = object.x + object.w / 2
+                msg.y = object.y + object.h / 2
+                msg.distance = object.distance
+                self.stop_signs.append(msg)
+
+
     def __on_new_stop(self, detected: List[DetectedObject]):
         self.stop_marks.clear()
         for object in detected:
-            if object.label == Labels.Stop:
+            if object.label == Labels.StopSurfaceMarking:
                 msg = StopMark()
                 msg.x = object.x + object.w / 2
                 msg.y = object.y + object.h / 2
@@ -109,6 +120,7 @@ class DetectionService:
         sign_msg.header.stamp = rospy.Time.now()
         sign_msg.header.frame_id = 'DetectionServiceTrafficSigns'
         sign_msg.speedSigns.extend(self.speed_signs)
+        sign_msg.stopSigns.extend(self.stop_signs)
         sign_msg.stopMarks.extend(self.stop_marks)
         sign_msg.trafficLights.extend(self.trafficLights)
         self.traffic_sign_publisher.publish(sign_msg)

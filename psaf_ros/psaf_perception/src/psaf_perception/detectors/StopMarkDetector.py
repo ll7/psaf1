@@ -114,7 +114,7 @@ class StopMarkDetector(AbstractDetector):
                     # probability is greater than the minimum probability
                     if score > self.confidence_min and self.labels[class_id]=="stop":
                         detected.append(
-                            DetectedObject(float(x1/W), float(y1/H),  (x2-x1)/W, (y2-y1)/H, 0,Labels.Stop, score))
+                            DetectedObject(float(x1/W), float(y1/H), (x2-x1) / W, (y2-y1) / H, 0, Labels.StopSurfaceMarking, score))
 
 
 
