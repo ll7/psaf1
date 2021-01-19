@@ -45,7 +45,6 @@ class TrafficSignDetector(AbstractDetector):
         rospy.loginfo("loading classifier model from disk...", logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
-        class_names = {}
         with open(os.path.join(root_path, f"models/{model_name}.names")) as f:
             class_names = json.load(f)
         self.labels = {class_names['stop']: Labels.StopSign,
@@ -155,9 +154,13 @@ class TrafficSignDetector(AbstractDetector):
                                            confidence=confidence))
 
                     if self.data_collect_path is not None and distance < 25:
+                        # get cropped rgb image
+                        crop_rgb = rgb_image[y1:y2, x1:x2, :]
+                        # use inverted mask to clear the background
+                        crop_rgb[np.logical_not(mask)] = 255
                         now = datetime.now().strftime("%H:%M:%S-%s")
-                        folder = os.path.abspath(
-                            f"{self.data_collect_path}/{classification.name if classification is not None else 'unknown'}")
+                        folder = os.path.abspath(f"{self.data_collect_path}/"
+                                                 f"{classification.name if classification is not None else 'unknown'}")
                         if not os.path.exists(folder):
                             os.mkdir(folder)
                         cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))

@@ -1,4 +1,4 @@
-from enum import Enum, Flag
+from enum import Enum
 from typing import Set, List, Callable
 
 
@@ -12,23 +12,20 @@ class LabelGroups(Enum):
     RightOfWay = 3
 
 
-LabelGroupSet = Set[LabelGroups]
-
-
 class Labels(Enum):
     """
     Enum that stores the available perception tags used to communicate between the components
     """
 
-    def __init__(self, id: int, label: str, groups: LabelGroupSet = None):
-        self._value_ = id
+    def __init__(self, nr: int, label: str, groups: Set[LabelGroups] = None):
+        self._value_ = nr
         self._label = label
         if groups is None:
             groups = {}
         self._groups = groups
 
     @property
-    def groups(self) -> LabelGroupSet:
+    def groups(self) -> Set[LabelGroups]:
         """
         Returns the set of groups
         :return:
@@ -56,11 +53,9 @@ class Labels(Enum):
     Speed60 = (14, "Speed 60", {LabelGroups.Speed})
     Speed90 = (15, "Speed 90", {LabelGroups.Speed})
     TrafficLightUnknown = (20, "Traffic light unknown", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
-    TrafficLightRed = (21, "Traffic light red",{LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightRed = (21, "Traffic light red", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
     TrafficLightYellow = (22, "Traffic light yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
-    TrafficLightYellowRed = (23, "Traffic light red-yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
-    TrafficLightGreen = (24, "Traffic light green", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
-    TrafficLightOff = (25, "Traffic light off", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+    TrafficLightGreen = (23, "Traffic light green", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
 
     Other = (99, "Other")
 
@@ -70,7 +65,8 @@ class DetectedObject:
     Data class for detected elements
     """
 
-    def __init__(self, x: float = 0, y: float = 0, width: float = 0, height: float = 0, distance:float = 0, label: Labels = 0,
+    def __init__(self, x: float = 0, y: float = 0, width: float = 0, height: float = 0, distance: float = 0,
+                 label: Labels = 0,
                  confidence: float = 0.01):
         """
 
@@ -106,10 +102,10 @@ class AbstractDetector:
         if self.__listener is not None:
             self.__listener(detected_list)
 
-    def set_on_detection_listener(self, func:Callable[[List[DetectedObject]],None]):
+    def set_on_detection_listener(self, func: Callable[[List[DetectedObject]], None]):
         """
         Set function to be called with detected objects
         :param func: the function
         :return: None
         """
-        self.__listener = func;
+        self.__listener = func

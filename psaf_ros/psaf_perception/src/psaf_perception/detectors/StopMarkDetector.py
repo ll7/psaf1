@@ -5,8 +5,8 @@ import cv2
 import rospkg
 import rospy
 from PyTorch_YOLOv3.models import Darknet
-from PyTorch_YOLOv3.utils.utils import non_max_suppression,rescale_boxes
-from PyTorch_YOLOv3.utils.datasets import Dataset,pad_to_square,resize
+from PyTorch_YOLOv3.utils.utils import non_max_suppression, rescale_boxes
+from PyTorch_YOLOv3.utils.datasets import Dataset, pad_to_square, resize
 import torch
 import torchvision.transforms as transforms
 
@@ -21,12 +21,12 @@ class SingleImage(Dataset):
     """
     Wrapper to use the dataloader
     """
-    def __init__(self,image, img_size=416):
+
+    def __init__(self, image, img_size=416):
         self.img_size = img_size
         self.image = image
 
     def __getitem__(self, index):
-
         img = transforms.ToTensor()(self.image)
         # Pad to square resolution
         img, _ = pad_to_square(img, 0)
@@ -57,20 +57,20 @@ class StopMarkDetector(AbstractDetector):
         self.labels = []
         self.count = 0
 
-        weights_path = os.path.join(root_path,"models/psaf2019_yolo.weights")
-        config_path = os.path.join(root_path,"models/psaf2019_yolo.cfg")
+        weights_path = os.path.join(root_path, "models/psaf2019_yolo.weights")
+        config_path = os.path.join(root_path, "models/psaf2019_yolo.cfg")
         label_file = os.path.join(root_path, "models/psaf2019_classes.csv")
         with open(label_file, newline='') as csvfile:
             csv_in = csv.reader(csvfile, delimiter=' ', quotechar='|')
             for row in csv_in:
-               self.labels.append(row[0])
+                self.labels.append(row[0])
 
-        rospy.loginfo(f"init device (use gpu={use_gpu})",logger_name=self.logger_name)
+        rospy.loginfo(f"init device (use gpu={use_gpu})", logger_name=self.logger_name)
         # select the gpu if allowed and a gpu is available
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
-        self.img_size = 416;
-        rospy.loginfo("loading classifier model from disk...",logger_name=self.logger_name)
-        model = Darknet(config_path,self.img_size).to(self.device)
+        self.img_size = 416
+        rospy.loginfo("loading classifier model from disk...", logger_name=self.logger_name)
+        model = Darknet(config_path, self.img_size).to(self.device)
         model.load_darknet_weights(weights_path)
         model.eval()
 
@@ -82,7 +82,7 @@ class StopMarkDetector(AbstractDetector):
         self.rgb_camera = RGBCamera(role_name, id="street")
         self.rgb_camera.set_on_image_listener(self.__on_image_update)
 
-    def __on_image_update(self, image,_):
+    def __on_image_update(self, image, _):
 
         (H, W) = image.shape[:2]
 
@@ -92,7 +92,7 @@ class StopMarkDetector(AbstractDetector):
             shuffle=False,
             num_workers=0,
         )
-        output =[]
+        output = []
         for batch_i, (input_imgs) in enumerate(dataloader):
             input_img = Variable(input_imgs.type(self.Tensor))
             input_img.to(self.device)
@@ -105,21 +105,19 @@ class StopMarkDetector(AbstractDetector):
             # loop over each of the detections
             if detections is not None:
                 detections = rescale_boxes(detections, self.img_size, image.shape[:2])
-                for  x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
+                for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
                     # extract the information
                     x1, y1, x2, y2, conf, cls_conf, cls_pred = x1.item(), y1.item(), x2.item(), y2.item(), conf.item(), cls_conf.item(), cls_pred.item()
                     class_id = int(cls_pred)
                     score = float(conf)
                     # filter out weak predictions by ensuring the detected
                     # probability is greater than the minimum probability
-                    if score > self.confidence_min and self.labels[class_id]=="stop":
+                    if score > self.confidence_min and self.labels[class_id] == "stop":
                         detected.append(
-                            DetectedObject(float(x1/W), float(y1/H), (x2-x1) / W, (y2-y1) / H, 0, Labels.StopSurfaceMarking, score))
-
-
+                            DetectedObject(float(x1 / W), float(y1 / H), (x2 - x1) / W, (y2 - y1) / H, 0,
+                                           Labels.StopSurfaceMarking, score))
 
         self.inform_listener(detected)
-
 
 
 # Show case code
@@ -129,9 +127,9 @@ if __name__ == "__main__":
     detected_r = None
 
 
-    def store_image(image,_):
+    def store_image(image, _):
         global detected_r
-        H,W = image.shape[:2]
+        H, W = image.shape[:2]
 
         if detected_r is not None:
             for element in detected_r:
@@ -145,7 +143,7 @@ if __name__ == "__main__":
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         # show the output image
-        cv2.imshow("RGB", cv2.cvtColor(image,cv2.COLOR_RGB2BGR))
+        cv2.imshow("RGB", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
         cv2.waitKey(1)
 
 

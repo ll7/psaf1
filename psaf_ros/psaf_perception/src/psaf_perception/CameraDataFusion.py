@@ -19,8 +19,6 @@ class CameraDataFusion:
 
         self.visible_tags = visible_tags
 
-        self.confidence_min = 0.70
-
         # Threshold between two image in seconds -> smaller is better but makes it harder to find partners
         self.time_threshold = time_threshold
 
@@ -87,7 +85,7 @@ class CameraDataFusion:
                     more_freq_value = bigger_sorted_list[i]
                     if possible_match is not None \
                             and abs(cls.__time_difference(reference_value, possible_match)) < abs(
-                        cls.__time_difference(reference_value, more_freq_value)):
+                            cls.__time_difference(reference_value, more_freq_value)):
                         # If there is already possible match and if the difference between the current timestamp
                         # and the reference timestamp is greater than difference between timestamp of the last
                         # possible match and the  reference timestamp, all upcoming elements will have a greater
