@@ -23,19 +23,20 @@ data_dir = "/home/psaf1/project-files/training_data/traffic_signs"
 # Generate path where the model will be stored
 now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 store_path = os.path.abspath(f"../models/traffic_sign-classifier-{now}")
+exisisting_model_path = '../models/traffic_sign-classifier-2021-01-18-17:58:35.pt'
 
 # classes in the dataset
 classes = ['back', 'speed_limit_30', 'speed_limit_40', 'speed_limit_60', 'speed_30', 'speed_60', 'speed_90','stop']
 
 # Batch size for training (change depending on how much memory you have)
-batch_size = 256
+batch_size = 512
 
 # Number of epochs to train for
-num_epochs = 10000
+num_epochs = 1000
 
 # Flag for feature extracting. When False, we finetune the whole model,
 #   when True we only update the reshaped layer params
-feature_extract = False
+feature_extract = True
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
@@ -121,10 +122,16 @@ def initialize_model(num_classes, feature_extract, use_pretrained=True):
 
     """ Resnet
     """
-    model_ft = models.resnet18(pretrained=use_pretrained)
-    set_parameter_requires_grad(model_ft, feature_extract)
-    num_ftrs = model_ft.fc.in_features
-    model_ft.fc = nn.Linear(num_ftrs, num_classes)
+    if exisisting_model_path is not None:
+        model_ft = torch.load(os.path.abspath(exisisting_model_path))
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.fc.in_features
+        model_ft.fc = nn.Linear(num_ftrs, num_classes)
+    else:
+        model_ft = models.resnet18(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.fc.in_features
+        model_ft.fc = nn.Linear(num_ftrs, num_classes)
     input_size = 224
     return model_ft, input_size
 

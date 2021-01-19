@@ -41,7 +41,7 @@ class TrafficSignDetector(AbstractDetector):
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
         rospy.loginfo("Device:" + str(self.device), logger_name=self.logger_name)
         # load our model
-        model_name = 'traffic_sign-classifier-2021-01-18-17:58:35'
+        model_name = 'traffic_sign-classifier-2021-01-19-09:53:51'
         rospy.loginfo("loading classifier model from disk...", logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 4)
 
         # show the output image
-        show_image("Speed_detection", image)
+        show_image("Traffic_sign_detection", image)
 
 
     def on_detected(detected_list):
