@@ -39,7 +39,6 @@ namespace psaf_local_planner
             double y_diff = current_pose.pose.position.y - w.pose.position.y;
             double distance_sq = x_diff * x_diff + y_diff * y_diff;
 
-            ROS_INFO("last: %f; current: %f", last_dist, distance_sq);
             // find the closest point
             if (last_dist > distance_sq) {
                 closest_it = it;
