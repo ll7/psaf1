@@ -19,6 +19,7 @@ from lanelet2.projection import UtmProjector
 from lanelet2.io import Origin
 import numpy as np
 from std_msgs.msg import String
+from copy import deepcopy
 
 
 class PathProviderAbstract:
@@ -49,6 +50,8 @@ class PathProviderAbstract:
         self.start_orientation = None
         self.goal = None
         self.enable_debug = enable_debug
+        self.map = None
+        self.original_map = None
 
     def __del__(self):
         # delete path bag files
@@ -147,6 +150,9 @@ class PathProviderAbstract:
         Callback function of psaf goal set subscriber
         :param data: data received
         """
+        # first reset map
+        self.map = deepcopy(self.original_map)
+
         self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
         self.start = self.GPS_Sensor.get_position()
         self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
