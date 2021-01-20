@@ -14,6 +14,7 @@ from commonroad.visualization.draw_dispatch_cr import draw_object
 from commonroad.common.util import Interval
 
 from SMP.route_planner.route_planner.route_planner import RoutePlanner
+from SMP.route_planner.route_planner.route import Route
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
 from psaf_abstraction_layer.sensors.GPS import GPS_Position
@@ -272,7 +273,29 @@ class PathProviderCommonRoads(PathProviderAbstract):
             if len(route.reference_path) < min_length:
                 min_length = len(route.reference_path)
                 min_index = index
-        return routes_list[min_index]
+        return self._generate_route_path(routes_list[min_index])
+
+    def _generate_route_path(self, route: Route):
+        lane_change_instructions = route._compute_lane_change_instructions()
+        path = []
+        do_lane_change = False
+        for i, lane_id in enumerate(route.list_ids_lanelets):
+            if lane_change_instructions[i] == 0:
+                if not do_lane_change:
+                    path.extend(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices)
+                else:
+                    path.extend(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
+                                len(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices)//2:])
+                    do_lane_change = False
+            else:
+                if not do_lane_change:
+                    path.extend(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
+                                :len(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices)//2])
+                else:
+                    path.extend(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
+                                len(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices)//2:])
+                do_lane_change = True
+        return path
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
@@ -335,7 +358,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         if num_routes >= 1:
             route = self._get_shortest_route(all_routes)
             prev_local_point = None
-            for path_point in route.reference_path:
+            for path_point in route:
                 local_point = Point(path_point[0], path_point[1], 0)
                 if prev_local_point is None:
                     prev_local_point = local_point
@@ -566,11 +589,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = right_1_old
                     self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_left = right_2_old
-                    next =self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_right
+                    next = self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_right
                 else:
                     self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_right = right_1_old
                     self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_right = right_2_old
-                    next =self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left
+                    next = self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left
 
         if left_1 is not None:
             # update left side of current lanelet
@@ -606,11 +629,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = left_1_old
                     self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_right = left_2_old
-                    next =self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_left
+                    next = self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_left
                 else:
                     self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_left = left_1_old
                     self.map.lanelet_network.find_lanelet_by_id(left_2)._adj_left = left_2_old
-                    next =self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right
+                    next = self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right
 
         # add obstacle
         if static_obstacle is not None:
