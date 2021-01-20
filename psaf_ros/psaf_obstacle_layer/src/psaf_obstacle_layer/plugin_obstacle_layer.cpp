@@ -8,10 +8,11 @@ namespace psaf_obstacle_layer
     
     void PsafObstacleLayer::updateCosts (costmap_2d::Costmap2D &master_grid, int min_i, int min_j, int max_i, int max_j) {
         static int counter = 0;
-        if (counter++ % 40 == 0) {
+
+        costmap_2d::ObstacleLayer::updateCosts(master_grid, min_i, min_j, max_i, max_j);
+        if (counter++ % 10 == 0) {
             costmap_2d::ObstacleLayer::reset();
         }
-        costmap_2d::ObstacleLayer::updateCosts(master_grid, min_i, min_j, max_i, max_j);
     }
 } // namespace psaf_local_planner
 
