@@ -58,7 +58,8 @@ namespace psaf_local_planner {
             
             double compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location);
             void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
-            bool check_distance_forward(double& distance);
+            bool check_distance_forward(double& distance, double &relativeX, double &relativeY);
+
             geometry_msgs::PoseStamped& find_lookahead_target();
 
             costmap_2d::Costmap2DROS* costmap_ros;
@@ -99,8 +100,12 @@ namespace psaf_local_planner {
             /** The distance for which it should look for a curvature*/
             double estimate_curvature_distance;
 
-            /** */
+            /** The max distance it should check for a collision*/
             double check_collision_max_distance;
+
+            /** */
+            int slow_car_ahead_counter;
+            bool slow_car_ahead_published;
 
     };
 };

@@ -12,7 +12,8 @@ namespace psaf_local_planner
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
                                            bufferSize(1000), initialized(false), closest_point_local_plan(2),
                                            lookahead_factor(4), max_velocity(15), target_velocity(15), min_velocity(5),
-                                           goal_reached(false), estimate_curvature_distance(30), check_collision_max_distance(40)
+                                           goal_reached(false), estimate_curvature_distance(30), check_collision_max_distance(40), 
+                                           slow_car_ahead_counter(0), slow_car_ahead_published(false)
     {
         std::cout << "Hi";
     }
@@ -123,9 +124,9 @@ namespace psaf_local_planner
                 auto target_point = find_lookahead_target();
 
                 double angle = compute_steering_angle(target_point.pose, current_pose.pose);
-                double distance;
+                double distance, relX, relY;
                 
-                if (target_velocity > 0 && !check_distance_forward(distance)) {
+                if (target_velocity > 0 && !check_distance_forward(distance, relX, relY)) {
                     if (distance < 5) {
                         ROS_INFO("attempting to stop");
                         target_velocity = 0;
@@ -135,6 +136,24 @@ namespace psaf_local_planner
                     
                     // target_velocity *= boost::algorithm::clamp((distance - 5) / (pow(max_velocity * 0.36, 2)), 0, 1);
                     ROS_INFO("distance forward: %f, max velocity: %f", distance, target_velocity);
+                }
+
+
+                // Check if there should be a line change if speed is slower than x for y iterations
+                if (target_velocity < max_velocity - 5) {
+                    slow_car_ahead_counter = std::min(100, slow_car_ahead_counter + 1);
+                } else {
+                    slow_car_ahead_counter = std::max(0, slow_car_ahead_counter - 2);
+                }
+
+                if (slow_car_ahead_counter > 60 && !slow_car_ahead_published) {
+                    ROS_INFO("publishing obstacle ahead at x: %f y: %f", relX, relY);
+                    slow_car_ahead_published = true;
+                }
+
+                if (slow_car_ahead_counter < 10 && slow_car_ahead_published) {
+                    ROS_INFO("publishing loss of obstacle");
+                    slow_car_ahead_published = false;
                 }
 
                 cmd_vel.linear.x = target_velocity;
@@ -237,6 +256,7 @@ namespace psaf_local_planner
         // Debug data for the direction and the angle between the car and the road
         auto marker1 = visualization_msgs::Marker();
         auto marker2 = visualization_msgs::Marker();
+        auto marker3 = visualization_msgs::Marker();
         auto markers = visualization_msgs::MarkerArray();
 
         marker1.type = visualization_msgs::Marker::ARROW;
@@ -267,7 +287,20 @@ namespace psaf_local_planner
         marker2.scale.y = 0.1;
         marker2.scale.z = 0.1;
 
-        markers.markers = {marker1, marker2};
+        marker3.type = visualization_msgs::Marker::SPHERE;
+        marker3.action = visualization_msgs::Marker::ADD;
+        marker3.ns = "next";
+        marker3.header.frame_id = "ego_vehicle";
+        marker3.header.stamp = ros::Time::now();
+        marker3.color.a = 1.0;
+        marker3.color.r = 0.0;
+        marker3.color.g = 1.0;
+        marker3.pose = target_location;
+        marker3.scale.x = 0.2;
+        marker3.scale.y = 0.2;
+        marker3.scale.z = 0.2;
+
+        markers.markers = {marker1, marker2, marker3};
         debug_pub.publish(markers);
 
         return d_angle;
@@ -314,7 +347,7 @@ namespace psaf_local_planner
     /**
      * Returns false if it failed because something is close; true if out of bounds
      */
-    bool PsafLocalPlanner::check_distance_forward(double& distance)
+    bool PsafLocalPlanner::check_distance_forward(double& distance, double &relativeX, double &relativeY)
     {
         tf2::Vector3 last_point, current_point, acutal_point;
         tf2::convert(current_pose.pose.position, last_point);
@@ -343,7 +376,9 @@ namespace psaf_local_planner
                     count_error += 1;
                     if (count_error >= 2)
                     {
-                        ROS_WARN("cost is %i at %f %f", cost, current_point.getX() - acutal_point.getX(), current_point.getY() - acutal_point.getY());                
+                        ROS_WARN("cost is %i at %f %f", cost, current_point.getX() - acutal_point.getX(), current_point.getY() - acutal_point.getY());
+                        relativeX = current_point.getX() - acutal_point.getX();
+                        relativeY = current_point.getY() - acutal_point.getY();
                         distance = sum_distance;
                         return false;
                     }
@@ -362,4 +397,4 @@ namespace psaf_local_planner
         distance = sum_distance;
         return true;
     }
-} // namespace psaf_local_planner
+} // namespace psaf_local_planner 
