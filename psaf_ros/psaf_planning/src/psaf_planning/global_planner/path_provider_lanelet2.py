@@ -10,6 +10,7 @@ from psaf_abstraction_layer.sensors.GPS import GPS_Position
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Point
 from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
+from copy import deepcopy
 
 
 class PathProviderLanelet2(PathProviderAbstract):
@@ -31,6 +32,7 @@ class PathProviderLanelet2(PathProviderAbstract):
             self.map = None
         else:
             self.map = self._load_map(self.map_path)
+        self.original_map = deepcopy(self.map)
 
     def _load_map(self, path):
         return lanelet2.io.load(path, self.projector)
