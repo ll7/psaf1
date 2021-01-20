@@ -7,9 +7,9 @@ carla:
     speed_Kd: 0.30  # min: 0, max: 10.
     # override the default values of the pid acceleration controller
     # (only relevant for ackermann control mode)
-    accel_Kp: 0.055  # min: 0, max: 10.
+    accel_Kp: 0.12  # min: 0, max: 10.
     accel_Ki: 0.00  # min: 0, max: 10.
-    accel_Kd: 0.05  # min: 0, max: 10.
+    accel_Kd: 0.1  # min: 0, max: 10.
     # set the minimum acceleration in (m/s^2)
     # This border value is used to enable the speed controller which is used to control driving 
     # at more or less constant speed.
