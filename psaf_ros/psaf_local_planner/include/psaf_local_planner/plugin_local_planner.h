@@ -22,6 +22,7 @@
 #include <tf2/utils.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
+#include <boost/statechart/
 
 
 namespace psaf_local_planner {
@@ -102,4 +103,40 @@ namespace psaf_local_planner {
             bool goal_reached;
 
     };
+};
+
+enum LocalPlannerState {
+    /** 
+     * Car has stopped 
+     * --> DRIVING [on global plan published] 
+     */
+    STOPPED, 
+
+    /**
+     * Car has reached final destination
+     * --> shutdown
+     */
+    GOAL_REACHED, 
+
+    /**
+     * Car is driving on normal, straight lane
+     * --> DRIVING_CURVATURE [on curvature ahead less than x meters with angle over y]
+     * --> DRIVING_INTERSECTION [on driving over a intersection]
+     * --> GOAL_REACHED [on reaching goal reached]
+     */
+    DRIVING, 
+    /**
+     * Car is driving in or ahead of a curvature
+     * --> DRIVING [on: car has left the curvature and is back on a straight track]
+     * --> DRIVING_INTERSECTION_AHEAD [on: car has left the curvature and has a intersection ahead of it]
+     */
+    DRIVING_CURVATURE, 
+
+    /**
+     * 
+     */
+    DRIVING_INTERSECTION_AHEAD,
+    DRIVING_INTERSECTION, 
+    STOPPED_INTERSECTION_REDLIGHT,
+    STOPPED_INTERSECTION_STOP_SIGN,
 };
