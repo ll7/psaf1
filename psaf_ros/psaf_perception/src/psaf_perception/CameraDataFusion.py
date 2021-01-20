@@ -1,4 +1,5 @@
 import math
+from multiprocessing.context import Process
 from threading import Lock
 from typing import Set, Tuple, List, Callable, Dict
 
@@ -85,7 +86,7 @@ class CameraDataFusion:
                     more_freq_value = bigger_sorted_list[i]
                     if possible_match is not None \
                             and abs(cls.__time_difference(reference_value, possible_match)) < abs(
-                            cls.__time_difference(reference_value, more_freq_value)):
+                        cls.__time_difference(reference_value, more_freq_value)):
                         # If there is already possible match and if the difference between the current timestamp
                         # and the reference timestamp is greater than difference between timestamp of the last
                         # possible match and the  reference timestamp, all upcoming elements will have a greater
@@ -193,6 +194,67 @@ class CameraDataFusion:
         self.__listener = func
 
 
+class CameraDataFusionWrapper:
+    """
+    Wrapper for CameraDataFusion to reduce the computation time for identical camera data fusions by
+    applying a singleton wrapper patter
+    """
+
+    instances = {}
+    wrapper_listeners = {}
+
+    def __init__(self, role_name: str = "ego_vehicle", time_threshold=0.1, visible_tags: Set[SegmentationTag] = None):
+        self.instance = CameraDataFusionWrapper.__get_instance(role_name, time_threshold)
+        self.visible_tags = visible_tags
+
+        self.__listener = None
+
+        CameraDataFusionWrapper.wrapper_listeners[self.instance].append(self.__on_new_data)
+
+    @classmethod
+    def __get_instance(cls, role_name: str = "ego_vehicle", time_threshold=0.1):
+        """
+        Internal helper method to crate the instances if necessary
+        :param role_name:
+        :param time_threshold:
+        :return:
+        """
+        parameters = (role_name, time_threshold)
+        if parameters in cls.instances.keys():
+            return cls.instances[parameters]
+        else:
+            instance = CameraDataFusion(role_name=role_name, time_threshold=time_threshold, visible_tags=None)
+            instance.set_on_image_data_listener(
+                lambda segmentation_image, rgb_image, depth_image, time:
+                cls.__listener_wrapper(instance, segmentation_image, rgb_image, depth_image, time))
+            cls.wrapper_listeners[instance] = []
+            cls.instances[parameters] = instance
+            return instance
+
+    @classmethod
+    def __listener_wrapper(cls, instance, segmentation_image, rgb_image, depth_image, time):
+        for each in cls.wrapper_listeners[instance]:
+            # Process(target=each,args = [ segmentation_image,rgb_image, depth_image, time]).start()
+            each(segmentation_image, rgb_image, depth_image, time)
+
+    def __on_new_data(self, segmentation_image, rgb_image, depth_image, time):
+        # Filter segmentation camera image for the given tags
+        if self.visible_tags is not None:
+            segmentation_image = SegmentationCamera.filter_for_tags(segmentation_image, self.visible_tags)
+
+        # Call listener method
+        if self.__listener is not None:
+            self.__listener(segmentation_image, rgb_image, depth_image, time)
+
+    def set_on_image_data_listener(self, func: Callable[[np.ndarray, np.ndarray, np.ndarray, Time], None]):
+        """
+        Set function to be called with image data
+        :param func: the function ( segmentation_image, rgb_image, depth_image, time) -> None
+        :return: None
+        """
+        self.__listener = func
+
+
 # Show case code
 def show_image(title, image):
     max_width, max_height = 1200, 800
@@ -222,6 +284,6 @@ if __name__ == "__main__":
         show_image("Fusion", image)
 
 
-    s = CameraDataFusion()
+    s = CameraDataFusionWrapper()
     s.set_on_image_data_listener(store_image)
     rospy.spin()
