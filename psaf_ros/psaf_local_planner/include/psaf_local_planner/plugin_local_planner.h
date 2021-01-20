@@ -22,7 +22,6 @@
 #include <tf2/utils.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
-#include <boost/statechart/
 
 
 namespace psaf_local_planner {
@@ -52,15 +51,10 @@ namespace psaf_local_planner {
              */
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
         private:
-            void publishLocalPlan(const std::vector<geometry_msgs::PoseStamped>& path);
             void publishGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& path);
             
             void deleteOldPoints();
             
-            /**
-             * Fills the point buffer with points of the route
-             */
-            void fillPointBuffer();
             
             double compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location);
             void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
@@ -70,7 +64,7 @@ namespace psaf_local_planner {
             costmap_2d::Costmap2DROS* costmap_ros;
             base_local_planner::LocalPlannerUtil planner_util;
 
-            ros::Publisher g_plan_pub, l_plan_pub;
+            ros::Publisher g_plan_pub;
             ros::Publisher debug_pub;
             ros::Subscriber vel_sub;
 
@@ -79,7 +73,7 @@ namespace psaf_local_planner {
             std::string odom_topic;
             
 
-            std::vector<geometry_msgs::PoseStamped> local_plan, global_plan;
+            std::vector<geometry_msgs::PoseStamped> global_plan;
             int bufferSize;
 
             bool initialized;
@@ -101,6 +95,12 @@ namespace psaf_local_planner {
 
             /** set to true when the goal is reached*/
             bool goal_reached;
+
+            /** The distance for which it should look for a curvature*/
+            double estimate_curvature_distance;
+
+            /** */
+            double check_collision_max_distance;
 
     };
 };

@@ -9,10 +9,10 @@ PLUGINLIB_EXPORT_CLASS(psaf_local_planner::PsafLocalPlanner, nav_core::BaseLocal
 
 namespace psaf_local_planner
 {
-    PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), local_plan({}), global_plan({}),
-                                           bufferSize(1000), initialized(false), closest_point_local_plan(3),
+    PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
+                                           bufferSize(1000), initialized(false), closest_point_local_plan(2),
                                            lookahead_factor(4), max_velocity(15), target_velocity(15), min_velocity(5),
-                                           goal_reached(false)
+                                           goal_reached(false), estimate_curvature_distance(30), check_collision_max_distance(40)
     {
         std::cout << "Hi";
     }
@@ -22,45 +22,46 @@ namespace psaf_local_planner
      */
     void PsafLocalPlanner::deleteOldPoints()
     {
-        std::vector<geometry_msgs::PoseStamped>::iterator it = local_plan.begin();
+        std::vector<geometry_msgs::PoseStamped>::iterator it = global_plan.begin();
+        double closest_point_local_plan_sq = closest_point_local_plan* closest_point_local_plan;
 
-        // std::string s = (std::string)"x: " + std::to_string(current_pose.pose.position.x) + "z: " + std::to_string(current_pose.pose.position.z) + "z: " + std::to_string(current_pose.pose.position.z);
-        double last_dist = 0;
-        while (it != local_plan.end())
+        double last_dist = 1e100;
+        std::vector<geometry_msgs::PoseStamped>::iterator last_it = it;
+        std::vector<geometry_msgs::PoseStamped>::iterator closest_it = it;
+
+        int to_delete = -1;
+
+        while (it != global_plan.end())
         {
             const geometry_msgs::PoseStamped &w = *it;
-            // Fixed error bound of 2 meters for now. Can reduce to a portion of the map size or based on the resolution
+            
             double x_diff = current_pose.pose.position.x - w.pose.position.x;
             double y_diff = current_pose.pose.position.y - w.pose.position.y;
             double distance_sq = x_diff * x_diff + y_diff * y_diff;
-            if (distance_sq > closest_point_local_plan * closest_point_local_plan)
-            {
-                // ROS_INFO("Nearest waypoint to <%f, %f> is <%f, %f>\n", current_pose.pose.position.x, current_pose.pose.position.y, w.pose.position.x, w.pose.position.y);
-                break;
+
+            ROS_INFO("last: %f; current: %f", last_dist, distance_sq);
+            // find the closest point
+            if (last_dist > distance_sq) {
+                closest_it = it;
+                last_dist  = distance_sq;
+                to_delete++;
+            } else {
+                // ensure that the closest point is ahead of the car when it is inside the bounds of the car
+                if (distance_sq < closest_point_local_plan_sq) {
+                    closest_it = it;
+                    to_delete++;
+                } else {
+                    break;
+                }
             }
-            it = local_plan.erase(it);
-        }
-    }
 
-    /**
-     * Fills the local path with the next 100 points of the path and removes them from the global plan
-     */
-    void PsafLocalPlanner::fillPointBuffer()
-    {
-        if (global_plan.empty())
-        {
-            return;
+            it++;
         }
-        std::vector<geometry_msgs::PoseStamped>::iterator it = global_plan.begin();
 
-        //> oder >= size?
-        while (bufferSize > local_plan.size() && it != global_plan.end())
-        {
-            const geometry_msgs::PoseStamped &w = *it;
-            local_plan.push_back(w);
+        // actually delete the points now
+        if (to_delete > 0)
+            global_plan.erase(global_plan.begin(), global_plan.begin() + to_delete);
 
-            it = global_plan.erase(it);
-        }
     }
 
     void velocityCallback(const geometry_msgs::Twist &msg)
@@ -76,7 +77,7 @@ namespace psaf_local_planner
         {
             ros::NodeHandle private_nh("~/" + name);
             g_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_global_plan", 1);
-            l_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_local_plan", 1);
+            //l_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_local_plan", 1);
             debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
 
             vel_sub = private_nh.subscribe("psaf_velocity_plan", 10, velocityCallback);
@@ -107,10 +108,10 @@ namespace psaf_local_planner
             costmap_ros->getRobotPose(current_pose);
 
             deleteOldPoints();
-            fillPointBuffer();
-            publishLocalPlan(local_plan);
+            // fillPointBuffer();
+            // publishLocalPlan(local_plan);
 
-            if (local_plan.size() <= 1 && global_plan.empty())
+            if (global_plan.size() <= 1)
             {
                 ROS_INFO("Goal reached");
                 cmd_vel.linear.x = 0;
@@ -120,9 +121,6 @@ namespace psaf_local_planner
             else
             {
                 estimate_curvature_and_set_target_velocity(current_pose.pose);
-                // int index = (target_velocity / lookahead_factor) + 4;
-                // auto target_point = &local_plan[index];
-
                 auto target_point = find_lookahead_target();
 
                 double angle = compute_steering_angle(target_point.pose, current_pose.pose);
@@ -165,7 +163,7 @@ namespace psaf_local_planner
         double desired_distance = std::pow(target_velocity / lookahead_factor, 1.2) + 3;
         double sum_distance = 0;
 
-        for (auto it = local_plan.begin(); it != local_plan.end(); ++it)
+        for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
         {
             geometry_msgs::PoseStamped &w = *it;
             tf2::convert(w.pose.position, current_point);
@@ -178,7 +176,7 @@ namespace psaf_local_planner
             last_point = current_point;
         }
 
-        auto &last_stamp = *local_plan.end();
+        auto &last_stamp = *global_plan.end();
         return last_stamp;
     }
 
@@ -188,7 +186,7 @@ namespace psaf_local_planner
      */
     bool PsafLocalPlanner::isGoalReached()
     {
-        return goal_reached && local_plan.empty() && global_plan.empty();
+        return goal_reached && global_plan.size() <= 1;
     }
 
     /**
@@ -199,15 +197,8 @@ namespace psaf_local_planner
         planner_util.setPlan(plan);
         publishGlobalPlan(plan);
         global_plan = plan;
-        local_plan.clear();
         goal_reached = false;
         return true;
-    }
-
-    void PsafLocalPlanner::publishLocalPlan(const std::vector<geometry_msgs::PoseStamped> &path)
-    {
-        if (!path.empty())
-            base_local_planner::publishPlan(path, l_plan_pub);
     }
 
     void PsafLocalPlanner::publishGlobalPlan(const std::vector<geometry_msgs::PoseStamped> &path)
@@ -286,7 +277,7 @@ namespace psaf_local_planner
     void PsafLocalPlanner::estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location)
     {
         tf2::Vector3 point1, point2, point3;
-        auto it = local_plan.begin();
+        auto it = global_plan.begin();
 
         tf2::convert(current_location.position, point1);
         const geometry_msgs::PoseStamped &w = *it;
@@ -295,9 +286,12 @@ namespace psaf_local_planner
         ++it;
         double sum_distance = tf2::tf2Distance2(point1, point2);
         double sum_angle = 0;
-
-        for (; it != local_plan.end(); ++it)
+        
+        for (; it != global_plan.end(); ++it)
         {
+            if (sum_distance > estimate_curvature_distance) 
+                break;
+
             const geometry_msgs::PoseStamped &w = *it;
             tf2::convert(w.pose.position, point3);
 
@@ -331,8 +325,11 @@ namespace psaf_local_planner
         double sum_distance = 0;
         int count_error = 0;
 
-        for (auto it = local_plan.begin(); it != local_plan.end(); ++it)
+        for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
         {
+            if (sum_distance > check_collision_max_distance)
+                break;
+
             const geometry_msgs::PoseStamped &w = *it;
             tf2::convert(w.pose.position, current_point);
             sum_distance += tf2::tf2Distance(last_point, current_point);
