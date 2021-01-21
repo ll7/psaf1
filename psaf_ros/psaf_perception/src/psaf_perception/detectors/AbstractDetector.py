@@ -86,6 +86,9 @@ class DetectedObject:
         self.label = label
         self.confidence = confidence
 
+    def __str__(self):
+        return f"x={self.x},y={self.y},label={self.label}"
+
 
 class AbstractDetector:
     """Abstract detector class for all Detector instances"""

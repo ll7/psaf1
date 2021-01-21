@@ -71,7 +71,7 @@ class TrafficLightDetector(AbstractDetector):
         torch.no_grad()  # reduce memory consumption and improve speed
 
         # init image source = combination of segmentation, rgb and depth camera
-        self.combinedCamera = CameraDataFusion(role_name=role_name, time_threshold=0.08,
+        self.combinedCamera = CameraDataFusionWrapper(role_name=role_name, time_threshold=0.08,
                                                visible_tags=set([SegmentationTag.TrafficLight]))
         self.combinedCamera.set_on_image_data_listener(self.__on_new_image_data)
 
@@ -116,7 +116,7 @@ class TrafficLightDetector(AbstractDetector):
             boxes.append(np.array([x1, y1, w, h]) / np.array([W, H, W, H]))
             x2 = x1 + w
             y2 = y1 + h
-
+            # TODO idea apply mask at the beginning for the whole image
             mask = segmentation_image[y1:y2, x1:x2] == SegmentationTag.TrafficLight.color
             # get cropped rgb image
             crop_rgb = rgb_image[y1:y2, x1:x2, :]
@@ -208,7 +208,7 @@ if __name__ == "__main__":
                 (w, h) = (int(element.w * W), int(element.h * H))
                 # draw a bounding box rectangle and label on the image
                 color_map = {Labels.TrafficLightRed: (255, 0, 0), Labels.TrafficLightGreen: (0, 255, 0),
-                             Labels.TrafficLightYellow: (255, 255, 0), Labels.TrafficLightOff: (0, 0, 255),
+                             Labels.TrafficLightYellow: (255, 255, 0),
                              Labels.TrafficLightUnknown: (0, 0, 0)}
                 color = color_map.get(element.label, (0, 0, 0))
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)

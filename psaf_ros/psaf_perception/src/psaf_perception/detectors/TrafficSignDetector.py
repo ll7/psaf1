@@ -1,19 +1,19 @@
 import json
-from datetime import datetime
 import os
+from datetime import datetime
 from typing import Tuple
 
 import cv2
+import numpy as np
 import rospkg
 import rospy
-import numpy as np
 import torch
 from torch.autograd import Variable
 from torchvision.transforms import transforms
 
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+from psaf_perception.CameraDataFusion import SegmentationTag, CameraDataFusion
 from psaf_perception.detectors.AbstractDetector import Labels, AbstractDetector, DetectedObject
-from psaf_perception.CameraDataFusion import CameraDataFusion, SegmentationTag
 
 
 class TrafficSignDetector(AbstractDetector):
@@ -67,7 +67,7 @@ class TrafficSignDetector(AbstractDetector):
         torch.no_grad()  # reduce memory consumption and improve speed
 
         # init image source = combination of segmentation, rgb and depth camera
-        self.combinedCamera = CameraDataFusionWrapper(role_name=role_name, time_threshold=0.08,
+        self.combinedCamera = CameraDataFusion(role_name=role_name, time_threshold=0.08,
                                                visible_tags=set([SegmentationTag.TrafficSign]))
         self.combinedCamera.set_on_image_data_listener(self.__on_new_image_data)
 
