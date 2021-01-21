@@ -54,6 +54,9 @@ add_message_files(
    StopMark.msg
    TrafficLight.msg
    Obstacle.msg
+   CenterLineExtended.msg
+   XRoute.msg
+   Lanelet.msg
 )
 
 ## Generate services in the 'srv' folder
