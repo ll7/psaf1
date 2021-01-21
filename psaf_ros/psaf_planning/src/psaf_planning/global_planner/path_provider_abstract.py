@@ -112,7 +112,7 @@ class PathProviderAbstract:
         rel_x = 1 if (pos.x - prev_pos.x) >= 0 else -1
         rel_y = 1 if (pos.y - prev_pos.y) >= 0 else -1
 
-        euler_angle_yaw = math.atan2(rel_y*abs(pos.y - prev_pos.y), rel_x*abs(pos.x - prev_pos.x))
+        euler_angle_yaw = math.atan2(rel_y * abs(pos.y - prev_pos.y), rel_x * abs(pos.x - prev_pos.x))
 
         # only 2D space is relevant, therefore angles beta and gamma can be set to zero
         q = quaternion_from_euler(0.0, 0.0, euler_angle_yaw)
@@ -145,13 +145,16 @@ class PathProviderAbstract:
         if debug:
             rospy.loginfo("PathProvider: Created bag file with path. ../psaf_scenario/scenarios/")
 
+    @abstractmethod
+    def _reset_map(self):
+        pass
+
     def _callback_goal(self, data):
         """
         Callback function of psaf goal set subscriber
         :param data: data received
         """
-        # first reset map
-        self.map = deepcopy(self.original_map)
+        self._reset_map()
 
         self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
         self.start = self.GPS_Sensor.get_position()
@@ -208,10 +211,10 @@ class PathProviderAbstract:
         max_len_rviz = 16384
 
         # get index list of elements without start and target index
-        index_list = np.array(list(range(1, len(path_poses)-2)))
+        index_list = np.array(list(range(1, len(path_poses) - 2)))
 
         # get index of elements which should be deleted
-        index_list_to_del = np.random.choice(index_list, len(path_poses)-max_len_rviz, replace=False, p=None)
+        index_list_to_del = np.random.choice(index_list, len(path_poses) - max_len_rviz, replace=False, p=None)
 
         # delete and return
         return np.delete(path_poses, index_list_to_del).tolist()

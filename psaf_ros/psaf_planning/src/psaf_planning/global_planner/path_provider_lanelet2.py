@@ -24,7 +24,8 @@ class PathProviderLanelet2(PathProviderAbstract):
         :param polling_rate: Polling Rate in [Hz]
         :param timeout_iter: Number of polling iterations until timeout occurs
         """
-        super(PathProviderLanelet2, self).__init__(init_rospy, polling_rate, timeout_iter, role_name, enable_debug=enable_debug)
+        super(PathProviderLanelet2, self).__init__(init_rospy, polling_rate, timeout_iter, role_name,
+                                                   enable_debug=enable_debug)
         self.path_long = Path()
         self.map_path = self._get_map_path(polling_rate, timeout_iter)
         if not self.map_path:
@@ -202,3 +203,6 @@ class PathProviderLanelet2(PathProviderAbstract):
         # create self.path messages
         self._create_path_message(path_short_list, debug)
         self._create_path_long_message(path_long_list, debug)
+
+    def _reset_map(self):
+        pass
