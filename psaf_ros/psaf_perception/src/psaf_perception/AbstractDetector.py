@@ -10,6 +10,7 @@ class LabelGroups(Enum):
     Speed = 1
     TrafficLight = 2
     RightOfWay = 3
+    RoadLine = 4
 
 
 LabelGroupSet = Set[LabelGroups]
@@ -60,6 +61,8 @@ class Labels(Enum):
     TrafficLightYellowRed = (11, "Traffic light red-yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
     TrafficLightGreen = (12, "Traffic light green", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
     TrafficLightOff = (13, "Traffic light off", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+
+    StopLine = (30,"Stop line",{LabelGroups.RoadLine})
 
     Other = (99, "Other")
 
