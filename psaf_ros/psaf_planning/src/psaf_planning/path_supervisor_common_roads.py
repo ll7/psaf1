@@ -26,7 +26,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.status_pub.publish("Init Done")
 
     def _callback_obstacle(self, obstacle: Obstacle):
-        if not self.busy and self.map is not None and len(self.path.poses) > 0:
+        if not self.busy and self.manager.map is not None and len(self.path.poses) > 0:
             self.busy = True
             # check if an old
             if self.last_id >= obstacle.id:
@@ -37,8 +37,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.last_id = obstacle.id
             self.status_pub.publish("Start Replanning")
             # create a clean slate
-            self.map = deepcopy(self.original_map)
-            self.neighbourhood = deepcopy(self.manager.original_neighbourhood)
+            self.manager.map = deepcopy(self.manager.original_map)
+            self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
             for point in obstacle.obstacles:
                 if self._add_obstacle(point):
                     self.status_pub.publish("Replanning done")
@@ -57,14 +57,14 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         curr_pos: Point = self._get_current_position()
         obs_pos_x = curr_pos.x + obstacle.x
         obs_pos_y = curr_pos.y + obstacle.y
-        car_lanelet = self.map.lanelet_network.find_lanelet_by_position([np.array([curr_pos.x, curr_pos.y])])
-        matching_lanelet = self.map.lanelet_network.find_lanelet_by_position([np.array([obs_pos_x, obs_pos_y])])
+        car_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([curr_pos.x, curr_pos.y])])
+        matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([obs_pos_x, obs_pos_y])])
         # check if the obstacle is within a lanelet
         if len(matching_lanelet[0]) == 0:
             rospy.logerr("PathSupervisor: Replanning aborted, obstacle not in a lanelet -> no interfering !!")
             self.status_pub.publish("Replanning aborted, obstacle not in a lanelet -> no interfering")
             return False
-        lanelet: Lanelet = self.map.lanelet_network.find_lanelet_by_id(car_lanelet[0][0])
+        lanelet: Lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(car_lanelet[0][0])
         # case single road in current direction
         if lanelet.adj_left_same_direction is False or lanelet.adj_right_same_direction is False:
             rospy.logerr("PathSupervisor: Replanning aborted, single road in current direction !!")
@@ -72,7 +72,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             return False
         # case at least one neighbouring lane and no solid line
         elif lanelet.adj_right_same_direction is not None or lanelet.adj_left_same_direction is not None:
-            static_obstacle_id = self.map.generate_object_id()
+            static_obstacle_id = self.manager.map.generate_object_id()
             static_obstacle_type = ObstacleType.PARKED_VEHICLE
             static_obstacle_shape = Rectangle(width=2, length=4.5)
             orientation = self.vehicle_status.get_status().get_orientation_as_euler()[2]
@@ -87,14 +87,14 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 # add the static obstacle to the scenario
                 split_ids = self.manager.update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0), curr_pos,
                                                       static_obstacle)
-                split_point = Point(self.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
-                                    self.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
+                split_point = Point(self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
+                                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
                 self.manager.update_network(split_ids[0], curr_pos, split_point, None)
             else:
                 if static_obstacle is not None:
-                    self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0]).add_static_obstacle_to_lanelet(
+                    self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0]).add_static_obstacle_to_lanelet(
                         static_obstacle.obstacle_id)
-                    self.map.add_objects(static_obstacle)
+                    self.manager.map.add_objects(static_obstacle)
 
         return True
 

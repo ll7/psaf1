@@ -7,11 +7,9 @@ from geometry_msgs.msg import Point
 
 def main():
     rospy.init_node('TEST', anonymous=True)
-    obs_1 = Point(-100, 0, 0)
-    obs_3 = Point(-200, 0, 0)
-    obs_2 = Point(10, 0, 0)
-    obs_4 = Point(-100, -5, 0)
-    ob = Obstacle(3, [obs_1, obs_3, obs_4])
+    obs_1 = Point(0, -10, 0)
+    obs_3 = Point(0, 10, 0)
+    ob = Obstacle(6, [obs_1, obs_3])
     pub = rospy.Publisher("/psaf/planning/obstacle", Obstacle, queue_size=10)
     while pub.get_num_connections() == 0:
         rospy.sleep(1)

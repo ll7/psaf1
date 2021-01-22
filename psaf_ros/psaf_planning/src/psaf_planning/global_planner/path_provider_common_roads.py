@@ -47,13 +47,9 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.step_size = step_size
         self.max_radius = max_radius
 
-        # load map and store the original_map which is not going to be altered
-        self.map = self._load_scenario(polling_rate, timeout_iter)
-        self.original_map = deepcopy(self.map)
-
         self.path_poses = []
         self.planning_problem = None
-        self.manager = CommonRoadManager(self.map)
+        self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter))
 
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
@@ -85,7 +81,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         nearest = None
         curr_radius = self.radius
         while curr_radius < self.max_radius or nearest is not None:
-            nearest = self.map.lanelet_network.lanelets_in_proximity(np.array([goal.x, goal.y]), curr_radius)
+            nearest = self.manager.map.lanelet_network.lanelets_in_proximity(np.array([goal.x, goal.y]), curr_radius)
             if len(nearest) == 0:
                 nearest = None
                 curr_radius += self.step_size
@@ -109,7 +105,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         :param target: x,y,z coordinates of the current goal position
         :return: status of the generated problem
         """
-        if self.map is None:
+        if self.manager.map is None:
             # No map -> generating of planning problem not possible
             self.status_pub.publish("No map -> Planning aborted")
             self.planning_problem = None
@@ -117,11 +113,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         # check if the car is already on a lanelet, if not get nearest lanelet to start
         start_lanelet: Lanelet
-        matching_lanelet = self.map.lanelet_network.find_lanelet_by_position([np.array([start.x, start.y])])
+        matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([start.x, start.y])])
         if len(matching_lanelet[0]) == 0:
             start_lanelet = self._find_nearest_lanlet(start)
         else:
-            start_lanelet = self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
+            start_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
         # get nearest lanelet to target
         goal_lanelet: Lanelet = self._find_nearest_lanlet(target)
 
@@ -282,18 +278,18 @@ class PathProviderCommonRoads(PathProviderAbstract):
         for i, lane_id in enumerate(route.list_ids_lanelets):
             if lane_change_instructions[i] == 0:
                 if not do_lane_change:
-                    path.extend(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices)
+                    path.extend(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices)
                 else:
-                    path.extend(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
-                                len(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices) // 2:])
+                    path.extend(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
+                                len(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices) // 2:])
                     do_lane_change = False
             else:
                 if not do_lane_change:
-                    path.extend(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
-                                :len(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices) // 2])
+                    path.extend(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
+                                :len(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices) // 2])
                 else:
-                    path.extend(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
-                                len(self.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices) // 2:])
+                    path.extend(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
+                                len(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices) // 2:])
                 do_lane_change = True
         return path
 
@@ -342,7 +338,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         # COMPUTE SHORTEST ROUTE
         # instantiate a route planner
-        route_planner = RoutePlanner(self.map, self.planning_problem, backend=RoutePlanner.Backend.PRIORITY_QUEUE)
+        route_planner = RoutePlanner(self.manager.map, self.planning_problem, backend=RoutePlanner.Backend.PRIORITY_QUEUE)
 
         # plan routes, and save the found routes in a route candidate holder
         candidate_holder = route_planner.plan_routes()
@@ -395,4 +391,4 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
     def _reset_map(self):
         # first reset map
-        self.map = deepcopy(self.manager.original_map)
+        self.manager.map = deepcopy(self.manager.original_map)

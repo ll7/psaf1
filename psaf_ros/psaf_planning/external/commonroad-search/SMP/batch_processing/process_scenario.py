@@ -84,7 +84,7 @@ def get_planning_problem_and_id(planning_problem_set: PlanningProblemSet, planni
 
 
 def solve_scenario(scenario, planning_problem, automaton, config: ScenarioConfig, result_dict) -> SearchResult:
-    scenario_id = scenario.benchmark_id
+    scenario_id = scenario.scenario_id
 
     error_msg = ""
     list_of_list_of_states = None
