@@ -26,6 +26,13 @@
 
 
 namespace psaf_local_planner {
+    class RaytraceCollisionData {
+    public:
+        RaytraceCollisionData(double relative_x, double relative_y, double angle, double distance);
+        double relative_x, relative_y, angle, distance;
+    };
+
+
     class PsafLocalPlanner : public nav_core::BaseLocalPlanner {
         public:
             PsafLocalPlanner();
@@ -62,7 +69,10 @@ namespace psaf_local_planner {
             bool check_distance_forward(double& distance, double &relativeX, double &relativeY);
 
             double raytrace(double m_target_x, double m_target_y);
-            void raytraceSemiCircle(double angle, double distance);
+            void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> collisions);
+            void checkForSlowCar();
+            void globalPlanExtendedCallback(const geometry_msgs::Twist &msg);
+            
 
             geometry_msgs::PoseStamped& find_lookahead_target();
 
@@ -72,6 +82,7 @@ namespace psaf_local_planner {
             ros::Publisher g_plan_pub;
             ros::Publisher debug_pub;
             ros::Subscriber vel_sub;
+            ros::Subscriber global_plan_extended_sub;
 
             geometry_msgs::PoseStamped current_pose;
             base_local_planner::OdometryHelperRos odom_helper;

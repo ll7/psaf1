@@ -68,6 +68,12 @@ namespace psaf_local_planner
     {
     }
 
+    void PsafLocalPlanner::globalPlanExtendedCallback(const geometry_msgs::Twist &msg)
+    {
+    }
+
+    
+
     /**
      * Constructs the local planner.
      */
@@ -81,6 +87,7 @@ namespace psaf_local_planner
             debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
 
             vel_sub = private_nh.subscribe("psaf_velocity_plan", 10, velocityCallback);
+            global_plan_extended_sub = private_nh.subscribe("psaf_global_plan_extended_TODODODODODODODO", 10, &PsafLocalPlanner::globalPlanExtendedCallback, this);
             planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
             this->costmap_ros = costmap_ros;
 
@@ -138,25 +145,8 @@ namespace psaf_local_planner
                     ROS_INFO("distance forward: %f, max velocity: %f", distance, target_velocity);
                 }
 
+                checkForSlowCar();
 
-                // Check if there should be a line change if speed is slower than x for y iterations
-                if (target_velocity < max_velocity - 5) {
-                    slow_car_ahead_counter = std::min(100, slow_car_ahead_counter + 1);
-                } else {
-                    slow_car_ahead_counter = std::max(0, slow_car_ahead_counter - 2);
-                }
-
-                if (slow_car_ahead_counter > 60 && !slow_car_ahead_published) {
-                    ROS_INFO("publishing obstacle ahead at x: %f y: %f", relX, relY);
-                    slow_car_ahead_published = true;
-                }
-
-                if (slow_car_ahead_counter < 10 && slow_car_ahead_published) {
-                    ROS_INFO("publishing loss of obstacle");
-                    slow_car_ahead_published = false;
-                }
-
-                raytraceSemiCircle(M_PI * 3/2, 20);
 
                 cmd_vel.linear.x = target_velocity;
                 cmd_vel.angular.z = angle;
@@ -200,15 +190,40 @@ namespace psaf_local_planner
         return last_stamp;
     }
 
+    void PsafLocalPlanner::checkForSlowCar() {
+        // Check if there should be a line change if speed is slower than x for y iterations
+        if (target_velocity < max_velocity - 5) {
+            slow_car_ahead_counter = std::min(100, slow_car_ahead_counter + 1);
+        } else {
+            slow_car_ahead_counter = std::max(0, slow_car_ahead_counter - 2);
+        }
 
-    void PsafLocalPlanner::raytraceSemiCircle(double angle, double distance) {
+        if (slow_car_ahead_counter > 60 && !slow_car_ahead_published) {
+            ROS_INFO("publishing obstacle ahead");
+            slow_car_ahead_published = true;
+
+            std::vector<RaytraceCollisionData> collisions = {};
+            raytraceSemiCircle(M_PI * 3/2, 20, collisions);
+
+            // TODO: hier message builden  und schicken
+        }
+
+        if (slow_car_ahead_counter < 10 && slow_car_ahead_published) {
+            ROS_INFO("publishing loss of obstacle");
+            slow_car_ahead_published = false;
+
+            // TODO: hier leere message schicken
+        }
+    }
+
+    void PsafLocalPlanner::raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> collisions) {
         tf2::Transform current_transform;
         tf2::convert(current_pose.pose, current_transform);
 
         double m_self_x = current_pose.pose.position.x;
         double m_self_y = current_pose.pose.position.y;
 
-        std::vector<std::tuple<double, double>> collisions = {};
+        // std::vector<std::tuple<double, double>> collisions = {};
 
         // Rotation around z axis of the car
         double orientation = tf2::getYaw(current_transform.getRotation());
@@ -218,8 +233,14 @@ namespace psaf_local_planner
             double y = std::sin(actual_angle + orientation) * distance;
 
             double dist = raytrace(x + m_self_x , y + m_self_y);
-            ROS_INFO("dist at angle: %f at %f, %f is %f", actual_angle, x, y, dist);
-            collisions.push_back({x, y});
+            //ROS_INFO("dist at angle: %f at %f, %f is %f", actual_angle, x, y, dist);
+            if (dist < INFINITY) {
+                collisions.push_back(RaytraceCollisionData(x, y, angle, distance));
+            }
+        }
+
+        for (auto &pos : collisions) {
+            ROS_INFO("collision at %f, %f is", pos.relative_x, pos.relative_y);
         }
     }
 
@@ -454,4 +475,9 @@ namespace psaf_local_planner
         distance = sum_distance;
         return true;
     }
+
+
+    RaytraceCollisionData::RaytraceCollisionData(double relative_x, double relative_y, double angle, double distance) 
+    : relative_x(relative_x), relative_y(relative_y), angle(angle), distance(distance)
+    {}
 } // namespace psaf_local_planner 
