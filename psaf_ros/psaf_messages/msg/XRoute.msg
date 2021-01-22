@@ -1,9 +1,9 @@
 #######################################################################################################################
-# Message that contains the information about a obstacle located on the road
+# Message that contains the information that is needed start/update a p2p navigation
 #######################################################################################################################
 
 # id planning msg
 uint8 id
 
-#The list of obstacles relative to the car position
-geometry_msgs/Point[] obstacles
+# List of all lanlets, that are located on the route
+XLanelet[] route

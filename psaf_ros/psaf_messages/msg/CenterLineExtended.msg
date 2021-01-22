@@ -1,9 +1,11 @@
 #######################################################################################################################
-# Message that contains the information about a obstacle located on the road
+# Message that Represents one waypoint in a route
 #######################################################################################################################
 
-# id planning msg
-uint8 id
+# 3d position
+float32 x
+float32 y
+float32 z
 
-#The list of obstacles relative to the car position
-geometry_msgs/Point[] obstacles
+# Max speed
+uint8 speed

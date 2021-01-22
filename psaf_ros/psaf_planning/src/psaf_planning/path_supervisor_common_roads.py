@@ -11,6 +11,7 @@ from commonroad.scenario.lanelet import Lanelet
 from commonroad.geometry.shape import Rectangle
 from commonroad.scenario.obstacle import StaticObstacle, ObstacleType
 from commonroad.scenario.trajectory import State
+from copy import deepcopy
 
 
 class PathSupervisorCommonRoads(PathProviderCommonRoads):
@@ -21,57 +22,57 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.busy: bool = False
         rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle)
         self.obstacles = {}
-        self._analyze_neighbourhood()
+        self.last_id = -1
         self.status_pub.publish("Init Done")
 
-    def _callback_obstacle(self, data: Obstacle):
-        if not self.busy and self.map is not None and len(self.path.poses) > 0:
+    def _callback_obstacle(self, obstacle: Obstacle):
+        if not self.busy and self.manager.map is not None and len(self.path.poses) > 0:
             self.busy = True
-            if data.action is data.ACTION_ADD:
-                self.status_pub.publish("Start Replanning")
-                if self._add_obstacle(data):
+            # check if an old
+            if self.last_id >= obstacle.id:
+                rospy.logerr("PathSupervisor: replanning aborted, received an old replaning msg !!")
+                self.status_pub.publish("Replanning aborted, received an old replaning msg")
+                self.busy = False
+                return
+            self.last_id = obstacle.id
+            self.status_pub.publish("Start Replanning")
+            # create a clean slate
+            self.manager.map = deepcopy(self.manager.original_map)
+            self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
+            for point in obstacle.obstacles:
+                if self._add_obstacle(point):
                     self.status_pub.publish("Replanning done")
-            elif data.action is data.ACTION_REMOVE:
-                self.status_pub.publish("Start Replanning")
-                if self._remove_obstacle(data):
-                    self.status_pub.publish("Replanning done")
-            else:
-                rospy.logerr("PathSupervisor: replanning aborted, unknown action !!")
-                self.status_pub.publish("Replanning aborted, unknown action")
+            # generate new plan
+            self._replan()
             self.busy = False
         else:
             rospy.logerr("PathSupervisor: replanning aborted, unknown action !!")
             self.status_pub.publish("Replanning aborted, unknown action")
 
-    def _add_obstacle(self, obstacle: Obstacle):
+    def _add_obstacle(self, obstacle: Point):
         """
         Add obstacle to scenario
         """
         rospy.loginfo("PathSupervisor: Add obstacle")
         curr_pos: Point = self._get_current_position()
-        # check if the obstacle already exists
-        if obstacle.id in self.obstacles:
-            rospy.logerr("PathSupervisor: Replanning aborted, obstacle already exists !!")
-            self.status_pub.publish("Replanning aborted, obstacle already exists")
-            return False
         obs_pos_x = curr_pos.x + obstacle.x
         obs_pos_y = curr_pos.y + obstacle.y
-        car_lanelet = self.map.lanelet_network.find_lanelet_by_position([np.array([curr_pos.x, curr_pos.y])])
-        matching_lanelet = self.map.lanelet_network.find_lanelet_by_position([np.array([obs_pos_x, obs_pos_y])])
+        car_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([curr_pos.x, curr_pos.y])])
+        matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([obs_pos_x, obs_pos_y])])
         # check if the obstacle is within a lanelet
         if len(matching_lanelet[0]) == 0:
             rospy.logerr("PathSupervisor: Replanning aborted, obstacle not in a lanelet -> no interfering !!")
             self.status_pub.publish("Replanning aborted, obstacle not in a lanelet -> no interfering")
             return False
-        lanelet: Lanelet = self.map.lanelet_network.find_lanelet_by_id(car_lanelet[0][0])
+        lanelet: Lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(car_lanelet[0][0])
         # case single road in current direction
-        if lanelet.adj_left_same_direction is False or lanelet.adj_right_same_direction is False:
+        if lanelet.adj_left_same_direction is False and lanelet.adj_right_same_direction is False:
             rospy.logerr("PathSupervisor: Replanning aborted, single road in current direction !!")
             self.status_pub.publish("Replanning aborted, single road in current direction")
             return False
         # case at least one neighbouring lane and no solid line
         elif lanelet.adj_right_same_direction is not None or lanelet.adj_left_same_direction is not None:
-            static_obstacle_id = self.map.generate_object_id()
+            static_obstacle_id = self.manager.map.generate_object_id()
             static_obstacle_type = ObstacleType.PARKED_VEHICLE
             static_obstacle_shape = Rectangle(width=2, length=4.5)
             orientation = self.vehicle_status.get_status().get_orientation_as_euler()[2]
@@ -82,26 +83,20 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             static_obstacle = StaticObstacle(static_obstacle_id, static_obstacle_type, static_obstacle_shape,
                                              static_obstacle_initial_state)
 
-            # add the static obstacle to the scenario
-            front_split_id = self._update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0),
-                                                  static_obstacle)
-            self._update_network(front_split_id[0], curr_pos, None)
-            # add obstacle to dict
-            self.obstacles[obstacle.id] = static_obstacle
-            self._replan()
-        return True
+            if car_lanelet[0][0] == matching_lanelet[0][0]:
+                # add the static obstacle to the scenario
+                split_ids = self.manager.update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0), curr_pos,
+                                                      static_obstacle)
+                split_point = Point(self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
+                                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
+                self.manager.update_network(split_ids[0], curr_pos, split_point, None)
+            else:
+                if static_obstacle is not None:
+                    self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0]).add_static_obstacle_to_lanelet(
+                        static_obstacle.obstacle_id)
+                    self.manager.map.add_objects(static_obstacle)
 
-    def _remove_obstacle(self, obstacle: Obstacle):
-        """
-        Removes an obstacle from the scenario
-        """
-        rospy.loginfo("PathSupervisor: Remove obstacle")
-        curr_pos_gps: Point = self._get_current_position()
-        if obstacle.id not in self.obstacles:
-            rospy.logerr("PathSupervisor: replanning aborted, obstacle doesn't exists !!")
-            self.status_pub.publish("Replanning aborted, obstacle doesn't exists")
-            return False
-        self.map.remove_obstacle(obstacle.id)
+        return True
 
     def _get_current_position(self) -> Point:
         """

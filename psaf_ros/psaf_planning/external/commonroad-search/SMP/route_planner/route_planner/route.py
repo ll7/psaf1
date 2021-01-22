@@ -231,6 +231,10 @@ class Route:
             lanelet = self.lanelet_network.find_lanelet_by_id(id_lanelet)
             # resample the center vertices to prevent too few vertices with too large distances
             vertices_resampled = resample_polyline(lanelet.center_vertices, 2)
+
+            # HOTFIX
+            # vertices_resampled = lanelet.center_vertices
+
             num_vertices = len(vertices_resampled)
             num_vertices_lane_change = min(int(num_vertices * percentage_vertices_lane_change_max) + 1,
                                            num_vertices_lane_change_max)
