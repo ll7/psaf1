@@ -38,7 +38,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.status_pub.publish("Start Replanning")
             # create a clean slate
             self.map = deepcopy(self.original_map)
-            self.neighbourhood = deepcopy(self.manager.original_map)
+            self.neighbourhood = deepcopy(self.manager.original_neighbourhood)
             for point in obstacle.obstacles:
                 if self._add_obstacle(point):
                     self.status_pub.publish("Replanning done")

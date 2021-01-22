@@ -4,18 +4,108 @@ from commonroad.scenario.scenario import Scenario
 from commonroad.scenario.lanelet import Lanelet
 from copy import deepcopy
 from geometry_msgs.msg import Point
+from psaf_messages.msg import XLanelet, CenterLineExtended
+from commonroad.scenario.traffic_sign import TrafficSignIDGermany, TrafficLight
+from typing import *
 
 import numpy as np
 import rospy
 
+
 class CommonRoadManager:
 
-    def __init__(self, map: Scenario):
-        self.map = map
-        self.original_map = deepcopy(map)
+    def __init__(self, hd_map: Scenario, default_speed: int = 50):
+        rospy.loginfo("CommonRoadManager: Started!")
+        self.default_speed = default_speed
+        self.map = hd_map
+        self.original_map = deepcopy(self.map)
         # create neighbourhood dicts for efficient access to that information
         self.neighbourhood = self._analyze_neighbourhood(self.original_map)
         self.original_neighbourhood = deepcopy(self.neighbourhood)
+        self.message_by_lanelet = {}
+
+        # test scenario
+        pos = len(self.original_map.lanelet_network.find_lanelet_by_id(100).center_vertices) // 2
+        pos = self.original_map.lanelet_network.find_lanelet_by_id(100).center_vertices[pos]
+        traffic_light = TrafficLight(1, [], pos)
+        id_set = set()
+        id_set.add(100)
+        self.original_map.lanelet_network.add_traffic_light(traffic_light, lanelet_ids=id_set)
+
+        self._fill_message_dict()
+
+    def _fill_message_dict(self):
+        rospy.loginfo("CommonRoadManager: Message Hashmap calculation started!")
+
+        for lanelet in self.original_map.lanelet_network.lanelets:
+            stop = False
+            for sign_id in lanelet.traffic_signs:
+                sign = self.original_map.lanelet_network.find_traffic_sign_by_id(sign_id)
+                if sign.traffic_sign_elements[0].traffic_sign_element_id == TrafficSignIDGermany.STOP:
+                    stop = True
+
+            light = len(lanelet.traffic_lights) > 0
+            intersection = self._check_in_lanelet_for_intersection(lanelet)
+            center_line = self._generate_extended_centerline_by_lanelet(lanelet)
+
+            # create message
+            message = XLanelet(id=lanelet.lanelet_id, hasLight=light, isAtIntersection=intersection, hasStop=stop,
+                               route_portion=center_line)
+
+            self.message_by_lanelet[lanelet.lanelet_id] = message
+        rospy.loginfo("CommonRoadManager: Message Hashmap calculation done!")
+
+    def _generate_extended_centerline_by_lanelet(self, lanelet: Lanelet) -> List[CenterLineExtended]:
+        """
+        Generate the extended centerline Message based on the given lanelet.
+        Therefore check the current speed limit for every waypoint.
+        :param lanelet: lanelet of which the given extended centerline should be generated
+        :return: List of Waypoints and their corresponding speed. -> [[x,y,z, speed], ..]
+        """
+        from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads as pp
+        # first get speed_signs in current lanelet
+        speed_signs = []
+        for sign_id in lanelet.traffic_signs:
+            sign = self.original_map.lanelet_network.find_traffic_sign_by_id(sign_id)
+            if sign.traffic_sign_elements[0].traffic_sign_element_id == TrafficSignIDGermany.MAX_SPEED:
+                speed = int(sign.traffic_sign_elements[0].additional_values[0])
+                pos = Point(sign.position[0], sign.position[1], 0)
+                index = pp.find_nearest_path_index(lanelet.center_vertices, pos, use_posestamped=False)
+                speed_signs.append([index, speed])
+
+        # sort speed signs to ease location based access
+        speed_signs.sort(key=lambda x: x[0])
+
+        # generate CenterLineExtended
+        center_line_extended = []
+        for i, point in enumerate(lanelet.center_vertices):
+            # check for speed signs
+            speed = self.default_speed
+            for speed_sign in speed_signs:
+                if i >= speed_sign[0]:
+                    speed = speed_sign[1]
+
+            # fill center_line_extended
+            center_line_extended.append(CenterLineExtended(x=point[0], y=point[1], z=0, speed=speed))
+
+        return center_line_extended
+
+    def _check_in_lanelet_for_intersection(self, lanelet: Lanelet) -> bool:
+        """
+        Checks whether a intersection is ahead of the given lanelet
+        :param lanelet: lanelet to be checked
+        :return: True if there is a upcoming intersection, False if not
+        """
+        # get the successor of the successor of the given lanelet
+        lane = lanelet
+        for i in range(0, 2):
+            if len(lane.successor) == 0:
+                return False
+            succ = lanelet.successor[0]
+            lane = self.original_map.lanelet_network.find_lanelet_by_id(succ)
+
+        # check for the amount of predecessor
+        return len(lane.predecessor) > 1
 
     def _modify_lanelet(self, lanelet_id: int, modify_point: Point, start_point: Point):
         from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads as pp

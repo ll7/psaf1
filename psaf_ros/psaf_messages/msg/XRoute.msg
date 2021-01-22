@@ -6,4 +6,4 @@
 uint8 id
 
 # List of all lanlets, that are located on the route
-Lanelet[] route
+XLanelet[] route
