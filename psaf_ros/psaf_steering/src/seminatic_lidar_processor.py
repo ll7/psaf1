@@ -29,7 +29,7 @@ def cmd_callback(data: PointCloud2):
     points_clearing = []
     for p in pc2.read_points(data, skip_nans=True):
         # print("%f %f %f: %i", p[0], p[1], p[2], p[3], p[4], p[5])
-        if (p[5] in [6, 7, 8]):
+        if (p[5] not in [4, 10]):
             # skip += 1
             points_clearing.append([p[0], p[1], p[2]])
             continue
