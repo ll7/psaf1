@@ -23,6 +23,7 @@ from geometry_msgs.msg import Point
 import sys
 from copy import deepcopy
 import rospy
+from sensor_msgs.msg import NavSatFix
 
 from enum import Enum
 
@@ -49,7 +50,10 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         self.path_poses = []
         self.planning_problem = None
+        self.manager = None
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter))
+        rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
+        self.status_pub.publish("PathProvider ready")
 
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
@@ -391,4 +395,5 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
     def _reset_map(self):
         # first reset map
-        self.manager.map = deepcopy(self.manager.original_map)
+        if self.manager is not None:
+            self.manager.map = deepcopy(self.manager.original_map)

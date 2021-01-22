@@ -24,26 +24,31 @@ class CommonRoadManager:
         self.message_by_lanelet = {}
 
         # test scenario
-        pos = len(self.map.lanelet_network.find_lanelet_by_id(368).center_vertices) // 2
-        pos = self.map.lanelet_network.find_lanelet_by_id(368).center_vertices[pos]
-        traffic_light = TrafficLight(1, [], pos)
-        id_set = set()
-        id_set.add(368)
-        self.map.lanelet_network.add_traffic_light(traffic_light, lanelet_ids=id_set)
-        signelement = TrafficSignElement(TrafficSignIDGermany.MAX_SPEED, ["20"])
-        sign = TrafficSign(15, first_occurrence=id_set, position=pos, traffic_sign_elements=[signelement])
-        self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=id_set)
-
-        signelement = TrafficSignElement(TrafficSignIDGermany.STOP, [])
-        pos = len(self.map.lanelet_network.find_lanelet_by_id(368).center_vertices) - 1
-        pos = self.map.lanelet_network.find_lanelet_by_id(368).center_vertices[pos]
-        sign = TrafficSign(16, first_occurrence=id_set, position=pos, traffic_sign_elements=[signelement])
-        self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=id_set)
+        self._dummy_test(368)
 
         self._fill_message_dict()
         self.original_map = deepcopy(self.map)
+        self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
 
-    def _update_message_dict(self, matching_lanelet_id: int, lanelet_front : int, lanelet_back : int):
+    # just for now , remove later !!!!!
+    def _dummy_test(self, id_insert):
+        pos = len(self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices) // 2
+        pos = self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices[pos]
+        traffic_light = TrafficLight(1, [], pos)
+        id_set = set()
+        id_set.add(id_insert)
+        self.map.lanelet_network.add_traffic_light(traffic_light, lanelet_ids=deepcopy(id_set))
+        signelement = TrafficSignElement(TrafficSignIDGermany.MAX_SPEED, ["20"])
+        sign = TrafficSign(15, first_occurrence=deepcopy(id_set), position=pos, traffic_sign_elements=[signelement])
+        self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
+
+        signelement = TrafficSignElement(TrafficSignIDGermany.STOP, [])
+        pos = len(self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices) - 1
+        pos = self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices[pos]
+        sign = TrafficSign(16, first_occurrence=deepcopy(id_set), position=pos, traffic_sign_elements=[signelement])
+        self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
+
+    def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int):
         # remove old lanelet from dict
         del self.message_by_lanelet[matching_lanelet_id]
         # add the new lanelets to the dict
@@ -161,19 +166,19 @@ class CommonRoadManager:
             signs_1 = set()
             signs_2 = set()
             for sign_id in lanelet_copy.traffic_signs:
-                sign = self.original_map.lanelet_network.find_traffic_sign_by_id(sign_id)
+                sign = self.map.lanelet_network.find_traffic_sign_by_id(sign_id)
                 pos = Point(sign.position[0], sign.position[1], 0)
                 index = pp.find_nearest_path_index(lanelet_copy.center_vertices, pos, use_posestamped=False)
                 # remove old reference
-                sign.first_occurrence.remove(lanelet_copy.lanelet_id)
+                sign._first_occurrence.remove(lanelet_copy.lanelet_id)
                 # determine whether the sign should be put on lane 1 or 2
                 if index < sep_index:
-                    signs_1.add(sign)
-                    sign.first_occurrence.add(id_lane_1)
-                    signs_2.add(sign)
-                    sign.first_occurrence.add(id_lane_2)
+                    signs_1.add(sign_id)
+                    sign._first_occurrence.add(id_lane_1)
+                    signs_2.add(sign_id)
+                    sign._first_occurrence.add(id_lane_2)
                 else:
-                    signs_2.add(sign)
+                    signs_2.add(sign_id)
                     sign.first_occurrence.add(id_lane_2)
             # delete lanelet
             del self.map.lanelet_network._lanelets[lanelet_id]
