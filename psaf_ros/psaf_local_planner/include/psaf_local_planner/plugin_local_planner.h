@@ -26,10 +26,47 @@
 
 
 namespace psaf_local_planner {
+
+    enum LocalPlannerState {
+        /** 
+         * Car has stopped 
+         * --> DRIVING [on global plan published] 
+         */
+        STOPPED, 
+
+        /**
+         * Car has reached final destination
+         * --> shutdown
+         */
+        GOAL_REACHED, 
+
+        /**
+         * Car is driving on normal, straight lane
+         * --> DRIVING_CURVATURE [on curvature ahead less than x meters with angle over y]
+         * --> DRIVING_INTERSECTION [on driving over a intersection]
+         * --> GOAL_REACHED [on reaching goal reached]
+         */
+        DRIVING, 
+        /**
+         * Car is driving in or ahead of a curvature
+         * --> DRIVING [on: car has left the curvature and is back on a straight track]
+         * --> DRIVING_INTERSECTION_AHEAD [on: car has left the curvature and has a intersection ahead of it]
+         */
+        DRIVING_CURVATURE, 
+
+        /**
+         * 
+         */
+        DRIVING_INTERSECTION_AHEAD,
+        DRIVING_INTERSECTION, 
+        STOPPED_INTERSECTION_REDLIGHT,
+        STOPPED_INTERSECTION_STOP_SIGN,
+    };
+
     class RaytraceCollisionData {
-    public:
-        RaytraceCollisionData(double relative_x, double relative_y, double angle, double distance);
-        double relative_x, relative_y, angle, distance;
+        public:
+            RaytraceCollisionData(double relative_x, double relative_y, double angle, double distance);
+            double relative_x, relative_y, angle, distance;
     };
 
 
@@ -118,45 +155,13 @@ namespace psaf_local_planner {
             /** The max distance it should check for a collision*/
             double check_collision_max_distance;
 
-            /** */
+            /** counts the iterations the car has been detected as slow before us */
             int slow_car_ahead_counter;
+
+            /** sets a flag when the slow car and obstacles have been published */ 
             bool slow_car_ahead_published;
 
+            LocalPlannerState state;
+
     };
-};
-
-enum LocalPlannerState {
-    /** 
-     * Car has stopped 
-     * --> DRIVING [on global plan published] 
-     */
-    STOPPED, 
-
-    /**
-     * Car has reached final destination
-     * --> shutdown
-     */
-    GOAL_REACHED, 
-
-    /**
-     * Car is driving on normal, straight lane
-     * --> DRIVING_CURVATURE [on curvature ahead less than x meters with angle over y]
-     * --> DRIVING_INTERSECTION [on driving over a intersection]
-     * --> GOAL_REACHED [on reaching goal reached]
-     */
-    DRIVING, 
-    /**
-     * Car is driving in or ahead of a curvature
-     * --> DRIVING [on: car has left the curvature and is back on a straight track]
-     * --> DRIVING_INTERSECTION_AHEAD [on: car has left the curvature and has a intersection ahead of it]
-     */
-    DRIVING_CURVATURE, 
-
-    /**
-     * 
-     */
-    DRIVING_INTERSECTION_AHEAD,
-    DRIVING_INTERSECTION, 
-    STOPPED_INTERSECTION_REDLIGHT,
-    STOPPED_INTERSECTION_STOP_SIGN,
 };
