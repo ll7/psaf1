@@ -22,6 +22,7 @@
 #include <tf2/utils.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
+#include <base_local_planner/line_iterator.h>
 
 
 namespace psaf_local_planner {
@@ -59,6 +60,9 @@ namespace psaf_local_planner {
             double compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location);
             void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
             bool check_distance_forward(double& distance, double &relativeX, double &relativeY);
+
+            double raytrace(double m_target_x, double m_target_y);
+            void raytraceSemiCircle(double angle, double distance);
 
             geometry_msgs::PoseStamped& find_lookahead_target();
 

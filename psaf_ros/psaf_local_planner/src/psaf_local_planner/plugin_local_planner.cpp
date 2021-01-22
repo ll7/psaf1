@@ -156,6 +156,8 @@ namespace psaf_local_planner
                     slow_car_ahead_published = false;
                 }
 
+                raytraceSemiCircle(M_PI * 3/2, 20);
+
                 cmd_vel.linear.x = target_velocity;
                 cmd_vel.angular.z = angle;
             }
@@ -198,6 +200,61 @@ namespace psaf_local_planner
         return last_stamp;
     }
 
+
+    void PsafLocalPlanner::raytraceSemiCircle(double angle, double distance) {
+        tf2::Transform current_transform;
+        tf2::convert(current_pose.pose, current_transform);
+
+        double m_self_x = current_pose.pose.position.x;
+        double m_self_y = current_pose.pose.position.y;
+
+        std::vector<std::tuple<double, double>> collisions = {};
+
+        // Rotation around z axis of the car
+        double orientation = tf2::getYaw(current_transform.getRotation());
+        
+        for (double actual_angle = -angle / 2; actual_angle <= angle / 2; actual_angle += (M_PI / 180) * 10) {
+            double x = std::cos(actual_angle + orientation) * distance;
+            double y = std::sin(actual_angle + orientation) * distance;
+
+            double dist = raytrace(x + m_self_x , y + m_self_y);
+            ROS_INFO("dist at angle: %f at %f, %f is %f", actual_angle, x, y, dist);
+            collisions.push_back({x, y});
+        }
+    }
+
+    double PsafLocalPlanner::raytrace(double m_target_x, double m_target_y) {
+        double m_self_x, m_self_y;
+        unsigned int c_self_x, c_self_y, c_target_x, c_target_y;
+        auto costmap = costmap_ros->getCostmap();
+
+        m_self_x = current_pose.pose.position.x;
+        m_self_y = current_pose.pose.position.y;
+        
+        if (!costmap->worldToMap(m_self_x, m_self_y, c_self_x, c_self_y)) {
+            ROS_WARN("self out of bounds: %f %f", m_self_x, m_self_y);
+            return INFINITY;
+        }
+
+        if (!costmap->worldToMap(m_target_x, m_target_y, c_target_x, c_target_y)) {
+            ROS_WARN("target out of bounds: %f %f", m_target_x, m_target_y);
+            return INFINITY;
+        }
+
+        
+        for(base_local_planner::LineIterator line(c_self_x, c_self_y, c_target_x, c_target_y); line.isValid(); line.advance())
+        {
+            int cost = costmap->getCost(line.getX(), line.getY());
+            if (cost > 128 && cost != costmap_2d::NO_INFORMATION) {
+                double coll_x, coll_y;
+                costmap->mapToWorld(line.getX(), line.getY(), coll_x, coll_y);
+                
+                return std::sqrt((m_self_x - coll_x) * (m_self_x - coll_x) + (m_self_y - coll_y) * (m_self_y - coll_y));
+            }
+        }
+
+        return INFINITY;
+    }
 
     /**
      * Check if the goal pose has been achieved by the local planner.
