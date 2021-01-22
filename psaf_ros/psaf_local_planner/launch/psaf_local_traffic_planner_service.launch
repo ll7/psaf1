@@ -3,6 +3,6 @@
 <!--  Arguments begin-->
 <!-- Arguments end-->
 
-  <node pkg="psaf_local_planner" type="local_traffic_rules_planner.py" name="local_traffic_rules_planner_service" output="screen">
+  <node pkg="psaf_local_planner" type="traffic_rules/local_traffic_rules_planner.py" name="local_traffic_rules_planner_service" output="screen">
   </node>
 </launch>
