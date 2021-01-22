@@ -38,7 +38,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.status_pub.publish("Start Replanning")
             # create a clean slate
             self.map = deepcopy(self.original_map)
-            self.neighbourhood = deepcopy(self.original_neighbourhood)
+            self.neighbourhood = deepcopy(self.manager.original_map)
             for point in obstacle.obstacles:
                 if self._add_obstacle(point):
                     self.status_pub.publish("Replanning done")
@@ -85,11 +85,11 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
             if car_lanelet[0][0] == matching_lanelet[0][0]:
                 # add the static obstacle to the scenario
-                split_ids = self._update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0), curr_pos,
+                split_ids = self.manager.update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0), curr_pos,
                                                       static_obstacle)
                 split_point = Point(self.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
                                     self.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
-                self._update_network(split_ids[0], curr_pos, split_point, None)
+                self.manager.update_network(split_ids[0], curr_pos, split_point, None)
             else:
                 if static_obstacle is not None:
                     self.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0]).add_static_obstacle_to_lanelet(
