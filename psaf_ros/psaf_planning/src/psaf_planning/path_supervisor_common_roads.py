@@ -66,7 +66,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             return False
         lanelet: Lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(car_lanelet[0][0])
         # case single road in current direction
-        if lanelet.adj_left_same_direction is False or lanelet.adj_right_same_direction is False:
+        if lanelet.adj_left_same_direction is False and lanelet.adj_right_same_direction is False:
             rospy.logerr("PathSupervisor: Replanning aborted, single road in current direction !!")
             self.status_pub.publish("Replanning aborted, single road in current direction")
             return False
