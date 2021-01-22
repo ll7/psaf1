@@ -107,7 +107,7 @@ class CommonRoadManager:
         # check for the amount of predecessor
         return len(lane.predecessor) > 1
 
-    def _modify_lanelet(self, lanelet_id: int, modify_point: Point, start_point: Point):
+    def _modify_lanelet(self, lanelet_id: int, modify_point: Point, start_point: Point) -> Tuple[int, int]:
         from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads as pp
         """Splits a lanelet at a certain point
 
@@ -209,7 +209,7 @@ class CommonRoadManager:
             rospy.logerr("PathSupervisor: invalid neighbourhood update!")
         self.neighbourhood[lanelet_id] = entry
 
-    def _analyze_neighbourhood(self, scenario_map: Scenario):
+    def _analyze_neighbourhood(self, scenario_map: Scenario) -> Dict:
         """
         Analyze the neighbourhood of the given lanelet_network stored in the given map
         Therefore creating a dict, which stores for every lanelet all lanelets that know their relationship
@@ -242,7 +242,8 @@ class CommonRoadManager:
         # remove lanelet_id from neighbourhood dict
         del self.neighbourhood[lanelet_id]
 
-    def update_network(self, matching_lanelet_id: int, modify_point: Point, start_point: Point, static_obstacle):
+    def update_network(self, matching_lanelet_id: int, modify_point: Point, start_point: Point, static_obstacle) -> \
+            Tuple[int, int]:
         """
         Splits a lanelet and it's neighbouring lanelets in half at a certain point, updates the reference graph
         and optionally adds a obstacle to the split lanelet

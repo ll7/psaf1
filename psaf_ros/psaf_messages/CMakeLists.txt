@@ -56,7 +56,7 @@ add_message_files(
    Obstacle.msg
    CenterLineExtended.msg
    XRoute.msg
-   Lanelet.msg
+   XLanelet.msg
 )
 
 ## Generate services in the 'srv' folder
