@@ -26,6 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_geometry_msgs
   tf2_ros
+  psaf_local_planner
 )
 
 ## System dependencies are found with CMake's conventions
@@ -121,7 +122,7 @@ generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
 catkin_package(
   #INCLUDE_DIRS include
   #LIBRARIES psaf_steering
-  CATKIN_DEPENDS roscpp rospy std_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs psaf_local_planner
 #  DEPENDS system_lib
 )
 

@@ -1,0 +1,7 @@
+<library path="lib/libpsaf_obstacle_layer">
+  <class type="psaf_obstacle_layer::PsafObstacleLayer" base_class_type="costmap_2d::Layer">
+    <description>
+      A clearing implementation of a obstacle layer for the PSAF-Project.
+    </description>
+  </class>
+</library>

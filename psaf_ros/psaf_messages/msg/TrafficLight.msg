@@ -15,8 +15,6 @@ uint8 state
 
 # constants representing the traffic light state
 uint8 STATE_UNKNOWN=0
-uint8 STATE_OFF=1
-uint8 STATE_RED=2
-uint8 STATE_YELLOW=3
-uint8 STATE_YELLOW_RED=4
-uint8 STATE_GREEN=5
+uint8 STATE_RED=1
+uint8 STATE_YELLOW=2
+uint8 STATE_GREEN=3
