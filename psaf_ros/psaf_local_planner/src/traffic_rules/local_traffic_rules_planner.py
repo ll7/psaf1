@@ -94,7 +94,8 @@ class Local_Traffic_Rules_Planner:
         :return:
         """
         if self.last_entering_intersection_with_turn_time_stamp is not None:
-            average_time_stamp = (timestamp.to_nsec() + self.last_entering_intersection_with_turn_time_stamp.to_nsec()) / 2
+            average_time_stamp = (timestamp.to_nsec() +
+                                  self.last_entering_intersection_with_turn_time_stamp.to_nsec()) / 2
             # Check if we have seen a speed limit and speed limit sign was seen after the average_time
             if self.last_speed_limit is not None and \
                     self.last_speed_limit[0].to_nsec() < average_time_stamp:  #
@@ -116,13 +117,14 @@ class Local_Traffic_Rules_Planner:
         valid_close_traffic_lights = list(
             filter(lambda x: x.distance < 15 and x.y < 0.3 or x.distance < 3 and x.x > 0.6,
                    traffic_signs.trafficLights))
-        if len(valid_close_traffic_lights) > 0 or len(traffic_signs.stopMarks) > 0:
+        valid_stop_signs = list(filter(lambda x: x.distance < 3 and x.x > 0.6,
+                                       traffic_signs.stopSigns))
+        if len(valid_close_traffic_lights) > 0 or len(valid_stop_signs) > 0 or len(traffic_signs.stopMarks) > 0:
             self.entering_intersection(traffic_signs.header.stamp, self.curvature)
 
         # TODO replace this in future when we will have a state machine for the intersection situations or with global plan info
         elif self.last_entering_intersection_with_turn_time_stamp is not None:
             self.leaving_intersection(traffic_signs.header.stamp)
-
 
     def periodic_planner_input_update(self, event):
         """
