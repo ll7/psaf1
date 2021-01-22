@@ -13,7 +13,7 @@ namespace psaf_local_planner
                                            bufferSize(1000), initialized(false), closest_point_local_plan(2),
                                            lookahead_factor(4), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false), estimate_curvature_distance(30), check_collision_max_distance(40), 
-                                           slow_car_ahead_counter(0), slow_car_ahead_published(false)
+                                           slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(2)
     {
         std::cout << "Hi";
     }
@@ -83,6 +83,7 @@ namespace psaf_local_planner
         {
             ros::NodeHandle private_nh("~/" + name);
             g_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_global_plan", 1);
+            obstacle_pub = private_nh.advertise<psaf_messages::Obstacle>("/psaf/planning/obstacle", 1);
             //l_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_local_plan", 1);
             debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
 
@@ -192,31 +193,55 @@ namespace psaf_local_planner
 
     void PsafLocalPlanner::checkForSlowCar() {
         // Check if there should be a line change if speed is slower than x for y iterations
-        if (target_velocity < max_velocity - 5) {
-            slow_car_ahead_counter = std::min(100, slow_car_ahead_counter + 1);
+        if (target_velocity < max_velocity - 6) {
+            slow_car_ahead_counter = std::min(50, slow_car_ahead_counter + 1);
         } else {
             slow_car_ahead_counter = std::max(0, slow_car_ahead_counter - 2);
         }
 
-        if (slow_car_ahead_counter > 60 && !slow_car_ahead_published) {
+        ROS_INFO("slow car counter: %d", slow_car_ahead_counter);
+
+        if (slow_car_ahead_counter > 30 && !slow_car_ahead_published) {
             ROS_INFO("publishing obstacle ahead");
             slow_car_ahead_published = true;
 
             std::vector<RaytraceCollisionData> collisions = {};
             raytraceSemiCircle(M_PI * 3/2, 20, collisions);
 
-            // TODO: hier message builden  und schicken
+            std::vector<geometry_msgs::Point> points = {};
+            
+            for (auto &pos : collisions) {
+                geometry_msgs::Point p;
+                p.x = pos.relative_x;
+                p.y = pos.relative_y;
+                p.z = 0;
+
+                ROS_INFO("collsions: %f %f", p.x, p.y);
+
+                points.push_back(p);
+            }
+
+            psaf_messages::Obstacle msg;
+            // msg.id = obstacle_msg_id_counter++;
+            msg.id = points.size();
+            msg.obstacles = points;
+
+            obstacle_pub.publish(msg);
         }
 
         if (slow_car_ahead_counter < 10 && slow_car_ahead_published) {
             ROS_INFO("publishing loss of obstacle");
             slow_car_ahead_published = false;
 
-            // TODO: hier leere message schicken
+            psaf_messages::Obstacle msg;
+            msg.id = obstacle_msg_id_counter++;
+            msg.obstacles = {};
+
+            obstacle_pub.publish(msg);
         }
     }
 
-    void PsafLocalPlanner::raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> collisions) {
+    void PsafLocalPlanner::raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions) {
         tf2::Transform current_transform;
         tf2::convert(current_pose.pose, current_transform);
 
@@ -236,11 +261,12 @@ namespace psaf_local_planner
             //ROS_INFO("dist at angle: %f at %f, %f is %f", actual_angle, x, y, dist);
             if (dist < INFINITY) {
                 collisions.push_back(RaytraceCollisionData(x, y, angle, distance));
+                ROS_INFO("dist at angle: %f at %f, %f is %f", actual_angle, x, y, dist);
             }
         }
 
         for (auto &pos : collisions) {
-            ROS_INFO("collision at %f, %f is", pos.relative_x, pos.relative_y);
+            ROS_INFO("collision at %f, %f", pos.relative_x, pos.relative_y);
         }
     }
 

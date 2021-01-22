@@ -3,7 +3,7 @@
 #include <ros/ros.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <costmap_2d/costmap_2d.h>
- #include <costmap_2d/cost_values.h>
+#include <costmap_2d/cost_values.h>
 #include <nav_core/base_local_planner.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
@@ -23,6 +23,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 #include <base_local_planner/line_iterator.h>
+#include <psaf_messages/Obstacle.h>
 
 
 namespace psaf_local_planner {
@@ -106,7 +107,7 @@ namespace psaf_local_planner {
             bool check_distance_forward(double& distance, double &relativeX, double &relativeY);
 
             double raytrace(double m_target_x, double m_target_y);
-            void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> collisions);
+            void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
             void checkForSlowCar();
             void globalPlanExtendedCallback(const geometry_msgs::Twist &msg);
             
@@ -118,6 +119,7 @@ namespace psaf_local_planner {
 
             ros::Publisher g_plan_pub;
             ros::Publisher debug_pub;
+            ros::Publisher obstacle_pub;
             ros::Subscriber vel_sub;
             ros::Subscriber global_plan_extended_sub;
 
@@ -162,6 +164,8 @@ namespace psaf_local_planner {
             bool slow_car_ahead_published;
 
             LocalPlannerState state;
+
+            unsigned int obstacle_msg_id_counter;
 
     };
 };
