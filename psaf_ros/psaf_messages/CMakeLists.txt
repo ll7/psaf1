@@ -51,6 +51,7 @@ add_message_files(
    TrafficSignInfo.msg
    SpeedSign.msg
    StopMark.msg
+   StopSign.msg
    TrafficLight.msg
    Obstacle.msg
 )
