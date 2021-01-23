@@ -6,6 +6,7 @@ from psaf_planning.map_provider import MapProvider
 from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
 from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from nav_msgs.msg import Path
+from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped, Point, Quaternion
 from tf.transformations import quaternion_from_euler
 import math
@@ -41,8 +42,8 @@ class PathProviderAbstract:
         self.role_name = role_name
         self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
         self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
+        rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
         self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
-        self.status_pub.publish("PathProvider not ready")
         self.map_provider = MapProvider()
         self.path = Path()
         self.start = None

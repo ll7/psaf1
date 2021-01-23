@@ -41,7 +41,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             # create a clean slate
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
-            self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
             for point in obstacle.obstacles:
                 if self._add_obstacle(point):
                     self.status_pub.publish("Replanning done")
@@ -88,17 +87,14 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
             if car_lanelet[0][0] == matching_lanelet[0][0]:
                 # add the static obstacle to the scenario
-                split_ids = self.manager.update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0),
-                                                        curr_pos,
-                                                        static_obstacle)
-                split_point = Point(
-                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
-                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
+                split_ids = self.manager.update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0), curr_pos,
+                                                      static_obstacle)
+                split_point = Point(self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
+                                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
                 self.manager.update_network(split_ids[0], curr_pos, split_point, None)
             else:
                 if static_obstacle is not None:
-                    self.manager.map.lanelet_network.find_lanelet_by_id(
-                        matching_lanelet[0][0]).add_static_obstacle_to_lanelet(
+                    self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0]).add_static_obstacle_to_lanelet(
                         static_obstacle.obstacle_id)
                     self.manager.map.add_objects(static_obstacle)
 

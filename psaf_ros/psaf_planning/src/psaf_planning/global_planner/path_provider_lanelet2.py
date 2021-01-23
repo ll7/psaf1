@@ -11,7 +11,6 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Point
 from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
 from copy import deepcopy
-from sensor_msgs.msg import NavSatFix
 
 
 class PathProviderLanelet2(PathProviderAbstract):
@@ -35,9 +34,6 @@ class PathProviderLanelet2(PathProviderAbstract):
         else:
             self.map = self._load_map(self.map_path)
         self.original_map = deepcopy(self.map)
-        rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
-        self.status_pub.publish("PathProvider ready")
-
 
     def _load_map(self, path):
         return lanelet2.io.load(path, self.projector)
