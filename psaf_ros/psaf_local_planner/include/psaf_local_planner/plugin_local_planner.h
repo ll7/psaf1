@@ -163,6 +163,9 @@ namespace psaf_local_planner {
             /** sets a flag when the slow car and obstacles have been published */ 
             bool slow_car_ahead_published;
 
+            /** */
+            ros::Time slow_car_last_published;
+
             LocalPlannerState state;
 
             unsigned int obstacle_msg_id_counter;

@@ -204,9 +204,11 @@ namespace psaf_local_planner
 
         ROS_INFO("slow car counter: %d", slow_car_ahead_counter);
 
-        if (slow_car_ahead_counter > 30 && !slow_car_ahead_published) {
+        if (slow_car_ahead_counter > 30 && (!slow_car_ahead_published || ros::Time::now() - slow_car_last_published > ros::Duration(3.0))) {
             ROS_INFO("publishing obstacle ahead");
             slow_car_ahead_published = true;
+            slow_car_last_published = ros::Time::now();
+            
 
             std::vector<RaytraceCollisionData> collisions = {};
             raytraceSemiCircle(M_PI * 3/2, 30, collisions);
