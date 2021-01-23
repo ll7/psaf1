@@ -66,8 +66,8 @@ namespace psaf_local_planner {
 
     class RaytraceCollisionData {
         public:
-            RaytraceCollisionData(double relative_x, double relative_y, double angle, double distance);
-            double relative_x, relative_y, angle, distance;
+            RaytraceCollisionData(double x, double y, double angle, double distance);
+            double x, y, angle, distance;
     };
 
 
@@ -106,7 +106,7 @@ namespace psaf_local_planner {
             void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
             bool check_distance_forward(double& distance, double &relativeX, double &relativeY);
 
-            double raytrace(double m_target_x, double m_target_y);
+            double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
             void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
             void checkForSlowCar();
             void globalPlanExtendedCallback(const geometry_msgs::Twist &msg);

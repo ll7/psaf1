@@ -148,6 +148,9 @@ namespace psaf_local_planner
 
                 checkForSlowCar();
 
+                //std::vector<RaytraceCollisionData> collisions = {};
+                //raytraceSemiCircle(M_PI * 3/2, 30, collisions);
+
 
                 cmd_vel.linear.x = target_velocity;
                 cmd_vel.angular.z = angle;
@@ -206,14 +209,14 @@ namespace psaf_local_planner
             slow_car_ahead_published = true;
 
             std::vector<RaytraceCollisionData> collisions = {};
-            raytraceSemiCircle(M_PI * 3/2, 20, collisions);
+            raytraceSemiCircle(M_PI * 3/2, 30, collisions);
 
             std::vector<geometry_msgs::Point> points = {};
             
             for (auto &pos : collisions) {
                 geometry_msgs::Point p;
-                p.x = pos.relative_x;
-                p.y = pos.relative_y;
+                p.x = pos.x;
+                p.y = pos.y;
                 p.z = 0;
 
                 ROS_INFO("collsions: %f %f", p.x, p.y);
@@ -222,8 +225,8 @@ namespace psaf_local_planner
             }
 
             psaf_messages::Obstacle msg;
-            // msg.id = obstacle_msg_id_counter++;
-            msg.id = points.size();
+            msg.id = obstacle_msg_id_counter++;
+            // msg.id = points.size();
             msg.obstacles = points;
 
             obstacle_pub.publish(msg);
@@ -256,21 +259,47 @@ namespace psaf_local_planner
         for (double actual_angle = -angle / 2; actual_angle <= angle / 2; actual_angle += (M_PI / 180) * 10) {
             double x = std::cos(actual_angle + orientation) * distance;
             double y = std::sin(actual_angle + orientation) * distance;
+            double coll_x, coll_y;
 
-            double dist = raytrace(x + m_self_x , y + m_self_y);
+            double dist = raytrace(x + m_self_x , y + m_self_y, coll_x, coll_y);
             //ROS_INFO("dist at angle: %f at %f, %f is %f", actual_angle, x, y, dist);
             if (dist < INFINITY) {
-                collisions.push_back(RaytraceCollisionData(x, y, angle, distance));
+                collisions.push_back(RaytraceCollisionData(coll_x, coll_y, angle, distance));
                 ROS_INFO("dist at angle: %f at %f, %f is %f", actual_angle, x, y, dist);
             }
         }
 
+                // Debug data for the direction and the angle between the car and the road
+        auto markers = visualization_msgs::MarkerArray();
+        auto marker1 = visualization_msgs::Marker();
+
+        marker1.type = visualization_msgs::Marker::SPHERE_LIST;
+        marker1.action = visualization_msgs::Marker::ADD;
+        marker1.ns = "obstacle";
+        marker1.header.frame_id = "map";
+        marker1.header.stamp = ros::Time::now();
+        marker1.color.a = 1.0;
+        marker1.color.r = 1.0;
+        //marker1.pose.position.x = pos.x;
+        //marker1.pose.position.y = pos.y;
+        marker1.scale.x = 0.5;
+        marker1.scale.y = 0.5;
+        marker1.scale.z = 4;
+
         for (auto &pos : collisions) {
-            ROS_INFO("collision at %f, %f", pos.relative_x, pos.relative_y);
+            geometry_msgs::Point point;
+            point.x = pos.x;
+            point.y = pos.y;
+            point.z = 0;
+            marker1.points.push_back(point);
+            ROS_INFO("collision at %f, %f", pos.x, pos.y);
         }
+        
+        markers.markers.push_back(marker1);
+        debug_pub.publish(markers);
     }
 
-    double PsafLocalPlanner::raytrace(double m_target_x, double m_target_y) {
+    double PsafLocalPlanner::raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y) {
         double m_self_x, m_self_y;
         unsigned int c_self_x, c_self_y, c_target_x, c_target_y;
         auto costmap = costmap_ros->getCostmap();
@@ -293,9 +322,7 @@ namespace psaf_local_planner
         {
             int cost = costmap->getCost(line.getX(), line.getY());
             if (cost > 128 && cost != costmap_2d::NO_INFORMATION) {
-                double coll_x, coll_y;
                 costmap->mapToWorld(line.getX(), line.getY(), coll_x, coll_y);
-                
                 return std::sqrt((m_self_x - coll_x) * (m_self_x - coll_x) + (m_self_y - coll_y) * (m_self_y - coll_y));
             }
         }
@@ -394,7 +421,7 @@ namespace psaf_local_planner
         marker3.type = visualization_msgs::Marker::SPHERE;
         marker3.action = visualization_msgs::Marker::ADD;
         marker3.ns = "next";
-        marker3.header.frame_id = "ego_vehicle";
+        marker3.header.frame_id = "map";
         marker3.header.stamp = ros::Time::now();
         marker3.color.a = 1.0;
         marker3.color.r = 0.0;
@@ -503,7 +530,7 @@ namespace psaf_local_planner
     }
 
 
-    RaytraceCollisionData::RaytraceCollisionData(double relative_x, double relative_y, double angle, double distance) 
-    : relative_x(relative_x), relative_y(relative_y), angle(angle), distance(distance)
+    RaytraceCollisionData::RaytraceCollisionData(double x, double y, double angle, double distance) 
+    : x(x), y(y), angle(angle), distance(distance)
     {}
 } // namespace psaf_local_planner 

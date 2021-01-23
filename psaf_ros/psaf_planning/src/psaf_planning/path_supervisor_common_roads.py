@@ -31,11 +31,11 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         if not self.busy and self.manager.map is not None and len(self.path.poses) > 0:
             self.busy = True
             # check if an old
-            if self.last_id >= obstacle.id:
-                rospy.logerr("PathSupervisor: replanning aborted, received an old replaning msg !!")
-                self.status_pub.publish("Replanning aborted, received an old replaning msg")
-                self.busy = False
-                return
+            #if self.last_id >= obstacle.id:
+            #    rospy.logerr("PathSupervisor: replanning aborted, received an old replaning msg !!")
+            #    self.status_pub.publish("Replanning aborted, received an old replaning msg")
+            #    self.busy = False
+            #    return
             self.last_id = obstacle.id
             self.status_pub.publish("Start Replanning")
             # create a clean slate
@@ -57,10 +57,13 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         """
         rospy.loginfo("PathSupervisor: Add obstacle")
         curr_pos: Point = self._get_current_position()
-        obs_pos_x = curr_pos.x + obstacle.x
-        obs_pos_y = curr_pos.y + obstacle.y
+        obs_pos_x = obstacle.x
+        obs_pos_y = obstacle.y
         car_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([curr_pos.x, curr_pos.y])])
         matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([obs_pos_x, obs_pos_y])])
+
+        rospy.loginfo("found car in lanelet: " + str(matching_lanelet[0]))
+
         # check if the obstacle is within a lanelet
         if len(matching_lanelet[0]) == 0:
             rospy.logerr("PathSupervisor: Replanning aborted, obstacle not in a lanelet -> no interfering !!")
@@ -126,7 +129,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
 
 def main():
-    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=True)
+    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
     rospy.spin()
 
 
