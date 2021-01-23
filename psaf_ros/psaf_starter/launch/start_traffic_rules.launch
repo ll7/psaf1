@@ -66,7 +66,7 @@
 
     <include file="$(find psaf_planning)/launch/psaf_planning_path_provider.launch"/>
 
-    <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch"/>
+   <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch"/>
 
     <!--<include file="$(find psaf_local_planner)/launch/psaf_local_traffic_planner_service.launch"/>
 

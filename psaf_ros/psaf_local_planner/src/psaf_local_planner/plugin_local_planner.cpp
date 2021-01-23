@@ -65,7 +65,7 @@ namespace psaf_local_planner
         }
     }
 
-    void PsafLocalPlanner::velocityCallback(const std_msgs::UInt8::ConstPtr &msg)
+    void PsafLocalPlanner::velocityCallback(const std_msgs::Int8::ConstPtr &msg)
     {
         max_velocity = msg->data / 3.6;
         ROS_INFO("new speed limit: %f", max_velocity);
@@ -158,9 +158,13 @@ namespace psaf_local_planner
                 double angle = compute_steering_angle(target_point.pose, current_pose.pose);
                 double distance;
                 
-                if (target_velocity > 0 && !check_distance_forward(distance)) {
+                if (target_velocity > 0 && !check_distance_forward(distance) && max_velocity > 0) {
                     target_velocity *= boost::algorithm::clamp((distance - 5) / (pow(max_velocity * 0.36, 2)), 0, 1);
                     ROS_INFO("distance forward: %f, max distance: %f", distance, pow(max_velocity * 0.36, 2));
+                }
+
+                if (max_velocity <= 0) {
+                    target_velocity = 0;
                 }
 
                 cmd_vel.linear.x = target_velocity;

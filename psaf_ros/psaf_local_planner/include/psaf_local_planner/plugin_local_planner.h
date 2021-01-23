@@ -9,7 +9,7 @@
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Quaternion.h>
 #include <std_msgs/Float64.h>
-#include <std_msgs/UInt8.h>
+#include <std_msgs/Int8.h>
 #include <nav_msgs/Path.h>
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
@@ -71,7 +71,7 @@ namespace psaf_local_planner {
             bool check_distance_forward(double& distance);
 
             void trafficSignCallback(const psaf_messages::TrafficSignInfo::ConstPtr &msg);
-            void velocityCallback(const std_msgs::UInt8::ConstPtr &msg);
+            void velocityCallback(const std_msgs::Int8::ConstPtr &msg);
 
             geometry_msgs::PoseStamped& find_lookahead_target();
 
