@@ -47,7 +47,7 @@ class Route:
         else:
             self.set_ids_lanelets_permissible = set_ids_lanelets_permissible
 
-        self.reference_path = self._generate_reference_path()
+        # self.reference_path = self._generate_reference_path()
 
     def retrieve_route_sections(self, is_opposite_direction_allowed: bool = False) -> Union[None, List[List[int]]]:
         """Retrieves route sections for lanelets in the route
