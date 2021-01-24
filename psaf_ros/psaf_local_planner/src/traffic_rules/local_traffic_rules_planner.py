@@ -133,6 +133,13 @@ class Local_Traffic_Rules_Planner:
 
         #self.traffic_light_publisher.publish(self.next_traffic_light)
 
+    # State machine methods for conditions and callbacks
+    def is_traffic_light_distance_below_stopping_distance(self):
+        # TODO implement
+        return True
+
+
+
 
 if __name__ == '__main__':
     rospy.init_node("Local_Traffic_Rules_planner")
