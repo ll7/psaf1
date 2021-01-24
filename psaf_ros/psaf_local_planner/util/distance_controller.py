@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import math
+from collections import deque
 from typing import List
 
 import rospy
@@ -24,6 +25,7 @@ class Distance_Controller:
 
         rospy.Subscriber('/carla/ego_vehicle/odometry', Odometry, self.odometry_received)
         rospy.Subscriber("/move_base/PsafLocalPlanner/psaf_local_plan", Path, self.local_plan_received)
+        # rospy.Subscriber("/psaf/perception/traffic_signs", TrafficSignInfo, self.callback_traffic_signs)
 
         self.current_limit = default_speed
         self.speed_sign_limit = default_speed
@@ -31,6 +33,7 @@ class Distance_Controller:
         self.current_speed = 0.0
         self.current_orientation = None
         self.current_location = None
+        self.local_plan = deque()
 
         self.pid = PID(0.7, 0.001, 0, setpoint=0)
 
@@ -38,6 +41,40 @@ class Distance_Controller:
         if self.goal_point is None:
             self.goal_point = path.poses[950].pose.position
             print(f"goal point: {self.goal_point}")
+
+        if not self.local_plan:
+            for pose in path.poses:
+                self.local_plan.append(pose.pose.position)
+            rospy.loginfo("Local Plan received")
+
+    def callback_traffic_signs(self, traffic_signs: TrafficSignInfo):
+        if len(traffic_signs.trafficLights) == 0 or len(self.local_plan) == 0:
+            return
+
+        next_tfl = sorted(traffic_signs.trafficLights, key=lambda x: x.distance)[0]
+        print(f"next tfl: {next_tfl.distance}")
+
+        best_point = None
+        best_dist_tfl = float("inf")
+        best_dist = 0.0
+        for point in self.local_plan:
+            target_vector = np.array([point.x - self.current_location.x, point.y - self.current_location.y])
+            dist_target = np.linalg.norm(target_vector)
+
+            dist_tfl = dist_target - next_tfl.distance
+
+            if dist_tfl < best_dist_tfl:
+                best_dist_tfl = dist_tfl
+                best_point = point
+                best_dist = dist_target
+
+        if self.goal_point is None:
+            self.goal_point = best_point
+            print(f"goal point: {self.goal_point.x}/{self.goal_point.y} | dista: {best_dist}")
+
+
+
+
 
     def odometry_received(self, odom: Odometry):
         self.current_location = odom.pose.pose.position
@@ -66,7 +103,8 @@ class Distance_Controller:
 
         msg = Int8(self.current_limit)
         self.velocity_publisher.publish(msg)
-        print(f"distance: {dist_target} | new speed limit: {self.current_limit}")
+        print(f"distance: {dist_target} | new speed limit: {self.current_limit} | speed: {self.current_speed*3.6}")
+
 
 
 if __name__ == '__main__':
