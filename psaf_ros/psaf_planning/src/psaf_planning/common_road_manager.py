@@ -33,9 +33,6 @@ class CommonRoadManager:
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
         self.original_time_by_lanelet = deepcopy(self.time_by_lanelet)
 
-        # test scenario
-        self._dummy_test(368)
-
     # just for now , remove later !!!!!
     def _dummy_test(self, id_insert):
         pos = len(self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices) // 2
