@@ -429,4 +429,8 @@ class PathProviderCommonRoads(PathProviderAbstract):
     def _reset_map(self):
         # first reset map
         if self.manager is not None:
+            # create clean slate
             self.manager.map = deepcopy(self.manager.original_map)
+            self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
+            self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
+            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)
