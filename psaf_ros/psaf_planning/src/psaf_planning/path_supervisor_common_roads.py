@@ -98,10 +98,11 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 split_ids = self.manager.update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0),
                                                         curr_pos,
                                                         static_obstacle)
-                split_point = Point(
-                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
-                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
-                self.manager.update_network(split_ids[0], curr_pos, split_point, None)
+                if split_ids[0] is not None:
+                    split_point = Point(
+                        self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
+                        self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
+                    self.manager.update_network(split_ids[0], curr_pos, split_point, None)
             else:
                 if static_obstacle is not None:
                     self.manager.map.lanelet_network.find_lanelet_by_id(
@@ -137,7 +138,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
 
 def main():
-    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=True)
+    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
     rospy.spin()
 
 

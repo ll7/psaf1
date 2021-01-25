@@ -52,8 +52,6 @@ class CommonRoadManager:
         self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
 
     def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int, sep_index: int):
-        # remove old lanelet from dict
-        del self.message_by_lanelet[matching_lanelet_id]
         # add the new lanelets to the dict
         self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_front))
         self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back))
@@ -63,6 +61,8 @@ class CommonRoadManager:
                                               self.time_by_lanelet[matching_lanelet_id][sep_index:]]
         # remove old time from dict
         del self.time_by_lanelet[matching_lanelet_id]
+        # remove old lanelet from dict
+        del self.message_by_lanelet[matching_lanelet_id]
 
     def _fill_dicts(self):
         rospy.loginfo("CommonRoadManager: Message and duration hashmap calculation started!")
@@ -252,7 +252,7 @@ class CommonRoadManager:
             self.map.lanelet_network.add_lanelet(lanelet_2)
             # clean references
             self._fast_reference_cleanup(lanelet_id)
-            self._update_message_dict(lanelet_copy.lanelet_id, id_lane_2, id_lane_1, sep_index)
+            self._update_message_dict(lanelet_copy.lanelet_id, id_lane_1, id_lane_2, sep_index)
             return id_lane_1, id_lane_2
         return None, None
 
