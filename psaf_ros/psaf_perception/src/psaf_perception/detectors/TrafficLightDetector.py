@@ -71,7 +71,7 @@ class TrafficLightDetector(AbstractDetector):
         torch.no_grad()  # reduce memory consumption and improve speed
 
         # init image source = combination of segmentation, rgb and depth camera
-        self.combinedCamera = CameraDataFusionWrapper(role_name=role_name, time_threshold=0.08,
+        self.combinedCamera = CameraDataFusion(role_name=role_name, time_threshold=0.08,
                                                visible_tags=set([SegmentationTag.TrafficLight]))
         self.combinedCamera.set_on_image_data_listener(self.__on_new_image_data)
 
