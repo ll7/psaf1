@@ -11,7 +11,7 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
                                            bufferSize(1000), initialized(false), closest_point_local_plan(2),
-                                           lookahead_factor(4), max_velocity(15), target_velocity(15), min_velocity(5),
+                                           lookahead_factor(3), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false), estimate_curvature_distance(30), check_collision_max_distance(40), 
                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
     {
@@ -140,25 +140,33 @@ namespace psaf_local_planner
                 double angle = compute_steering_angle(target_point.pose, current_pose.pose);
                 double distance, relX, relY;
                 
+                double velocity_distance_diff;
+
                 if (target_velocity > 0 && !check_distance_forward(distance, relX, relY)) {
                     if (distance < 5) {
                         ROS_INFO("attempting to stop");
-                        target_velocity = 0;
+                        velocity_distance_diff = target_velocity;
                     } else {
-                        target_velocity = std::min(target_velocity, 25/18 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
+                        // TODO: validate if working
+                        // slow formula, working okay ish
+                        velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
+                        // faster formula, requires faster controller
+                        //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
                     }
                     
                     // target_velocity *= boost::algorithm::clamp((distance - 5) / (pow(max_velocity * 0.36, 2)), 0, 1);
                     ROS_INFO("distance forward: %f, max velocity: %f", distance, target_velocity);
                 }
 
-                checkForSlowCar();
+                checkForSlowCar(velocity_distance_diff);
 
                 //std::vector<RaytraceCollisionData> collisions = {};
                 //raytraceSemiCircle(M_PI * 3/2, 30, collisions);
 
+                ROS_INFO("vel diff: %f", velocity_distance_diff);
 
-                cmd_vel.linear.x = target_velocity;
+
+                cmd_vel.linear.x = target_velocity - velocity_distance_diff;
                 cmd_vel.angular.z = angle;
             }
         }
@@ -180,7 +188,7 @@ namespace psaf_local_planner
         last_point.setZ(0);
         acutal_point = last_point;
 
-        double desired_distance = std::pow(target_velocity / lookahead_factor, 1.2) + 3;
+        double desired_distance = std::pow(target_velocity / lookahead_factor, 1.4) + 3;
         double sum_distance = 0;
 
         for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
@@ -200,9 +208,9 @@ namespace psaf_local_planner
         return last_stamp;
     }
 
-    void PsafLocalPlanner::checkForSlowCar() {
+    void PsafLocalPlanner::checkForSlowCar(double velocity_distance_diff) {
         // Check if there should be a line change if speed is slower than x for y iterations
-        if (target_velocity < max_velocity - 6) {
+        if (velocity_distance_diff > 5) {
             slow_car_ahead_counter = std::min(50, slow_car_ahead_counter + 1);
         } else {
             slow_car_ahead_counter = std::max(0, slow_car_ahead_counter - 2);
@@ -478,9 +486,19 @@ namespace psaf_local_planner
             point2 = point3;
         }
 
+
+        // Circumference of a circle segment in rad: C = phi * r
+        // r = C / phi
+        // max speed in curves: v <= sqrt(µ_haft * r * g)
+        // µ_haft ~= 0.8 - 1.0
+        
+
         ROS_INFO("curvature: %f; distance %f", sum_angle, sum_distance);
-        auto fact = boost::algorithm::clamp(sum_angle * 10 / sum_distance, 0, 1);
-        target_velocity = (max_velocity - fact * (max_velocity - min_velocity));
+        auto fact = boost::algorithm::clamp(sum_angle * 10  / sum_distance, 0, 1);
+
+        // target_velocity = (max_velocity - fact * (max_velocity - min_velocity));
+        target_velocity = std::min(max_velocity, std::sqrt(1.0 * (sum_distance / sum_angle) * 9.81));
+        ROS_INFO("radius: %f, target vel: %f", (sum_distance / sum_angle), target_velocity);
     }
 
     /**

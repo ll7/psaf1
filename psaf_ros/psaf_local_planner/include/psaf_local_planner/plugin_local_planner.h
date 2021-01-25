@@ -110,7 +110,7 @@ namespace psaf_local_planner {
 
             double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
             void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
-            void checkForSlowCar();
+            void checkForSlowCar(double velocity_distance_diff);
             void globalPlanExtendedCallback(const geometry_msgs::Twist &msg);
             
             dynamic_reconfigure::Server<psaf_local_planner::PsafLocalPlannerParameterConfig> *dyn_serv;
