@@ -455,18 +455,34 @@ namespace psaf_local_planner
 
     void PsafLocalPlanner::estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location)
     {
+        if (global_plan.size() < 3)
+            return;
+
         tf2::Vector3 point1, point2, point3;
+        int first = 0, middle, last = 0;
+        bool hasNonZero = false;
+        
         auto it = global_plan.begin();
 
-        tf2::convert(current_location.position, point1);
+        // tf2::convert(current_location.position, point1);
         const geometry_msgs::PoseStamped &w = *it;
-        tf2::convert(w.pose.position, point2);
+        tf2::convert(w.pose.position, point1);
         
         ++it;
+        ++last;
+
+        const geometry_msgs::PoseStamped &w2  = *it;
+        tf2::convert(w2.pose.position, point2);
+        
+        ++it;
+        ++last;
         double sum_distance = tf2::tf2Distance2(point1, point2);
         double sum_angle = 0;
+        double last_angle = 0;
+
+
         
-        for (; it != global_plan.end(); ++it)
+        for (; it != global_plan.end(); ++it, ++last)
         {
             if (sum_distance > estimate_curvature_distance) 
                 break;
@@ -479,13 +495,71 @@ namespace psaf_local_planner
             auto v2 = (point3 - point2);
 
             double angle = v1.angle(v2);
-            if (isfinite(angle))
+            if (isfinite(angle)) {
+                // indendet purpose of this: 
+                // find three points on the curvature
                 sum_angle += abs(angle);
+                ROS_INFO("angle: %f", angle);
+                if (abs(angle) < 0.0001) {
+                    // find first point on circle
+                    if (!hasNonZero) {
+                        first++;
+                    } else {
+                        // curvature has ended
+                        break;
+                    }
+                } else {
+                    hasNonZero = true;
+                    // curvature is bending in different direction, therefor ended as well
+                    if (std::signbit(last_angle) != std::signbit(angle)) {
+                        break;
+                    }
+                }
+
+                last_angle = angle;
+            }
 
             point1 = point2;
             point2 = point3;
         }
 
+
+        if (first == last || last == 0) {
+            target_velocity = max_velocity;
+            return;
+        }
+
+        if (last - first <= 5) {
+            target_velocity = max_velocity;
+            return;
+        }
+
+        middle = first + (last - first) / 2;
+        // find center point of the circle using http://www.ambrsoft.com/TrigoCalc/Circle3D.htm
+        double x1 = global_plan[first].pose.position.x;
+        double y1 = global_plan[first].pose.position.y;
+
+        double x2 = global_plan[middle].pose.position.x;
+        double y2 = global_plan[middle].pose.position.y;
+
+        double x3 = global_plan[last].pose.position.x;
+        double y3 = global_plan[last].pose.position.y;
+
+        double a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
+        
+        double b =  (x1*x1+y1*y1)*(y3-y2)+(x2*x2+y2*y2)*(y1-y3)+(x3*x3+y3*y3)*(y2-y1);
+
+        double c = (x1*x1 + y1*y1) * (x2 - x3) + (x2*x2 + y2*y2)*(x3 - x1) + (x3*x3 + y3*y3)*(x1 - x2);
+        double d = (x1*x1 + y1*y1)*(x3*y2 - x2*y3) + (x2*x2 + y2*y2)*(x1*y3-x3*y1)+(x3*x3 + y3*y3)*(x2*y1-x1*y2);
+
+        double r = std::sqrt((b * b + c * c - (4 * a * d)) / (4 * a * a));
+        double center_x = - b/(2*a)
+        double center_y = - c/(2*a)
+
+        ROS_INFO("first: %d, middle: %d, last: %d", first, middle, last);
+        ROS_INFO("x1: %f y1: %f x2: %f y2:%f x3: %f y3: %f", x1, y1, x2, y2, x3, y3);
+        ROS_INFO("a: %f b: %f c: %f d:%f", a, b, c, d);
+        ROS_INFO("r: %f, cx: %f cy: %f", r, center_x, center_y);
 
         // Circumference of a circle segment in rad: C = phi * r
         // r = C / phi
@@ -494,11 +568,11 @@ namespace psaf_local_planner
         
 
         ROS_INFO("curvature: %f; distance %f", sum_angle, sum_distance);
-        auto fact = boost::algorithm::clamp(sum_angle * 10  / sum_distance, 0, 1);
+        //auto fact = boost::algorithm::clamp(sum_angle * 10  / sum_distance, 0, 1);
 
         // target_velocity = (max_velocity - fact * (max_velocity - min_velocity));
-        target_velocity = std::min(max_velocity, std::sqrt(1.0 * (sum_distance / sum_angle) * 9.81));
-        ROS_INFO("radius: %f, target vel: %f", (sum_distance / sum_angle), target_velocity);
+        target_velocity = std::min(max_velocity, std::sqrt(1.0 * r * 9.81));
+        ROS_INFO("radius: %f, target vel: %f", r, target_velocity);
     }
 
     /**
