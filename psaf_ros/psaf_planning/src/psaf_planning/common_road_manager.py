@@ -269,7 +269,7 @@ class CommonRoadManager:
                 lane_id = np.random.randint(0, sys.maxsize)
             else:
                 lane_id = np.random.randint(id_start, sys.maxsize)
-            if self.map.lanelet_network.find_lanelet_by_id(lane_id) is None and lane_id is not exclude:
+            if self.map.lanelet_network.find_lanelet_by_id(lane_id) is None and lane_id != exclude:
                 return lane_id
 
     def _add_to_neighbourhood(self, lanelet_id: int, entry: list):
