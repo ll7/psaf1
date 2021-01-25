@@ -535,7 +535,6 @@ namespace psaf_local_planner
         }
 
         middle = first + (last - first) / 2;
-        // find center point of the circle using http://www.ambrsoft.com/TrigoCalc/Circle3D.htm
         double x1 = global_plan[first].pose.position.x;
         double y1 = global_plan[first].pose.position.y;
 
@@ -545,7 +544,12 @@ namespace psaf_local_planner
         double x3 = global_plan[last].pose.position.x;
         double y3 = global_plan[last].pose.position.y;
 
-        double a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
+        auto p1 = tf2::Vector3(x1, y1, 0);
+        auto p2 = tf2::Vector3(x2, y2, 0);
+        auto p3 = tf2::Vector3(x3, y3, 0);
+
+        // find center point of the circle using http://www.ambrsoft.com/TrigoCalc/Circle3D.htm
+        /*double a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
         
         double b =  (x1*x1+y1*y1)*(y3-y2)+(x2*x2+y2*y2)*(y1-y3)+(x3*x3+y3*y3)*(y2-y1);
 
@@ -553,13 +557,23 @@ namespace psaf_local_planner
         double d = (x1*x1 + y1*y1)*(x3*y2 - x2*y3) + (x2*x2 + y2*y2)*(x1*y3-x3*y1)+(x3*x3 + y3*y3)*(x2*y1-x1*y2);
 
         double r = std::sqrt((b * b + c * c - (4 * a * d)) / (4 * a * a));
-        double center_x = - b/(2*a)
-        double center_y = - c/(2*a)
+        double center_x = - b/(2*a);
+        double center_y = - c/(2*a);
 
         ROS_INFO("first: %d, middle: %d, last: %d", first, middle, last);
         ROS_INFO("x1: %f y1: %f x2: %f y2:%f x3: %f y3: %f", x1, y1, x2, y2, x3, y3);
         ROS_INFO("a: %f b: %f c: %f d:%f", a, b, c, d);
-        ROS_INFO("r: %f, cx: %f cy: %f", r, center_x, center_y);
+        ROS_INFO("r: %f, cx: %f cy: %f", r, center_x, center_y);*/
+
+        // next try: 
+        // https://stackoverflow.com/questions/41144224/calculate-curvature-for-3-points-x-y
+        // https://en.wikipedia.org/wiki/Menger_curvature#Definition
+        // https://math.stackexchange.com/questions/516219/finding-out-the-area-of-a-triangle-if-the-coordinates-of-the-three-vertices-are
+        double triangle_area = ((x2 - x1)*(y3 - y1) - (x3 - x1)*(y2 - y1)) / 2.0;
+        double menger = (4 * triangle_area)/(tf2::tf2Distance(p1, p2)*tf2::tf2Distance(p2, p3)*tf2::tf2Distance(p3, p1));
+        double r_m = 1.0 / menger;
+
+        ROS_INFO("r_m: %f; menger: %f", r_m, menger);
 
         // Circumference of a circle segment in rad: C = phi * r
         // r = C / phi
