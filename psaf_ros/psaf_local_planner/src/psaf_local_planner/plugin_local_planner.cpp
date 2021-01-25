@@ -11,7 +11,7 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
                                            bufferSize(1000), initialized(false), closest_point_local_plan(2),
-                                           lookahead_factor(3), max_velocity(15), target_velocity(15), min_velocity(5),
+                                           lookahead_factor(3), max_velocity(30), target_velocity(30), min_velocity(5),
                                            goal_reached(false), estimate_curvature_distance(30), check_collision_max_distance(40), 
                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
     {
@@ -188,7 +188,13 @@ namespace psaf_local_planner
         last_point.setZ(0);
         acutal_point = last_point;
 
-        double desired_distance = std::pow(target_velocity / lookahead_factor, 1.4) + 3;
+        geometry_msgs::PoseStamped vel;
+        odom_helper.getRobotVel(vel);
+
+        // ROS_INFO("velx: %f y: %f", vel.pose.position.x, vel.pose.position.y);
+
+
+        double desired_distance = std::pow(vel.pose.position.x / lookahead_factor, 1.2) + 5;
         double sum_distance = 0;
 
         for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
@@ -585,8 +591,8 @@ namespace psaf_local_planner
         //auto fact = boost::algorithm::clamp(sum_angle * 10  / sum_distance, 0, 1);
 
         // target_velocity = (max_velocity - fact * (max_velocity - min_velocity));
-        target_velocity = std::min(max_velocity, std::sqrt(1.0 * r * 9.81));
-        ROS_INFO("radius: %f, target vel: %f", r, target_velocity);
+        target_velocity = std::min(max_velocity, std::sqrt(1.0 * r_m * 9.81));
+        ROS_INFO("radius: %f, target vel: %f", r_m, target_velocity);
     }
 
     /**
