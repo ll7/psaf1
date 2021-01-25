@@ -24,6 +24,7 @@
 #include <visualization_msgs/Marker.h>
 #include <base_local_planner/line_iterator.h>
 #include <psaf_messages/Obstacle.h>
+#include "psaf_local_planner/PsafLocalPlannerParameterConfig.h"
 
 
 namespace psaf_local_planner {
@@ -98,7 +99,8 @@ namespace psaf_local_planner {
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
         private:
             void publishGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& path);
-            
+            void reconfigure_callback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level);
+
             void deleteOldPoints();
             
             
@@ -111,6 +113,7 @@ namespace psaf_local_planner {
             void checkForSlowCar();
             void globalPlanExtendedCallback(const geometry_msgs::Twist &msg);
             
+            dynamic_reconfigure::Server<psaf_local_planner::PsafLocalPlannerParameterConfig> *dyn_serv;
 
             geometry_msgs::PoseStamped& find_lookahead_target();
 

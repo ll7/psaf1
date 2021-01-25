@@ -13,9 +13,51 @@ namespace psaf_local_planner
                                            bufferSize(1000), initialized(false), closest_point_local_plan(2),
                                            lookahead_factor(4), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false), estimate_curvature_distance(30), check_collision_max_distance(40), 
-                                           slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(2)
+                                           slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
     {
         std::cout << "Hi";
+    }
+
+    void PsafLocalPlanner::reconfigure_callback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level) {
+       ROS_INFO("Reconfigure Request");
+    }
+
+
+
+    /**
+     * Constructs the local planner.
+     */
+    void PsafLocalPlanner::initialize(std::string name, tf2_ros::Buffer *tf, costmap_2d::Costmap2DROS *costmap_ros)
+    {
+        if (!initialized)
+        {
+            ros::NodeHandle private_nh("~/" + name);
+            g_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_global_plan", 1);
+            obstacle_pub = private_nh.advertise<psaf_messages::Obstacle>("/psaf/planning/obstacle", 1);
+            //l_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_local_plan", 1);
+            debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
+
+            global_plan_extended_sub = private_nh.subscribe("psaf_global_plan_extended_TODODODODODODODO", 10, &PsafLocalPlanner::globalPlanExtendedCallback, this);
+            planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
+            this->costmap_ros = costmap_ros;
+            
+            dyn_serv = new dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>(private_nh);
+            dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigure_callback, this, _1, _2);
+            dyn_serv->setCallback(f);
+
+            initialized = true;
+        }
+        else
+        {
+            ROS_WARN("Node is already inited");
+        }
+    }
+
+    PsafLocalPlanner::~PsafLocalPlanner()
+    {
+        g_plan_pub.shutdown();
+        vel_sub.shutdown();
+        delete dyn_serv;
     }
 
     /**
@@ -64,47 +106,11 @@ namespace psaf_local_planner
 
     }
 
-    void velocityCallback(const geometry_msgs::Twist &msg)
-    {
-    }
-
     void PsafLocalPlanner::globalPlanExtendedCallback(const geometry_msgs::Twist &msg)
     {
     }
 
     
-
-    /**
-     * Constructs the local planner.
-     */
-    void PsafLocalPlanner::initialize(std::string name, tf2_ros::Buffer *tf, costmap_2d::Costmap2DROS *costmap_ros)
-    {
-        if (!initialized)
-        {
-            ros::NodeHandle private_nh("~/" + name);
-            g_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_global_plan", 1);
-            obstacle_pub = private_nh.advertise<psaf_messages::Obstacle>("/psaf/planning/obstacle", 1);
-            //l_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_local_plan", 1);
-            debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
-
-            vel_sub = private_nh.subscribe("psaf_velocity_plan", 10, velocityCallback);
-            global_plan_extended_sub = private_nh.subscribe("psaf_global_plan_extended_TODODODODODODODO", 10, &PsafLocalPlanner::globalPlanExtendedCallback, this);
-            planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
-            this->costmap_ros = costmap_ros;
-
-            initialized = true;
-        }
-        else
-        {
-            ROS_WARN("Node is already inited");
-        }
-    }
-
-    PsafLocalPlanner::~PsafLocalPlanner()
-    {
-        g_plan_pub.shutdown();
-        vel_sub.shutdown();
-    }
 
     /**
      * Given the current position, orientation, and velocity of the robot, compute velocity commands to send to the base.

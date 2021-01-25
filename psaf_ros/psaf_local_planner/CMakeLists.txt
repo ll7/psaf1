@@ -110,7 +110,9 @@ find_package(catkin REQUIRED COMPONENTS
 #   cfg/DynReconf1.cfg
 #   cfg/DynReconf2.cfg
 # )
-#generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
+generate_dynamic_reconfigure_options(config/PsafLocalPlannerParameter.cfg)
+
+
 
 ###################################
 ## catkin specific configuration ##
