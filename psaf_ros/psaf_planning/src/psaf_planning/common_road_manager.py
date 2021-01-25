@@ -354,7 +354,11 @@ class CommonRoadManager:
 
         # add obstacle
         if static_obstacle is not None:
-            self.map.lanelet_network.find_lanelet_by_id(matching_2).add_static_obstacle_to_lanelet(
-                static_obstacle.obstacle_id)
+            if matching_2 is not None:
+                self.map.lanelet_network.find_lanelet_by_id(matching_2).add_static_obstacle_to_lanelet(
+                    static_obstacle.obstacle_id)
+            else:
+                self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).add_static_obstacle_to_lanelet(
+                    static_obstacle.obstacle_id)
             self.map.add_objects(static_obstacle)
         return matching_1, matching_2
