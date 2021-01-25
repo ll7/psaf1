@@ -163,8 +163,6 @@ namespace psaf_local_planner
                 //std::vector<RaytraceCollisionData> collisions = {};
                 //raytraceSemiCircle(M_PI * 3/2, 30, collisions);
 
-                ROS_INFO("vel diff: %f", velocity_distance_diff);
-
 
                 cmd_vel.linear.x = target_velocity - velocity_distance_diff;
                 cmd_vel.angular.z = angle;
@@ -505,7 +503,6 @@ namespace psaf_local_planner
                 // indendet purpose of this: 
                 // find three points on the curvature
                 sum_angle += abs(angle);
-                ROS_INFO("angle: %f", angle);
                 if (abs(angle) < 0.0001) {
                     // find first point on circle
                     if (!hasNonZero) {
@@ -579,15 +576,11 @@ namespace psaf_local_planner
         double menger = (4 * triangle_area)/(tf2::tf2Distance(p1, p2)*tf2::tf2Distance(p2, p3)*tf2::tf2Distance(p3, p1));
         double r_m = 1.0 / menger;
 
-        ROS_INFO("r_m: %f; menger: %f", r_m, menger);
-
         // Circumference of a circle segment in rad: C = phi * r
         // r = C / phi
         // max speed in curves: v <= sqrt(µ_haft * r * g)
         // µ_haft ~= 0.8 - 1.0
         
-
-        ROS_INFO("curvature: %f; distance %f", sum_angle, sum_distance);
         //auto fact = boost::algorithm::clamp(sum_angle * 10  / sum_distance, 0, 1);
 
         // target_velocity = (max_velocity - fact * (max_velocity - min_velocity));
