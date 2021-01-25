@@ -4,7 +4,7 @@ import rospy
 
 from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 from psaf_abstraction_layer.sensors.SegmentationCamera import SegmentationCamera,Tag
-from psaf_perception.AbstractDetector import AbstractDetector, DetectedObject, Labels
+from psaf_perception.detectors.AbstractDetector import AbstractDetector, DetectedObject, Labels
 
 
 class StopLineDetector(AbstractDetector):
