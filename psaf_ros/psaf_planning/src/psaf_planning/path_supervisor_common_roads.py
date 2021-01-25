@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import sys
 
 from psaf_messages.msg import Obstacle
@@ -31,16 +29,18 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         if not self.busy and self.manager.map is not None and len(self.path.poses) > 0:
             self.busy = True
             # check if an old
-            #if self.last_id >= obstacle.id:
-            #    rospy.logerr("PathSupervisor: replanning aborted, received an old replaning msg !!")
-            #    self.status_pub.publish("Replanning aborted, received an old replaning msg")
-            #    self.busy = False
-            #    return
+            if self.last_id >= obstacle.id:
+                rospy.logerr("PathSupervisor: replanning aborted, received an old replaning msg !!")
+                self.status_pub.publish("Replanning aborted, received an old replaning msg")
+                self.busy = False
+                return
             self.last_id = obstacle.id
             self.status_pub.publish("Start Replanning")
             # create a clean slate
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
+            self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
+            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)
             for point in obstacle.obstacles:
                 if self._add_obstacle(point):
                     self.status_pub.publish("Replanning done")
@@ -48,8 +48,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self._replan()
             self.busy = False
         else:
-            rospy.logerr("PathSupervisor: replanning aborted, unknown action !!")
-            self.status_pub.publish("Replanning aborted, unknown action")
+            rospy.logerr("PathSupervisor: replanning aborted, contact support !!")
+            self.status_pub.publish("Replanning aborted, contact support")
 
     def _add_obstacle(self, obstacle: Point):
         """
@@ -61,13 +61,14 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         obs_pos_y = obstacle.y
         car_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([curr_pos.x, curr_pos.y])])
         matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([obs_pos_x, obs_pos_y])])
-
-        rospy.loginfo("found car in lanelet: " + str(matching_lanelet[0]))
-
         # check if the obstacle is within a lanelet
         if len(matching_lanelet[0]) == 0:
-            rospy.logerr("PathSupervisor: Replanning aborted, obstacle not in a lanelet -> no interfering !!")
-            self.status_pub.publish("Replanning aborted, obstacle not in a lanelet -> no interfering")
+            rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle not in a lanelet -> no interfering !!")
+            self.status_pub.publish("Ignoring obstacle, obstacle not in a lanelet -> no interfering")
+            return False
+        if self.manager.message_by_lanelet[matching_lanelet[0][0]].isAtIntersection:
+            rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle on a intersection !!")
+            self.status_pub.publish("Ignoring obstacle, obstacle on a intersection")
             return False
         if len(car_lanelet[0]) == 0:
             rospy.logerr("PathSupervisor: Car is not on a lanelet, abort !!")
@@ -76,8 +77,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         lanelet: Lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(car_lanelet[0][0])
         # case single road in current direction
         if lanelet.adj_left_same_direction is False and lanelet.adj_right_same_direction is False:
-            rospy.logerr("PathSupervisor: Replanning aborted, single road in current direction !!")
-            self.status_pub.publish("Replanning aborted, single road in current direction")
+            rospy.logerr("PathSupervisor: Ignoring obstacle, single road in current direction !!")
+            self.status_pub.publish("Ignoring obstacle, single road in current direction")
             return False
         # case at least one neighbouring lane and no solid line
         elif lanelet.adj_right_same_direction is not None or lanelet.adj_left_same_direction is not None:
@@ -94,14 +95,17 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
             if car_lanelet[0][0] == matching_lanelet[0][0]:
                 # add the static obstacle to the scenario
-                split_ids = self.manager.update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0), curr_pos,
-                                                      static_obstacle)
-                split_point = Point(self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
-                                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
+                split_ids = self.manager.update_network(matching_lanelet[0][0], Point(obs_pos_x, obs_pos_y, 0),
+                                                        curr_pos,
+                                                        static_obstacle)
+                split_point = Point(
+                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
+                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
                 self.manager.update_network(split_ids[0], curr_pos, split_point, None)
             else:
                 if static_obstacle is not None:
-                    self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0]).add_static_obstacle_to_lanelet(
+                    self.manager.map.lanelet_network.find_lanelet_by_id(
+                        matching_lanelet[0][0]).add_static_obstacle_to_lanelet(
                         static_obstacle.obstacle_id)
                     self.manager.map.add_objects(static_obstacle)
 
@@ -133,7 +137,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
 
 def main():
-    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
+    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=True)
     rospy.spin()
 
 
