@@ -10,6 +10,7 @@ class LabelGroups(Enum):
     Speed = 1
     TrafficLight = 2
     RightOfWay = 3
+    RoadLine = 4
 
 
 class Labels(Enum):
@@ -56,6 +57,8 @@ class Labels(Enum):
     TrafficLightRed = (21, "Traffic light red", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
     TrafficLightYellow = (22, "Traffic light yellow", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
     TrafficLightGreen = (23, "Traffic light green", {LabelGroups.TrafficLight, LabelGroups.RightOfWay})
+
+    StopLine = (30,"Stop line",{LabelGroups.RoadLine})
 
     Other = (99, "Other")
 

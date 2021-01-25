@@ -53,6 +53,8 @@ add_message_files(
    StopMark.msg
    StopSign.msg
    TrafficLight.msg
+   StopLineInfo.msg
+   StopLine.msg
    Obstacle.msg
 )
 
