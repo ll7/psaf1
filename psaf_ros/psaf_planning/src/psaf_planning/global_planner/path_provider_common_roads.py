@@ -55,6 +55,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter))
         self.route_id = 0
         rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
+        self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
         self.status_pub.publish("PathProvider ready")
 
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
@@ -273,7 +274,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
         best_path = None
         for route in routes_list:
             extended_path, time_spent = self._generate_extended_route_path(route)
-
+            if self.enable_debug:
+                for xlane in extended_path.route:
+                    for portion in xlane.route_portion:
+                        route.reference_path.append([portion.x, portion.y])
+                route.reference_path = np.array(route.reference_path)
             if time_spent < min_value:
                 min_value = time_spent
                 best_path = extended_path
@@ -376,38 +381,38 @@ class PathProviderCommonRoads(PathProviderAbstract):
         candidate_holder = route_planner.plan_routes()
         all_routes, num_routes = candidate_holder.retrieve_all_routes()
 
-        if debug:
-            # if debug: show results in .png
-            for i in range(0, num_routes):
-                self._visualization(all_routes[i], i)
 
         rospy.loginfo("PathProvider: Computing feasible path from a to b")
         path_poses = []
+        x_route = XRoute(id=-1)
         if num_routes >= 1:
             x_route = self._get_shortest_route(all_routes)
-
             # Path was found!
-            # Prune path to get exact start and end points
-            real_start_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[0].route_portion,
-                                                                               start_point, prematured_stop=True,
-                                                                               use_posestamped=False)
-            x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
-            real_end_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[-1].route_portion,
-                                                                             target_point, prematured_stop=True,
-                                                                             use_posestamped=False)
-            x_route.route[-1].route_portion = x_route.route[-1].route_portion[:real_end_index]
-
             for lane in x_route.route:
                 prev_local_point = None
-                for point in lane:
+                for point in lane.route_portion:
                     local_point = Point(point.x, point.y, 0)
                     if prev_local_point is None:
                         prev_local_point = local_point
 
                     path_poses.append(self._get_pose_stamped(local_point, prev_local_point))
                     prev_local_point = local_point
-
+            # Prune path to get exact start and end points
+            real_start_index = PathProviderCommonRoads.find_nearest_path_index(path_poses,
+                                                                               start_point,
+                                                                               prematured_stop=True,
+                                                                               use_posestamped=True)
+            x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
+            real_end_index = PathProviderCommonRoads.find_nearest_path_index(path_poses,
+                                                                             target_point, prematured_stop=True,
+                                                                             use_posestamped=True)
+            x_route.route[-1].route_portion = x_route.route[-1].route_portion[:real_end_index]
+            if debug:
+                # if debug: show results in .png
+                for i in range(0, num_routes):
+                    self._visualization(all_routes[i], i)
             rospy.loginfo("PathProvider: Computation of feasible path done")
+
 
         else:
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
@@ -419,6 +424,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         # create self.path messages
         self._create_path_message(path_poses, debug)
+        self.xroute_pub.publish(x_route)
 
     def _reset_map(self):
         # first reset map

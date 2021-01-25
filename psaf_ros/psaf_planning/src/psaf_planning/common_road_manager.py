@@ -12,6 +12,7 @@ import numpy as np
 import rospy
 import sys
 
+
 class CommonRoadManager:
 
     def __init__(self, hd_map: Scenario, default_speed: int = 50):
@@ -30,6 +31,7 @@ class CommonRoadManager:
         self._fill_dicts()
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
+        self.original_time_by_lanelet = deepcopy(self.time_by_lanelet)
 
     # just for now , remove later !!!!!
     def _dummy_test(self, id_insert):
@@ -49,12 +51,18 @@ class CommonRoadManager:
         sign = TrafficSign(16, first_occurrence=deepcopy(id_set), position=pos, traffic_sign_elements=[signelement])
         self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
 
-    def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int):
+    def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int, sep_index: int):
         # remove old lanelet from dict
         del self.message_by_lanelet[matching_lanelet_id]
         # add the new lanelets to the dict
         self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_front))
         self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back))
+        # add new time
+        self.time_by_lanelet[lanelet_front] = self.time_by_lanelet[matching_lanelet_id][:sep_index]
+        self.time_by_lanelet[lanelet_back] = [x - self.time_by_lanelet[matching_lanelet_id][sep_index] for x in
+                                              self.time_by_lanelet[matching_lanelet_id][sep_index:]]
+        # remove old time from dict
+        del self.time_by_lanelet[matching_lanelet_id]
 
     def _fill_dicts(self):
         rospy.loginfo("CommonRoadManager: Message and duration hashmap calculation started!")
@@ -72,12 +80,12 @@ class CommonRoadManager:
         duration = [0]
 
         for i in range(1, len(waypoint_list)):
-            prev = np.array((waypoint_list[i-1].x, waypoint_list[i-1].y, waypoint_list[i-1].z))
+            prev = np.array((waypoint_list[i - 1].x, waypoint_list[i - 1].y, waypoint_list[i - 1].z))
             curr = np.array((waypoint_list[i].x, waypoint_list[i].y, waypoint_list[i].z))
-            distance = np.linalg.norm(curr-prev)
+            distance = np.linalg.norm(curr - prev)
             # calculate time by distance [m] and speed [km/h] -> transform to [m/s]
-            time_spent = distance / (waypoint_list[i-1].speed / 3.6)
-            duration.append(duration[i-1] + time_spent)
+            time_spent = distance / (waypoint_list[i - 1].speed / 3.6)
+            duration.append(duration[i - 1] + time_spent)
 
         self.time_by_lanelet[lanelet.lanelet_id] = duration
 
@@ -141,11 +149,10 @@ class CommonRoadManager:
         """
         # get the successor of the successor of the given lanelet
         lane = lanelet
-        for i in range(0, 2):
-            if len(lane.successor) == 0:
-                return False
-            succ = lanelet.successor[0]
-            lane = self.map.lanelet_network.find_lanelet_by_id(succ)
+        if len(lane.successor) == 0:
+            return False
+        succ = lanelet.successor[0]
+        lane = self.map.lanelet_network.find_lanelet_by_id(succ)
 
         # check for the amount of predecessor
         return len(lane.predecessor) > 1
@@ -245,7 +252,7 @@ class CommonRoadManager:
             self.map.lanelet_network.add_lanelet(lanelet_2)
             # clean references
             self._fast_reference_cleanup(lanelet_id)
-            self._update_message_dict(lanelet_copy.lanelet_id, id_lane_2, id_lane_1)
+            self._update_message_dict(lanelet_copy.lanelet_id, id_lane_2, id_lane_1, sep_index)
             return id_lane_1, id_lane_2
         return None, None
 
