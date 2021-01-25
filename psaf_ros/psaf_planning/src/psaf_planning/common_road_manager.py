@@ -12,7 +12,6 @@ import numpy as np
 import rospy
 import sys
 
-
 class CommonRoadManager:
 
     def __init__(self, hd_map: Scenario, default_speed: int = 50):
@@ -24,20 +23,10 @@ class CommonRoadManager:
         self.neighbourhood = self._analyze_neighbourhood(self.original_map)
         self.original_neighbourhood = deepcopy(self.neighbourhood)
         self.message_by_lanelet = {}
-        self.time_by_lanelet = {}
 
         # test scenario
-        self._dummy_test(368)
-
-        self._fill_dicts()
-        self.original_map = deepcopy(self.map)
-        self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
-        self.original_time_by_lanelet = deepcopy(self.time_by_lanelet)
-
-    # just for now , remove later !!!!!
-    def _dummy_test(self, id_insert):
-        pos = len(self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices) // 2
-        pos = self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices[pos]
+        pos = len(self.original_map.lanelet_network.find_lanelet_by_id(100).center_vertices) // 2
+        pos = self.original_map.lanelet_network.find_lanelet_by_id(100).center_vertices[pos]
         traffic_light = TrafficLight(1, [], pos)
         id_set = set()
         id_set.add(100)
@@ -45,50 +34,15 @@ class CommonRoadManager:
 
         self._fill_message_dict()
 
-    def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int, sep_index: int):
-        # remove old lanelet from dict
-        del self.message_by_lanelet[matching_lanelet_id]
-        # add the new lanelets to the dict
-        self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_front))
-        self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back))
-        # add new time
-        self.time_by_lanelet[lanelet_front] = self.time_by_lanelet[matching_lanelet_id][:sep_index]
-        self.time_by_lanelet[lanelet_back] = [x - self.time_by_lanelet[matching_lanelet_id][sep_index] for x in
-                                              self.time_by_lanelet[matching_lanelet_id][sep_index:]]
-        # remove old time from dict
-        del self.time_by_lanelet[matching_lanelet_id]
+    def _fill_message_dict(self):
+        rospy.loginfo("CommonRoadManager: Message Hashmap calculation started!")
 
-    def _fill_dicts(self):
-        rospy.loginfo("CommonRoadManager: Message and duration hashmap calculation started!")
-        for lanelet in self.map.lanelet_network.lanelets:
-            self._generate_XLanelet(lanelet)
-            self._generate_duration_dict(lanelet)
-        rospy.loginfo("CommonRoadManager: Hashmap calculation done!")
-
-    def _generate_duration_dict(self, lanelet: Lanelet):
-        x_lanelet = self.message_by_lanelet[lanelet.lanelet_id]
-        waypoint_list = x_lanelet.route_portion
-
-        # create the duration list, which will be filled with the cumulative sum
-        # entry for first waypoint is zero, because there is not yet any time spent on that lanelet
-        duration = [0]
-
-        for i in range(1, len(waypoint_list)):
-            prev = np.array((waypoint_list[i - 1].x, waypoint_list[i - 1].y, waypoint_list[i - 1].z))
-            curr = np.array((waypoint_list[i].x, waypoint_list[i].y, waypoint_list[i].z))
-            distance = np.linalg.norm(curr - prev)
-            # calculate time by distance [m] and speed [km/h] -> transform to [m/s]
-            time_spent = distance / (waypoint_list[i - 1].speed / 3.6)
-            duration.append(duration[i - 1] + time_spent)
-
-        self.time_by_lanelet[lanelet.lanelet_id] = duration
-
-    def _generate_XLanelet(self, lanelet: Lanelet):
-        stop = False
-        for sign_id in lanelet.traffic_signs:
-            sign = self.map.lanelet_network.find_traffic_sign_by_id(sign_id)
-            if sign.traffic_sign_elements[0].traffic_sign_element_id == TrafficSignIDGermany.STOP:
-                stop = True
+        for lanelet in self.original_map.lanelet_network.lanelets:
+            stop = False
+            for sign_id in lanelet.traffic_signs:
+                sign = self.original_map.lanelet_network.find_traffic_sign_by_id(sign_id)
+                if sign.traffic_sign_elements[0].traffic_sign_element_id == TrafficSignIDGermany.STOP:
+                    stop = True
 
             light = len(lanelet.traffic_lights) > 0
             intersection = self._check_in_lanelet_for_intersection(lanelet)
@@ -144,10 +98,11 @@ class CommonRoadManager:
         """
         # get the successor of the successor of the given lanelet
         lane = lanelet
-        if len(lane.successor) == 0:
-            return False
-        succ = lanelet.successor[0]
-        lane = self.map.lanelet_network.find_lanelet_by_id(succ)
+        for i in range(0, 2):
+            if len(lane.successor) == 0:
+                return False
+            succ = lanelet.successor[0]
+            lane = self.original_map.lanelet_network.find_lanelet_by_id(succ)
 
         # check for the amount of predecessor
         return len(lane.predecessor) > 1
@@ -230,7 +185,6 @@ class CommonRoadManager:
             self.map.lanelet_network.add_lanelet(lanelet_2)
             # clean references
             self._fast_reference_cleanup(lanelet_id)
-            self._update_message_dict(lanelet_copy.lanelet_id, id_lane_2, id_lane_1, sep_index)
             return id_lane_1, id_lane_2
         return None, None
 

@@ -50,10 +50,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.path_poses = []
         self.planning_problem = None
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter))
-        self.route_id = 0
-        rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
-        self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
-        self.status_pub.publish("PathProvider ready")
 
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
@@ -267,64 +263,35 @@ class PathProviderCommonRoads(PathProviderAbstract):
         :param routes_list: list, which contains every generated route
         :return: shortest route determined by the number of points in the path
         """
-        min_value = float("inf")
-        best_path = None
-        for route in routes_list:
-            extended_path, time_spent = self._generate_extended_route_path(route)
-            if self.enable_debug:
-                for xlane in extended_path.route:
-                    for portion in xlane.route_portion:
-                        route.reference_path.append([portion.x, portion.y])
-                route.reference_path = np.array(route.reference_path)
-            if time_spent < min_value:
-                min_value = time_spent
-                best_path = extended_path
+        min_length = len(routes_list[0].reference_path)
+        min_index = 0
+        for index, route in enumerate(routes_list):
+            if len(route.reference_path) < min_length:
+                min_length = len(route.reference_path)
+                min_index = index
+        return self._generate_route_path(routes_list[min_index])
 
-        self.route_id += 1
-        best_path.id = self.route_id
-        return best_path
-
-    def _generate_extended_route_path(self, route: Route):
-        """
-        Generate the extended_route_path and provide a heuristic evaluation of the time,
-        passed while traveling on that route
-        :param route: Route
-        :return: extended route and its corresponding time duration heuristic
-        """
+    def _generate_route_path(self, route: Route):
         lane_change_instructions = route._compute_lane_change_instructions()
-        extended_route = XRoute(id=self.route_id, route=[])
+        path = []
         do_lane_change = False
-        time = 0
         for i, lane_id in enumerate(route.list_ids_lanelets):
             if lane_change_instructions[i] == 0:
                 if not do_lane_change:
-                    extended_route.route.append(deepcopy(self.manager.message_by_lanelet[lane_id]))
-                    time += self.manager.time_by_lanelet[lane_id][-1]
-
-                    # heuristic adds defined amount of seconds for each traffic light
-                    time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
+                    path.extend(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices)
                 else:
-                    message = deepcopy(self.manager.message_by_lanelet[lane_id])
-                    message.route_portion = message.route_portion[len(message.route_portion) // 2:]
-                    extended_route.route.append(deepcopy(message))
-                    time += self.manager.time_by_lanelet[lane_id][-1] - self.manager.time_by_lanelet[lane_id][
-                        len(message.route_portion) // 2]
-
-                    # heuristic adds defined amount of seconds for each traffic light
-                    time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
-
+                    path.extend(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
+                                len(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices) // 2:])
                     do_lane_change = False
             else:
                 if not do_lane_change:
-                    message = deepcopy(self.manager.message_by_lanelet[lane_id])
-                    message.route_portion = message.route_portion[:len(message.route_portion) // 2]
-                    extended_route.route.append(deepcopy(message))
-                    time += self.manager.time_by_lanelet[lane_id][len(message.route_portion) // 2]
+                    path.extend(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
+                                :len(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices) // 2])
                 else:
                     path.extend(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices[
                                 len(self.manager.map.lanelet_network.find_lanelet_by_id(lane_id).center_vertices) // 2:])
                 do_lane_change = True
-        return extended_route, time
+        return path
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
@@ -377,39 +344,40 @@ class PathProviderCommonRoads(PathProviderAbstract):
         candidate_holder = route_planner.plan_routes()
         all_routes, num_routes = candidate_holder.retrieve_all_routes()
 
+        if debug:
+            # if debug: show results in .png
+            for i in range(0, num_routes):
+                self._visualization(all_routes[i], i)
 
         rospy.loginfo("PathProvider: Computing feasible path from a to b")
         path_poses = []
-        x_route = XRoute(id=-1)
         if num_routes >= 1:
-            x_route = self._get_shortest_route(all_routes)
-            # Path was found!
-            for lane in x_route.route:
-                prev_local_point = None
-                for point in lane.route_portion:
-                    local_point = Point(point.x, point.y, 0)
-                    if prev_local_point is None:
-                        prev_local_point = local_point
-
-                    path_poses.append(self._get_pose_stamped(local_point, prev_local_point))
+            route = self._get_shortest_route(all_routes)
+            prev_local_point = None
+            for path_point in route:
+                local_point = Point(path_point[0], path_point[1], 0)
+                if prev_local_point is None:
                     prev_local_point = local_point
+
+                path_poses.append(self._get_pose_stamped(local_point, prev_local_point))
+                prev_local_point = local_point
+
+            # Path was found!
             # Prune path to get exact start and end points
-            real_start_index = PathProviderCommonRoads.find_nearest_path_index(path_poses,
-                                                                               start_point,
-                                                                               prematured_stop=True,
-                                                                               use_posestamped=True)
-            x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
-            real_end_index = PathProviderCommonRoads.find_nearest_path_index(path_poses,
-                                                                             target_point, prematured_stop=True,
-                                                                             use_posestamped=True)
-            x_route.route[-1].route_portion = x_route.route[-1].route_portion[:real_end_index]
-            if debug:
-                # if debug: show results in .png
-                for i in range(0, num_routes):
-                    self._visualization(all_routes[i], i)
-            rospy.loginfo("PathProvider: Computation of feasible path done")
+            real_start_index = PathProviderCommonRoads.find_nearest_path_index(path_poses, start_point,
+                                                                               prematured_stop=True)
+            real_end_index = PathProviderCommonRoads.find_nearest_path_index(path_poses, target_point, True, True)
+            path_poses_shortened = path_poses[real_start_index:real_end_index]
 
+            rospy.loginfo("PathProvider: Points in path: {}".format(len(path_poses_shortened)))
+            # check if you are already closer to end point than to start point (rare condition)
+            if len(path_poses_shortened) == 0:
+                path_poses_shortened.append(path_poses[real_end_index])
+                rospy.logerr("PathProvider: Already close to target point, no path output was generated")
+            else:
+                rospy.loginfo("PathProvider: Computation of feasible path done")
 
+            path_poses = path_poses_shortened
         else:
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
             path_poses.append(self._get_pose_stamped(start_point, start_point))
@@ -420,7 +388,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         # create self.path messages
         self._create_path_message(path_poses, debug)
-        self.xroute_pub.publish(x_route)
 
     def _reset_map(self):
         # first reset map

@@ -41,8 +41,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             # create a clean slate
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
-            self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
-            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)
             for point in obstacle.obstacles:
                 if self._add_obstacle(point):
                     self.status_pub.publish("Replanning done")
@@ -50,8 +48,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self._replan()
             self.busy = False
         else:
-            rospy.logerr("PathSupervisor: replanning aborted, contact support !!")
-            self.status_pub.publish("Replanning aborted, contact support")
+            rospy.logerr("PathSupervisor: replanning aborted, unknown action !!")
+            self.status_pub.publish("Replanning aborted, unknown action")
 
     def _add_obstacle(self, obstacle: Point):
         """
@@ -68,18 +66,14 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
         # check if the obstacle is within a lanelet
         if len(matching_lanelet[0]) == 0:
-            rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle not in a lanelet -> no interfering !!")
-            self.status_pub.publish("Ignoring obstacle, obstacle not in a lanelet -> no interfering")
-            return False
-        if self.manager.message_by_lanelet[matching_lanelet[0][0]].isAtIntersection:
-            rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle on a intersection !!")
-            self.status_pub.publish("Ignoring obstacle, obstacle on a intersection")
+            rospy.logerr("PathSupervisor: Replanning aborted, obstacle not in a lanelet -> no interfering !!")
+            self.status_pub.publish("Replanning aborted, obstacle not in a lanelet -> no interfering")
             return False
         lanelet: Lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(car_lanelet[0][0])
         # case single road in current direction
         if lanelet.adj_left_same_direction is False and lanelet.adj_right_same_direction is False:
-            rospy.logerr("PathSupervisor: Ignoring obstacle, single road in current direction !!")
-            self.status_pub.publish("Ignoring obstacle, single road in current direction")
+            rospy.logerr("PathSupervisor: Replanning aborted, single road in current direction !!")
+            self.status_pub.publish("Replanning aborted, single road in current direction")
             return False
         # case at least one neighbouring lane and no solid line
         elif lanelet.adj_right_same_direction is not None or lanelet.adj_left_same_direction is not None:
