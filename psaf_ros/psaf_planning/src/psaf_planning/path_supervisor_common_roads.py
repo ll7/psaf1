@@ -70,6 +70,10 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle on a intersection !!")
             self.status_pub.publish("Ignoring obstacle, obstacle on a intersection")
             return False
+        if len(car_lanelet[0]) == 0:
+            rospy.logerr("PathSupervisor: Car is not on a lanelet, abort !!")
+            self.status_pub.publish("Car is not on a lanelet, abort !! ")
+            return False
         lanelet: Lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(car_lanelet[0][0])
         # case single road in current direction
         if lanelet.adj_left_same_direction is False and lanelet.adj_right_same_direction is False:
