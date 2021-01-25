@@ -272,47 +272,57 @@ class PathProviderCommonRoads(PathProviderAbstract):
         min_value = float("inf")
         best_path = None
         for route in routes_list:
-            traffic_lights_cnt = 0
-            time_spent = 0
-            extended_path = self._generate_extended_route_path(route, skip_id=True)
-            for lane in extended_path.route:
-                time_spent += lane.time_spent
-                traffic_lights_cnt += int(lane.hasLight)
+            extended_path, time_spent = self._generate_extended_route_path(route)
 
-            # heuristic adds defined amount of seconds for each traffic light
-            temp_value = time_spent + traffic_lights_cnt * 30
-
-            if temp_value < min_value:
-                min_value = temp_value
+            if time_spent < min_value:
+                min_value = time_spent
                 best_path = extended_path
 
+        self.route_id += 1
+        best_path.id = self.route_id
         return best_path
 
-    def _generate_extended_route_path(self, route: Route, skip_id=False):
+    def _generate_extended_route_path(self, route: Route):
+        """
+        Generate the extended_route_path and provide a heuristic evaluation of the time,
+        passed while traveling on that route
+        :param route: Route
+        :return: extended route and its corresponding time duration heuristic
+        """
         lane_change_instructions = route._compute_lane_change_instructions()
         extended_route = XRoute(id=self.route_id, route=[])
-        if not skip_id:
-            self.route_id += 1
         do_lane_change = False
+        time = 0
         for i, lane_id in enumerate(route.list_ids_lanelets):
             if lane_change_instructions[i] == 0:
                 if not do_lane_change:
                     extended_route.route.append(deepcopy(self.manager.message_by_lanelet[lane_id]))
+                    time += self.manager.time_by_lanelet[lane_id][-1]
+
+                    # heuristic adds defined amount of seconds for each traffic light
+                    time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
                 else:
                     message = deepcopy(self.manager.message_by_lanelet[lane_id])
                     message.route_portion = message.route_portion[len(message.route_portion) // 2:]
                     extended_route.route.append(deepcopy(message))
+                    time += self.manager.time_by_lanelet[lane_id][-1] - self.manager.time_by_lanelet[lane_id][
+                        len(message.route_portion) // 2]
+
+                    # heuristic adds defined amount of seconds for each traffic light
+                    time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
+
                     do_lane_change = False
             else:
                 if not do_lane_change:
                     message = deepcopy(self.manager.message_by_lanelet[lane_id])
                     message.route_portion = message.route_portion[:len(message.route_portion) // 2]
                     extended_route.route.append(deepcopy(message))
+                    time += self.manager.time_by_lanelet[lane_id][len(message.route_portion) // 2]
                 else:
                     rospy.logerr("This should not have happened, CHECK!")  # TODO: Check if it occurs
 
                 do_lane_change = True
-        return extended_route
+        return extended_route, time
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """

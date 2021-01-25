@@ -22,11 +22,12 @@ class CommonRoadManager:
         self.neighbourhood = self._analyze_neighbourhood(self.map)
         self.original_neighbourhood = deepcopy(self.neighbourhood)
         self.message_by_lanelet = {}
+        self.time_by_lanelet = {}
 
         # test scenario
         self._dummy_test(368)
 
-        self._fill_message_dict()
+        self._fill_dicts()
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
 
@@ -55,11 +56,30 @@ class CommonRoadManager:
         self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_front))
         self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back))
 
-    def _fill_message_dict(self):
-        rospy.loginfo("CommonRoadManager: Message Hashmap calculation started!")
+    def _fill_dicts(self):
+        rospy.loginfo("CommonRoadManager: Message and duration hashmap calculation started!")
         for lanelet in self.map.lanelet_network.lanelets:
             self._generate_XLanelet(lanelet)
-        rospy.loginfo("CommonRoadManager: Message Hashmap calculation done!")
+            self._generate_duration_dict(lanelet)
+        rospy.loginfo("CommonRoadManager: Hashmap calculation done!")
+
+    def _generate_duration_dict(self, lanelet: Lanelet):
+        x_lanelet = self.message_by_lanelet[lanelet.lanelet_id]
+        waypoint_list = x_lanelet.route_portion
+
+        # create the duration list, which will be filled with the cumulative sum
+        # entry for first waypoint is zero, because there is not yet any time spent on that lanelet
+        duration = [0]
+
+        for i in range(1, len(waypoint_list)):
+            prev = np.array((waypoint_list[i-1].x, waypoint_list[i-1].y, waypoint_list[i-1].z))
+            curr = np.array((waypoint_list[i].x, waypoint_list[i].y, waypoint_list[i].z))
+            distance = np.linalg.norm(curr-prev)
+            # calculate time by distance [m] and speed [km/h] -> transform to [m/s]
+            time_spent = distance / (waypoint_list[i-1].speed / 3.6)
+            duration.append(duration[i-1] + time_spent)
+
+        self.time_by_lanelet[lanelet.lanelet_id] = duration
 
     def _generate_XLanelet(self, lanelet: Lanelet):
         stop = False
