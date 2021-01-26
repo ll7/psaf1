@@ -4,6 +4,8 @@
 #include <base_local_planner/goal_functions.h>
 #include <boost/algorithm/clamp.hpp>
 
+
+
 //register this planner as a BaseLocalPlanner plugin
 PLUGINLIB_EXPORT_CLASS(psaf_local_planner::PsafLocalPlanner, nav_core::BaseLocalPlanner)
 
@@ -63,8 +65,32 @@ namespace psaf_local_planner
         }
     }
 
-    void velocityCallback(const geometry_msgs::Twist &msg)
+    void PsafLocalPlanner::velocityCallback(const std_msgs::UInt8::ConstPtr &msg)
     {
+        max_velocity = msg->data / 3.6;
+        ROS_INFO("new speed limit: %f", max_velocity);
+    }
+
+    void PsafLocalPlanner::trafficSignCallback(const psaf_messages::TrafficSignInfo::ConstPtr &msg)
+    {
+        std::vector<psaf_messages::SpeedSign> speed_signs = msg->speedSigns;
+        double speed_limit = -1;
+        int last_dist = std::numeric_limits<int>::max();
+        for (auto it = speed_signs.begin(); it != speed_signs.end(); ++it)
+        {
+            const psaf_messages::SpeedSign &sign = *it;
+            if (sign.x > 0.7 && sign.distance < 8.0)
+            {
+                if (speed_limit < 0 || sign.distance < last_dist)
+                {
+                    speed_limit = (sign.limit / 3.6);
+                    last_dist = sign.distance;
+                }
+
+            }
+        }
+        max_velocity = speed_limit;
+        ROS_INFO("new speed limit: %f", speed_limit);
     }
 
     /**
@@ -77,9 +103,12 @@ namespace psaf_local_planner
             ros::NodeHandle private_nh("~/" + name);
             g_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_global_plan", 1);
             l_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_local_plan", 1);
+            curvature_pub = private_nh.advertise<std_msgs::Float64>("/psaf/local_planner/curvature", 1);
             debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
 
-            vel_sub = private_nh.subscribe("psaf_velocity_plan", 10, velocityCallback);
+            vel_sub = private_nh.subscribe("/psaf/local_planner/speed_limit", 10, &PsafLocalPlanner::velocityCallback, this);
+            //traffic_sign_sub = private_nh.subscribe("/psaf/perception/traffic_signs", 10, &PsafLocalPlanner::trafficSignCallback, this);
+
             planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
             this->costmap_ros = costmap_ros;
 
@@ -95,6 +124,7 @@ namespace psaf_local_planner
     {
         g_plan_pub.shutdown();
         vel_sub.shutdown();
+        traffic_sign_sub.shutdown();
     }
 
     /**
@@ -304,6 +334,10 @@ namespace psaf_local_planner
             point1 = point2;
             point2 = point3;
         }
+
+        std_msgs::Float64 msg;
+        msg.data = sum_angle;
+        curvature_pub.publish(msg);
 
         ROS_INFO("curvature: %f; distance %f", sum_angle, sum_distance);
         auto fact = boost::algorithm::clamp(sum_angle * 10 / sum_distance, 0, 1);

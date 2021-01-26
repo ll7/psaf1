@@ -10,7 +10,7 @@
   <arg name="vehicle_filter" default='vehicle.bmw.grandtourer'/>
   <arg name="spawn_point" default=""/>
   <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
-  <arg name="sensor_definition_file" default='$(find psaf_steering)/config/sensors.json'/>
+  <arg name="sensor_definition_file" default=''/>
 
 
   <!-- Map to load on startup (either a predefined CARLA town (e.g. 'Town01'), or a OpenDRIVE map file) -->

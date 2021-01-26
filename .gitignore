@@ -35,3 +35,5 @@ crashlytics-build.properties
 fabric.properties
 
 *.pyc
+# ignore vscode configs
+.vscode/
