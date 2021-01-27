@@ -11,7 +11,7 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
                                            bufferSize(1000), initialized(false), closest_point_local_plan(2),
-                                           lookahead_factor(3), max_velocity(30), target_velocity(30), min_velocity(5),
+                                           lookahead_factor(3.5), max_velocity(30), target_velocity(30), min_velocity(5),
                                            goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40), 
                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
     {
@@ -190,9 +190,9 @@ namespace psaf_local_planner
         odom_helper.getRobotVel(vel);
 
         // ROS_INFO("velx: %f y: %f", vel.pose.position.x, vel.pose.position.y);
+        double vel_x = std::ceil(std::abs(vel.pose.position.x));
 
-
-        double desired_distance = std::pow(vel.pose.position.x / lookahead_factor, 1.2) + 5;
+        double desired_distance = std::pow(vel_x / lookahead_factor, 1.1) + 5;
         double sum_distance = 0;
 
         for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
