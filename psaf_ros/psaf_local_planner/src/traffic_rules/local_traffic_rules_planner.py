@@ -25,7 +25,7 @@ class Local_Traffic_Rules_Planner:
 
         self.publish_timer = rospy.Timer(rospy.Duration(0.1), self.periodic_planner_input_update)
 
-        self.speed_acceptance_area = np.zeros([3, 3], dtype=float)
+        self.speed_acceptance_area = np.zeros([ 4], dtype=float)
 
         # known upcoming curvature in rad
         self.curvature = 0
