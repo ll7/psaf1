@@ -260,30 +260,30 @@ def parse_scenario_config(configuration, scenario, planning_problem_set):
     max_tree_depth = int(configuration['default']['max_tree_depth'])
 
     # get configuration for each scenario
-    if scenario.benchmark_id in configuration.keys():
+    if scenario.scenario_id in configuration.keys():
         # configuration for specific scenario
         try:
-            vehicle_model = parse_vehicle_model(configuration[scenario.benchmark_id]['vehicle_model'])
+            vehicle_model = parse_vehicle_model(configuration[scenario.scenario_id]['vehicle_model'])
         except KeyError:
             pass
         try:
-            vehicle_type, vehicle_type_id = parse_vehicle_type(configuration[scenario.benchmark_id]['vehicle_type'])
+            vehicle_type, vehicle_type_id = parse_vehicle_type(configuration[scenario.scenario_id]['vehicle_type'])
         except KeyError:
             pass
         try:
-            cost_function = parse_cost_function(configuration[scenario.benchmark_id]['cost_function'])
+            cost_function = parse_cost_function(configuration[scenario.scenario_id]['cost_function'])
         except KeyError:
             pass
         try:
-            planning_problem_idx = int(configuration[scenario.benchmark_id]['planning_problem_idx'])
+            planning_problem_idx = int(configuration[scenario.scenario_id]['planning_problem_idx'])
         except KeyError:
             pass
         try:
-            planner_id = int(configuration[scenario.benchmark_id]['planner'])
+            planner_id = int(configuration[scenario.scenario_id]['planner'])
         except KeyError:
             pass
         try:
-            max_tree_depth = int(configuration[scenario.benchmark_id]['max_tree_depth'])
+            max_tree_depth = int(configuration[scenario.scenario_id]['max_tree_depth'])
         except KeyError:
             pass
 

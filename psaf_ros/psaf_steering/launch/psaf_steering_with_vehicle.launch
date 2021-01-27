@@ -19,7 +19,7 @@
   <!-- Synchronous mode-->
   <arg name='synchronous_mode' default=''/>
   <arg name='synchronous_mode_wait_for_vehicle_control_command' default=''/>
-  <!-- Run at 50 fps-->
+  <!-- Run at 20 fps-->
   <arg name='fixed_delta_seconds' default='0.05'/>
 
   <include file="$(find carla_ros_bridge)/launch/carla_ros_bridge.launch">

@@ -9,6 +9,7 @@ project(psaf_messages)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   std_msgs
+  geometry_msgs
   message_generation
 )
 
@@ -56,6 +57,9 @@ add_message_files(
    StopLineInfo.msg
    StopLine.msg
    Obstacle.msg
+   CenterLineExtended.msg
+   XRoute.msg
+   XLanelet.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -77,6 +81,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   psaf_messages
+  geometry_msgs
 )
 
 ################################################

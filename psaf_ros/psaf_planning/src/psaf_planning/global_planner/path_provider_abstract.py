@@ -6,7 +6,6 @@ from psaf_planning.map_provider import MapProvider
 from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
 from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from nav_msgs.msg import Path
-from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped, Point, Quaternion
 from tf.transformations import quaternion_from_euler
 import math
@@ -19,6 +18,7 @@ from lanelet2.projection import UtmProjector
 from lanelet2.io import Origin
 import numpy as np
 from std_msgs.msg import String
+from copy import deepcopy
 
 
 class PathProviderAbstract:
@@ -41,14 +41,16 @@ class PathProviderAbstract:
         self.role_name = role_name
         self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
         self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
-        rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
         self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
+        self.status_pub.publish("PathProvider not ready")
         self.map_provider = MapProvider()
         self.path = Path()
         self.start = None
         self.start_orientation = None
         self.goal = None
         self.enable_debug = enable_debug
+        self.map = None
+        self.original_map = None
 
     def __del__(self):
         # delete path bag files
@@ -109,7 +111,7 @@ class PathProviderAbstract:
         rel_x = 1 if (pos.x - prev_pos.x) >= 0 else -1
         rel_y = 1 if (pos.y - prev_pos.y) >= 0 else -1
 
-        euler_angle_yaw = math.atan2(rel_y*abs(pos.y - prev_pos.y), rel_x*abs(pos.x - prev_pos.x))
+        euler_angle_yaw = math.atan2(rel_y * abs(pos.y - prev_pos.y), rel_x * abs(pos.x - prev_pos.x))
 
         # only 2D space is relevant, therefore angles beta and gamma can be set to zero
         q = quaternion_from_euler(0.0, 0.0, euler_angle_yaw)
@@ -142,11 +144,17 @@ class PathProviderAbstract:
         if debug:
             rospy.loginfo("PathProvider: Created bag file with path. ../psaf_scenario/scenarios/")
 
+    @abstractmethod
+    def _reset_map(self):
+        pass
+
     def _callback_goal(self, data):
         """
         Callback function of psaf goal set subscriber
         :param data: data received
         """
+        self._reset_map()
+
         self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
         self.start = self.GPS_Sensor.get_position()
         self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
@@ -202,10 +210,10 @@ class PathProviderAbstract:
         max_len_rviz = 16384
 
         # get index list of elements without start and target index
-        index_list = np.array(list(range(1, len(path_poses)-2)))
+        index_list = np.array(list(range(1, len(path_poses) - 2)))
 
         # get index of elements which should be deleted
-        index_list_to_del = np.random.choice(index_list, len(path_poses)-max_len_rviz, replace=False, p=None)
+        index_list_to_del = np.random.choice(index_list, len(path_poses) - max_len_rviz, replace=False, p=None)
 
         # delete and return
         return np.delete(path_poses, index_list_to_del).tolist()

@@ -105,8 +105,8 @@ class RoutePlanner:
         self.backend = backend
 
         self.scenario = scenario
-        self.scenario_id = scenario.benchmark_id
-        #self.scenario_id = scenario.scenario_id
+        #self.scenario_id = scenario.benchmark_id
+        self.scenario_id = scenario.scenario_id
         self.lanelet_network = scenario.lanelet_network
         self.planning_problem = planning_problem
 

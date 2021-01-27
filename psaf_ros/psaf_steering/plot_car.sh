@@ -1,0 +1,1 @@
+rqt_plot /carla/ego_vehicle/ackermann_control/control_info/target/steering_angle:speed carla/ego_vehicle/ackermann_control/control_info/current/speed carla/ego_vehicle/ackermann_control/control_info/output/steer:brake carla/ego_vehicle/ackermann_control/control_info/status/speed_control_accel_target
