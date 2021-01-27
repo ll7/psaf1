@@ -1,3 +1,4 @@
+# commonroad-search
 commonroad-io==2020.3
 tqdm~=4.50.2
 networkx>=2.4
@@ -10,6 +11,8 @@ pyyaml~=5.3.1
 imageio~=2.9.0
 shapely>=1.6.4.post2
 setuptools>=42.0.1
+
+# opendrive to lanelet
 lxml>=4.3.4
 pyproj>=2.2.0
 scipy>=1.3.0
