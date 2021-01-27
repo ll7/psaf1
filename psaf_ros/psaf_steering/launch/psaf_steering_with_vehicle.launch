@@ -39,6 +39,7 @@
     <arg name="vehicle_filter" value='$(arg vehicle_filter)'/>
     <arg name='role_name' value='$(arg role_name)'/>
     <arg name="spawn_point" value="$(arg spawn_point)"/>
+    <arg name="sensor_definition_file" value="$(arg sensor_definition_file)"/>
   </include>
 
   <include file="$(find carla_manual_control)/launch/carla_manual_control.launch">
