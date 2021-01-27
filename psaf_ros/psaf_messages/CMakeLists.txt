@@ -56,6 +56,7 @@ add_message_files(
    TrafficLight.msg
    StopLineInfo.msg
    StopLine.msg
+   TrafficSituation.msg
    Obstacle.msg
    CenterLineExtended.msg
    XRoute.msg
