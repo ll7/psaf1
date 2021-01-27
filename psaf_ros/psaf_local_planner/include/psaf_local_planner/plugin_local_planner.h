@@ -106,6 +106,8 @@ namespace psaf_local_planner {
             
             double compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location);
             void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
+            double calculateRadius(unsigned int first, unsigned int last);
+
             bool check_distance_forward(double& distance, double &relativeX, double &relativeY);
 
             double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);

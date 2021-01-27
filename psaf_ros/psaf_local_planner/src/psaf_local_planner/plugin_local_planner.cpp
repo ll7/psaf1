@@ -11,7 +11,7 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
                                            bufferSize(1000), initialized(false), closest_point_local_plan(2),
-                                           lookahead_factor(3.5), max_velocity(30), target_velocity(30), min_velocity(5),
+                                           lookahead_factor(3.5), max_velocity(15), target_velocity(15), min_velocity(5),
                                            goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40), 
                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
     {
@@ -457,87 +457,16 @@ namespace psaf_local_planner
         return d_angle;
     }
 
-    void PsafLocalPlanner::estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location)
-    {
-        if (global_plan.size() < 3)
-            return;
-
-        tf2::Vector3 point1, point2, point3;
-        int first = 0, middle, last = 0;
-        bool hasNonZero = false;
-        
-        auto it = global_plan.begin();
-
-        // tf2::convert(current_location.position, point1);
-        const geometry_msgs::PoseStamped &w = *it;
-        tf2::convert(w.pose.position, point1);
-        
-        ++it;
-        ++last;
-
-        const geometry_msgs::PoseStamped &w2  = *it;
-        tf2::convert(w2.pose.position, point2);
-        
-        ++it;
-        ++last;
-        double sum_distance = tf2::tf2Distance2(point1, point2);
-        double sum_angle = 0;
-        double last_angle = 0;
-
-
-        
-        for (; it != global_plan.end(); ++it, ++last)
-        {
-            if (sum_distance > estimate_curvature_distance) 
-                break;
-
-            const geometry_msgs::PoseStamped &w = *it;
-            tf2::convert(w.pose.position, point3);
-
-            sum_distance += tf2::tf2Distance(point2, point3);
-            auto v1 = (point2 - point1);
-            auto v2 = (point3 - point2);
-
-            double angle = v1.angle(v2);
-            if (isfinite(angle)) {
-                // indendet purpose of this: 
-                // find three points on the curvature
-                sum_angle += abs(angle);
-                if (abs(angle) < 0.0001) {
-                    // find first point on circle
-                    if (!hasNonZero) {
-                        first++;
-                    } else {
-                        // curvature has ended
-                        break;
-                    }
-                } else {
-                    hasNonZero = true;
-                    // curvature is bending in different direction, therefor ended as well
-                    if (std::signbit(last_angle) != std::signbit(angle)) {
-                        break;
-                    }
-                }
-
-                last_angle = angle;
-            }
-
-            point1 = point2;
-            point2 = point3;
-        }
-
-
+    double PsafLocalPlanner::calculateRadius(unsigned int first, unsigned int last) {
         if (first == last || last == 0) {
-            target_velocity = max_velocity;
-            return;
+            return INFINITY;
         }
 
         if (last - first <= 5) {
-            target_velocity = max_velocity;
-            return;
+            return INFINITY;
         }
 
-        middle = first + (last - first) / 2;
+        unsigned int middle = first + (last - first) / 2;
         double x1 = global_plan[first].pose.position.x;
         double y1 = global_plan[first].pose.position.y;
 
@@ -576,6 +505,89 @@ namespace psaf_local_planner
         double menger = (4 * triangle_area)/(tf2::tf2Distance(p1, p2)*tf2::tf2Distance(p2, p3)*tf2::tf2Distance(p3, p1));
         double r_m = std::abs(1.0 / menger);
 
+
+        return r_m;
+    }
+
+    void PsafLocalPlanner::estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location)
+    {
+        if (global_plan.size() < 3)
+            return;
+
+        tf2::Vector3 point1, point2, point3;
+        unsigned int first = 0, middle, last = 0;
+        bool hasNonZero = false;
+        
+        auto it = global_plan.begin();
+
+        // tf2::convert(current_location.position, point1);
+        const geometry_msgs::PoseStamped &w = *it;
+        tf2::convert(w.pose.position, point1);
+        
+        ++it;
+        ++last;
+
+        const geometry_msgs::PoseStamped &w2  = *it;
+        tf2::convert(w2.pose.position, point2);
+        
+        ++it;
+        ++last;
+        double sum_distance = tf2::tf2Distance2(point1, point2);
+        double sum_angle = 0;
+        double last_angle = 0;
+
+        double min_radius = INFINITY;
+        
+        for (; it != global_plan.end(); ++it, ++last)
+        {
+            if (sum_distance > estimate_curvature_distance) 
+                break;
+
+            const geometry_msgs::PoseStamped &w = *it;
+            tf2::convert(w.pose.position, point3);
+
+            sum_distance += tf2::tf2Distance(point2, point3);
+            auto v1 = (point2 - point1);
+            auto v2 = (point3 - point2);
+
+            double angle = v1.angle(v2);
+            if (isfinite(angle)) {
+                // indendet purpose of this: 
+                // find three points on the curvature
+                sum_angle += abs(angle);
+                if (abs(angle) < 0.0001) {
+                    // find first point on circle
+                    if (!hasNonZero) {
+                        first++;
+                    } else {
+                        // curvature has ended
+                        min_radius = std::min(min_radius, calculateRadius(first, last));
+                        first = last;
+                        hasNonZero = false;
+                    }
+                } else {
+                    hasNonZero = true;
+                    // curvature is bending in different direction, therefor ended as well
+                    if (std::signbit(last_angle) != std::signbit(angle)) {
+                        min_radius = std::min(min_radius, calculateRadius(first, last));
+                        first = last;
+                        hasNonZero = false;
+                    }
+                }
+
+                last_angle = angle;
+            }
+
+            point1 = point2;
+            point2 = point3;
+        }
+
+
+        if (min_radius == INFINITY) {
+            target_velocity = max_velocity;
+            return;
+        }
+
         // Circumference of a circle segment in rad: C = phi * r
         // r = C / phi
         // max speed in curves: v <= sqrt(µ_haft * r * g)
@@ -584,8 +596,8 @@ namespace psaf_local_planner
         //auto fact = boost::algorithm::clamp(sum_angle * 10  / sum_distance, 0, 1);
 
         // target_velocity = (max_velocity - fact * (max_velocity - min_velocity));
-        target_velocity = std::min(max_velocity, std::sqrt(0.8 * r_m * 9.81));
-        ROS_INFO("radius: %f, target vel: %f", r_m, target_velocity);
+        target_velocity = std::min(max_velocity, std::sqrt(0.8 * min_radius * 9.81));
+        ROS_INFO("radius: %f, target vel: %f", min_radius, target_velocity);
     }
 
     /**
