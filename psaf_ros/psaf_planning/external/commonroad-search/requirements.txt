@@ -1,4 +1,4 @@
-commonroad-io==2020.2
+commonroad-io==2020.3
 tqdm~=4.50.2
 networkx>=2.4
 ipywidgets~=7.5.1
