@@ -33,10 +33,9 @@ namespace psaf_local_planner
             ros::NodeHandle private_nh("~/" + name);
             g_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_global_plan", 1);
             obstacle_pub = private_nh.advertise<psaf_messages::Obstacle>("/psaf/planning/obstacle", 1);
-            //l_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_local_plan", 1);
             debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
 
-            global_plan_extended_sub = private_nh.subscribe("psaf_global_plan_extended_TODODODODODODODO", 10, &PsafLocalPlanner::globalPlanExtendedCallback, this);
+            global_plan_extended_sub = private_nh.subscribe("/psaf/xroute", 10, &PsafLocalPlanner::globalPlanExtendedCallback, this);
             planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
             this->costmap_ros = costmap_ros;
 
@@ -163,11 +162,15 @@ namespace psaf_local_planner
         // actually delete the points now
         if (to_delete > 0)
             global_plan.erase(global_plan.begin(), global_plan.begin() + to_delete);
-
     }
 
-    void PsafLocalPlanner::globalPlanExtendedCallback(const geometry_msgs::Twist &msg)
+    void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
+        ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
+        global_route = msg.route;
+        goal_reached = false;
+        
+        publishGlobalPlan(plan);
     }
 
 }

@@ -24,7 +24,9 @@
 #include <visualization_msgs/Marker.h>
 #include <base_local_planner/line_iterator.h>
 #include <psaf_messages/Obstacle.h>
-#include "psaf_local_planner/PsafLocalPlannerParameterConfig.h"
+#include <psaf_messages/XRoute.h>
+#include <psaf_messages/XLanelet.h>
+#include <psaf_local_planner/PsafLocalPlannerParameterConfig.h>
 #include <base_local_planner/goal_functions.h>
 #include <boost/algorithm/clamp.hpp>
 
@@ -114,7 +116,7 @@ namespace psaf_local_planner {
             double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
             void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
             void checkForSlowCar(double velocity_distance_diff);
-            void globalPlanExtendedCallback(const geometry_msgs::Twist &msg);
+            void globalPlanExtendedCallback(const psaf_messages::XRoute &msg);
             
             dynamic_reconfigure::Server<psaf_local_planner::PsafLocalPlannerParameterConfig> *dyn_serv;
 
@@ -135,6 +137,8 @@ namespace psaf_local_planner {
             
 
             std::vector<geometry_msgs::PoseStamped> global_plan;
+            std::vector<psaf_messages::XLanelet> global_route;
+
             int bufferSize;
 
             bool initialized;

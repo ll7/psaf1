@@ -23,7 +23,6 @@ def cmd_callback(data: PointCloud2):
     # field_names=("x", "y", "z", "cos", "index", "tag")
     skip = 0
     skip2 = 0
-    print("zPos: " + str(zPos))
 
     points_marking = []
     points_clearing = []

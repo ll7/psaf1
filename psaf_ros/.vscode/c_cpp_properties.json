@@ -6,10 +6,11 @@
                 "limitSymbolsToIncludedHeaders": true
             },
             "includePath": [
-                "${workspaceFolder}/../devel/include",
+                "${workspaceFolder}/../../devel/include/**",
                 "/opt/ros/noetic/include/**",
                 "/usr/include/**",
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "~/carla-ros-bridge/catkin_ws/devel/include/**"
             ],
             "name": "ROS",
             "intelliSenseMode": "gcc-x64",
