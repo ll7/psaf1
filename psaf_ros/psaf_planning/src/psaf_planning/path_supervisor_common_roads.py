@@ -136,6 +136,16 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         rospy.loginfo("PathSupervisor: global planner plugin triggered")
         self.status_pub.publish("Replanning done")
 
+    def _reset_map(self):
+        # reset obstacle msg id
+        self.last_id = -1
+        # first reset map
+        if self.manager is not None:
+            # create clean slate
+            self.manager.map = deepcopy(self.manager.original_map)
+            self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
+            self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
+            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)
 
 def main():
     provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
