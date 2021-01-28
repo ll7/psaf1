@@ -25,7 +25,8 @@
 #include <base_local_planner/line_iterator.h>
 #include <psaf_messages/Obstacle.h>
 #include "psaf_local_planner/PsafLocalPlannerParameterConfig.h"
-
+#include <base_local_planner/goal_functions.h>
+#include <boost/algorithm/clamp.hpp>
 
 namespace psaf_local_planner {
 
