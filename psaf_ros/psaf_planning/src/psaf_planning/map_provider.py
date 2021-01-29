@@ -201,13 +201,20 @@ class MapProvider:
                 return nearest[0]
         return None
 
-    def _traffic_lights_to_scenario(self, landmarks, map):
+    def _traffic_lights_to_scenario(self, landmarks, map: Scenario):
         lights = landmarks['Signal_3Light_Post01']
         for light in lights:
-            lanelet = self._find_nearest_lanlet(light, map)
+            lanelet: Lanelet = self._find_nearest_lanlet(light, map)
+
+            if light.mark_id == 2021:
+                print("Light orientation" + str(light.orientation))
+                print("lanelet orientation" + str(self._get_lanelet_end_orientation_to_light(lanelet)))
+                print("Lanelet id" + str(lanelet.lanelet_id))
+
             # check whether the orientation of the traffic light and the corresponding lanelet matches
             # allow a absolut tolerance of 20 degrees to consider a traffic light associated with the lanelet
-            if math.isclose(light.orientation, self._get_lanelet_end_orientation(lanelet), abs_tol=20):
+            angle_diff = 180 - abs(abs(light.orientation - self._get_lanelet_end_orientation_to_light(lanelet)) - 180)
+            if angle_diff < 20:
                 # add traffic light to the predecessor of the lanelet
                 print("[{}, {}] ID: {} -> {} (lanlet_id)".format(light.x, light.y, light.mark_id, lanelet.lanelet_id))
 
@@ -248,13 +255,13 @@ class MapProvider:
             rospy.logerr("MapProvider: lanelet not available")
             rospy.logerr("MapProvider: No file generated")
 
-    def _get_lanelet_end_orientation(self, lanelet: Lanelet):
+    def _get_lanelet_end_orientation_to_light(self, lanelet: Lanelet):
         prev_pos = lanelet.center_vertices[-2]
         pos = lanelet.center_vertices[-1]
 
         # describes the relativ position of the pos to the prev pos
         rel_x = 1 if (pos[0] - prev_pos[0]) >= 0 else -1
-        rel_y = 1 if (pos[1] - prev_pos[1]) >= 0 else -1
+        rel_y = 1 if (prev_pos[1] - pos[1]) >= 0 else -1
 
         euler_angle_yaw = math.degrees(math.atan2(rel_y * abs(pos[1] - prev_pos[1]), rel_x * abs(pos[0] - prev_pos[0])))
 
