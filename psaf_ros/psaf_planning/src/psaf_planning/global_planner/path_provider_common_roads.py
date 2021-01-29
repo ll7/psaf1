@@ -18,7 +18,7 @@ from SMP.route_planner.route_planner.route import Route
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
 from psaf_abstraction_layer.sensors.GPS import GPS_Position
-from psaf_planning.common_road_manager import CommonRoadManager
+from psaf_planning.global_planner.common_road_manager import CommonRoadManager
 from geometry_msgs.msg import Point
 import sys
 from copy import deepcopy
@@ -212,7 +212,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
         ratio_x_y = (plot_limits[1] - plot_limits[0]) / (plot_limits[3] - plot_limits[2])
         fig = plt.figure(figsize=(size_x, size_x / ratio_x_y))
         fig.gca().axis('equal')
-
         draw_route(route, draw_route_lanelets=True, draw_reference_path=True, plot_limits=plot_limits)
         plt.savefig("route_" + str(num) + ".png")
         plt.close()

@@ -263,12 +263,13 @@ class CommonRoadManager:
         :param exclude: id that should not be used
         :return: new unique lanelet id
         """
+        max_uint16 = 2**16
         while True:
             lane_id = 0
             if id_start == -1:
-                lane_id = np.random.randint(0, sys.maxsize)
+                lane_id = np.random.randint(0, max_uint16)
             else:
-                lane_id = np.random.randint(id_start, sys.maxsize)
+                lane_id = np.random.randint(id_start, max_uint16)
             if self.map.lanelet_network.find_lanelet_by_id(lane_id) is None and lane_id != exclude:
                 return lane_id
 
