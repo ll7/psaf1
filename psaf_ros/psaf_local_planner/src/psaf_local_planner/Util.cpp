@@ -22,10 +22,6 @@ namespace psaf_local_planner
      */
     bool PsafLocalPlanner::setPlan(const std::vector<geometry_msgs::PoseStamped> &plan)
     {
-        planner_util.setPlan(plan);
-        publishGlobalPlan(plan);
-        global_plan = plan;
-        goal_reached = false;
         return true;
     }
 

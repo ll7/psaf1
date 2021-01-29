@@ -301,7 +301,6 @@ class CarlaAckermannControl(object):
         self.set_target_speed(ros_twist.linear.x * self.input_multiplier)
         self.set_target_accel(0)
         self.set_target_jerk(0)
-        print(ros_twist.angular.z )
 
         self.input_speed = ros_twist.linear.x * self.input_multiplier
         self.input_accel = 0.

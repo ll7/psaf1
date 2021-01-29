@@ -165,8 +165,31 @@ namespace psaf_local_planner
         }
 
         // actually delete the points now
-        if (to_delete > 0)
+        if (to_delete > 0) {
             global_plan.erase(global_plan.begin(), global_plan.begin() + to_delete);
+            
+            auto route_iter = global_route.begin();
+            while (route_iter != global_route.end() && to_delete > 0) {
+                auto &lanelet = *route_iter;
+                int size = lanelet.route_portion.size();
+
+                if (to_delete >= size) {
+                    route_iter = global_route.erase(route_iter);
+                    to_delete -= size;
+                } else {
+                    lanelet.route_portion.erase(lanelet.route_portion.begin(), lanelet.route_portion.begin() + to_delete);
+                    to_delete = 0;
+                }
+            }
+        }
+
+        // validate whether the plans are the same length; TODO: Remove when sufficiently validated 
+        int route_len = 0;
+        for (auto lanelet : global_route) {
+            route_len += lanelet.route_portion.size();
+        }
+        
+        assert(route_len == global_plan.size());
     }
 
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
@@ -174,8 +197,27 @@ namespace psaf_local_planner
         ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
         global_route = msg.route;
         goal_reached = false;
-        
-        // publishGlobalPlan(plan);
+
+        std::vector<geometry_msgs::PoseStamped> points = {};
+
+        unsigned int counter = 0;
+        for (auto lanelet : global_route) {
+            for (auto point : lanelet.route_portion) {
+                geometry_msgs::PoseStamped pose;
+                pose.header.frame_id = "map";
+                pose.header.seq = counter++;
+                pose.pose.orientation.w = 1;
+                pose.pose.position.x = point.x;
+                pose.pose.position.y = point.y;
+                pose.pose.position.z = point.z;
+
+                points.push_back(pose);
+            }
+        }
+
+        global_plan = points;
+        planner_util.setPlan(global_plan);
+        publishGlobalPlan(global_plan);
     }
 
 }

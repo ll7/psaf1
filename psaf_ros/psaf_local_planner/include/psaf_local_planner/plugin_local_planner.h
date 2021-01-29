@@ -29,6 +29,8 @@
 #include <psaf_local_planner/PsafLocalPlannerParameterConfig.h>
 #include <base_local_planner/goal_functions.h>
 #include <boost/algorithm/clamp.hpp>
+#include <assert.h>
+
 
 namespace psaf_local_planner {
 
