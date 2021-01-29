@@ -5,7 +5,7 @@
 namespace psaf_local_planner
 {
 
-    void PsafLocalPlanner::reconfigure_callback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level) {
+    void PsafLocalPlanner::reconfigureCallback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level) {
         ROS_INFO("Reconfigure Request");
     }
 

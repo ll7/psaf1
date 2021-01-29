@@ -45,7 +45,7 @@ namespace psaf_local_planner
             this->costmap_ros = costmap_ros;
 
             dyn_serv = new dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>(private_nh);
-            dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigure_callback, this, _1, _2);
+            dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
             dyn_serv->setCallback(f);
 
             initialized = true;
@@ -78,15 +78,15 @@ namespace psaf_local_planner
             }
             else
             {
-                estimate_curvature_and_set_target_velocity(current_pose.pose);
-                auto target_point = find_lookahead_target();
+                estimateCurvatureAndSetTargetVelocity(current_pose.pose);
+                auto target_point = findLookaheadTarget();
 
-                double angle = compute_steering_angle(target_point.pose, current_pose.pose);
+                double angle = computeSteeringAngle(target_point.pose, current_pose.pose);
                 double distance, relX, relY;
 
                 double velocity_distance_diff;
 
-                if (target_velocity > 0 && !check_distance_forward(distance, relX, relY)) {
+                if (target_velocity > 0 && !checkDistanceForward(distance, relX, relY)) {
                     if (distance < 5) {
                         ROS_INFO("attempting to stop");
                         velocity_distance_diff = target_velocity;

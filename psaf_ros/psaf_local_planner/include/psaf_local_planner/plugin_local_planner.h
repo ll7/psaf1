@@ -135,7 +135,7 @@ namespace psaf_local_planner {
              * @param config: Object containing all the changed parameters
              * @param level: Highest level of the changed parameter (see dyn_rec docs)
              */
-            void reconfigure_callback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level);
+            void reconfigureCallback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level);
 
             /**
              * Deletes the points in the global plan that have been driven over
@@ -151,7 +151,7 @@ namespace psaf_local_planner {
              * @param current_location: Current Location + Rotation of the car
              * @return angle of the wheels in rad
              */
-            double compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location);
+            double computeSteeringAngle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location);
 
             /**
              * Esitmates the curvature on the upcomuing road for the next [estimate_curvature_distance] distance
@@ -166,7 +166,13 @@ namespace psaf_local_planner {
              * 
              * @param current_location: current pose of the car
              */
-            void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
+            void estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location);
+
+
+            /**
+             * reads the max velocity from the current nearest point of the xroute to the car
+             */
+            double getMaxVelocity();
 
             /**
              * Helper function for calculating the radius of the curve on the global plan
@@ -186,7 +192,7 @@ namespace psaf_local_planner {
              * @param relativeX: return value of relative X position at which the obstacle was found
              * @param relativeY: return value of relative Y position at which the obstacle was found
              */
-            bool check_distance_forward(double& distance, double &relativeX, double &relativeY);
+            bool checkDistanceForward(double& distance, double &relative_x, double &relative_y);
             
             /**
              * Send a raytrace along the costmap from the current position of the car
@@ -228,7 +234,7 @@ namespace psaf_local_planner {
              * 
              * @return pointer to the target point
              */
-            geometry_msgs::PoseStamped& find_lookahead_target();
+            geometry_msgs::PoseStamped& findLookaheadTarget();
 
             /** The dynamic reconfigure server local for this node */
             dynamic_reconfigure::Server<psaf_local_planner::PsafLocalPlannerParameterConfig> *dyn_serv;

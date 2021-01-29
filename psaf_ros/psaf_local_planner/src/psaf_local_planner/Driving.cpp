@@ -6,7 +6,7 @@ namespace psaf_local_planner
     /**
      * Compute relative angle and distance between a target_location and a current_location
      */
-    double PsafLocalPlanner::compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location)
+    double PsafLocalPlanner::computeSteeringAngle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location)
     {
         tf2::Transform target_transform;
         tf2::Transform current_transform;
@@ -136,7 +136,7 @@ namespace psaf_local_planner
         return r_m;
     }
 
-    void PsafLocalPlanner::estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location)
+    void PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location)
     {
         if (global_plan.size() < 3)
             return;
@@ -227,7 +227,7 @@ namespace psaf_local_planner
         ROS_INFO("radius: %f, target vel: %f", min_radius, target_velocity);
     }
 
-    geometry_msgs::PoseStamped& PsafLocalPlanner::find_lookahead_target() {
+    geometry_msgs::PoseStamped& PsafLocalPlanner::findLookaheadTarget() {
         tf2::Vector3 last_point, current_point, acutal_point;
         tf2::convert(current_pose.pose.position, last_point);
         last_point.setZ(0);

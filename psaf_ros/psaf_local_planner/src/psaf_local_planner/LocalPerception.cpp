@@ -149,7 +149,7 @@ namespace psaf_local_planner
     /**
      * Returns false if it failed because something is close; true if out of bounds
      */
-    bool PsafLocalPlanner::check_distance_forward(double& distance, double &relativeX, double &relativeY)
+    bool PsafLocalPlanner::checkDistanceForward(double& distance, double &relative_x, double &relative_y)
     {
         tf2::Vector3 last_point, current_point, acutal_point;
         tf2::convert(current_pose.pose.position, last_point);
@@ -179,8 +179,8 @@ namespace psaf_local_planner
                     if (count_error >= 2)
                     {
                         ROS_WARN("cost is %i at %f %f", cost, current_point.getX() - acutal_point.getX(), current_point.getY() - acutal_point.getY());
-                        relativeX = current_point.getX() - acutal_point.getX();
-                        relativeY = current_point.getY() - acutal_point.getY();
+                        relative_x = current_point.getX() - acutal_point.getX();
+                        relative_y = current_point.getY() - acutal_point.getY();
                         distance = sum_distance;
                         return false;
                     }
