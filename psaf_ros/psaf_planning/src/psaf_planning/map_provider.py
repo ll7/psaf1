@@ -41,6 +41,20 @@ except IndexError:
 import carla
 
 
+class LandMarkPoint:
+
+    def __init__(self, x, y, id):
+        self.x = x
+        self.y = y
+        self.mark_id = id
+
+    def __eq__(self, other):
+        return self.mark_id == other.mark_id
+
+    def __hash__(self):
+        return hash(self.mark_id)
+
+
 def get_markings():
     # In this tutorial script, we are going to add a vehicle to the simulation
     # and let it drive in autopilot. We will also create a camera attached to
@@ -60,10 +74,10 @@ def get_markings():
         marks = world.get_map().get_all_landmarks()
         for mark in marks:
             if mark.name in markings:
-                markings[mark.name].append(Point(mark.transform.location.x, -mark.transform.location.y, int(mark.id)))
+                markings[mark.name].add(LandMarkPoint(mark.transform.location.x, -mark.transform.location.y, int(mark.id)))
             else:
-                markings[mark.name] = []
-                markings[mark.name].append(Point(mark.transform.location.x, -mark.transform.location.y, int(mark.id)))
+                markings[mark.name] = set()
+                markings[mark.name].add(LandMarkPoint(mark.transform.location.x, -mark.transform.location.y, int(mark.id)))
         return markings
     finally:
 
@@ -169,7 +183,7 @@ class MapProvider:
         lights = landmarks['Signal_3Light_Post01']
         for light in lights:
             lanelet = self._find_nearest_lanlet(light, scenario)
-            print("[{}, {}] ID: {} -> {} (lanlet_id)".format(light.x, light.y, light.z, lanelet.lanelet_id))
+            print("[{}, {}] ID: {} -> {} (lanlet_id)".format(light.x, light.y, light.mark_id, lanelet.lanelet_id))
 
 
     """
