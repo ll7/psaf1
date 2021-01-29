@@ -211,19 +211,13 @@ namespace psaf_local_planner
 
 
         if (min_radius == INFINITY) {
-            target_velocity = max_velocity;
+            target_velocity = getMaxVelocity();
             return;
         }
 
-        // Circumference of a circle segment in rad: C = phi * r
-        // r = C / phi
         // max speed in curves: v <= sqrt(µ_haft * r * g)
         // µ_haft ~= 0.8 - 1.0
-
-        //auto fact = boost::algorithm::clamp(sum_angle * 10  / sum_distance, 0, 1);
-
-        // target_velocity = (max_velocity - fact * (max_velocity - min_velocity));
-        target_velocity = std::min(max_velocity, std::sqrt(0.8 * min_radius * 9.81));
+        target_velocity = std::min(getMaxVelocity(), std::sqrt(0.8 * min_radius * 9.81));
         ROS_INFO("radius: %f, target vel: %f", min_radius, target_velocity);
     }
 
@@ -236,7 +230,6 @@ namespace psaf_local_planner
         geometry_msgs::PoseStamped vel;
         odom_helper.getRobotVel(vel);
 
-        // ROS_INFO("velx: %f y: %f", vel.pose.position.x, vel.pose.position.y);
         double vel_x = std::ceil(std::abs(vel.pose.position.x));
 
         double desired_distance = std::pow(vel_x / lookahead_factor, 1.1) + 5;
@@ -259,5 +252,13 @@ namespace psaf_local_planner
         return last_stamp;
     }
 
+    double PsafLocalPlanner::getMaxVelocity() {
+        if (global_route.size() > 0) {
+            if (global_route[0].route_portion.size() > 0)
+                return global_route[0].route_portion[0].speed / 3.6;
+        }
+
+        return 0.0;
+    }
 
 }

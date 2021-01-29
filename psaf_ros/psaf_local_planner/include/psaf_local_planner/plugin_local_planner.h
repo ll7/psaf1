@@ -275,14 +275,8 @@ namespace psaf_local_planner {
             /** The Route part of the xtenden route */
             std::vector<psaf_messages::XLanelet> global_route;
 
-            /** ~~ unused ~~ was size of the local plan */
-            int bufferSize;
-
             /** is set to true after the node is inited via ROS */ 
             bool initialized;
-
-            /** Actual Max velocity that is allowed to be driven */
-            double max_velocity;
             
             /** min speed that the car should drive at even through sharp angles */
             double min_velocity;

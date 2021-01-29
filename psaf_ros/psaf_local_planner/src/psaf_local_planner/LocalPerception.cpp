@@ -42,7 +42,6 @@ namespace psaf_local_planner
 
             psaf_messages::Obstacle msg;
             msg.id = obstacle_msg_id_counter++;
-            // msg.id = points.size();
             msg.obstacles = points;
 
             obstacle_pub.publish(msg);
@@ -67,8 +66,6 @@ namespace psaf_local_planner
         double m_self_x = current_pose.pose.position.x;
         double m_self_y = current_pose.pose.position.y;
 
-        // std::vector<std::tuple<double, double>> collisions = {};
-
         // Rotation around z axis of the car
         double orientation = tf2::getYaw(current_transform.getRotation());
 
@@ -78,10 +75,8 @@ namespace psaf_local_planner
             double coll_x, coll_y;
 
             double dist = raytrace(x + m_self_x , y + m_self_y, coll_x, coll_y);
-            //ROS_INFO("dist at angle: %f at %f, %f is %f", actual_angle, x, y, dist);
             if (dist < INFINITY) {
                 collisions.push_back(RaytraceCollisionData(coll_x, coll_y, angle, distance));
-                ROS_INFO("dist at angle: %f at %f, %f is %f", actual_angle, x, y, dist);
             }
         }
 
@@ -96,8 +91,6 @@ namespace psaf_local_planner
         marker1.header.stamp = ros::Time::now();
         marker1.color.a = 1.0;
         marker1.color.r = 1.0;
-        //marker1.pose.position.x = pos.x;
-        //marker1.pose.position.y = pos.y;
         marker1.scale.x = 0.5;
         marker1.scale.y = 0.5;
         marker1.scale.z = 4;

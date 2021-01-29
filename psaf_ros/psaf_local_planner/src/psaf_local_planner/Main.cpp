@@ -7,10 +7,10 @@ PLUGINLIB_EXPORT_CLASS(psaf_local_planner::PsafLocalPlanner, nav_core::BaseLocal
 namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
-                                           bufferSize(1000), initialized(false), closest_point_local_plan(2),
-                                           lookahead_factor(3.5), max_velocity(15), target_velocity(15), min_velocity(5),
-                                           goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
-                                           slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
+                                            initialized(false), closest_point_local_plan(2),
+                                            lookahead_factor(3.5), target_velocity(15), min_velocity(5),
+                                            goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
+                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
     {
         std::cout << "Hi";
     }
@@ -66,8 +66,6 @@ namespace psaf_local_planner
             costmap_ros->getRobotPose(current_pose);
 
             deleteOldPoints();
-            // fillPointBuffer();
-            // publishLocalPlan(local_plan);
 
             if (global_plan.size() <= 1)
             {
@@ -98,15 +96,10 @@ namespace psaf_local_planner
                         //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
                     }
 
-                    // target_velocity *= boost::algorithm::clamp((distance - 5) / (pow(max_velocity * 0.36, 2)), 0, 1);
                     ROS_INFO("distance forward: %f, max velocity: %f", distance, target_velocity);
                 }
 
                 checkForSlowCar(velocity_distance_diff);
-
-                //std::vector<RaytraceCollisionData> collisions = {};
-                //raytraceSemiCircle(M_PI * 3/2, 30, collisions);
-
 
                 cmd_vel.linear.x = target_velocity - velocity_distance_diff;
                 cmd_vel.angular.z = angle;
@@ -116,10 +109,6 @@ namespace psaf_local_planner
         {
             ROS_WARN("Called compute velocity before being inited");
         }
-
-        /*auto x = costmap_ros->getCostmap()->getSizeInCellsX();
-        auto y = costmap_ros->getCostmap()->getSizeInCellsY();
-        costmap_ros->getCostmap()->resetMaps();*/
 
         return true;
     }
