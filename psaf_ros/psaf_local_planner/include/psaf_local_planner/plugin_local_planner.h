@@ -160,6 +160,8 @@ namespace psaf_local_planner {
              *   max speed in curves: v <= sqrt(µ_haft * r * g)
              *   µ_haft ~= 0.8 - 1.0
              * 
+             * Should be called in any case no matter the state; sets the base velocity
+             * 
              * @param current_location: current pose of the car
              */
             void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
@@ -191,36 +193,84 @@ namespace psaf_local_planner {
              * @param m_target_y: x position where to raytrace to in global map coordinates (in meters)
              * @param coll_x: x position where the collision happend on the costmap in global map coordinates (in meters)
              * @param coll_y: x position where the collision happend on the costmap in global map coordinates (in meters)
-             * @return distance of the raytrace
+             * @return distance of the raytrace; returns infinity if there was no collision between those two points
              */
             double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
+
+            /**
+             * Sends out a bunch of raytraces around the car in a semi circle with the given angle
+             * 
+             * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
+             * @param distance: max distance that should be looked at by the raytrace
+             * @param collisions: in case of collisions they are getting added to the vector
+             */
             void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
+
+            /**
+             * Function that checks for a slow car ahead using the slowdown of the own car
+             * @param velocity_distance_diff: the difference between the max velocity and current that is caused by the slower car ahead
+             * 
+             * pubslishes obstacle positions using raytraces
+             */
             void checkForSlowCar(double velocity_distance_diff);
+
+            /**
+             * Callback for the extened global plan by the global planner
+             * 
+             * @param msg: The message getting received
+             */
             void globalPlanExtendedCallback(const psaf_messages::XRoute &msg);
             
-            dynamic_reconfigure::Server<psaf_local_planner::PsafLocalPlannerParameterConfig> *dyn_serv;
-
+            /** 
+             * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
+             * 
+             * @return pointer to the target point
+             */
             geometry_msgs::PoseStamped& find_lookahead_target();
 
+            /** The dynamic reconfigure server local for this node */
+            dynamic_reconfigure::Server<psaf_local_planner::PsafLocalPlannerParameterConfig> *dyn_serv;
+
+            /** The pointer to the costmap, updates automatically when the costmap changes */
             costmap_2d::Costmap2DROS* costmap_ros;
+
+            /** Helper object from move_base */
             base_local_planner::LocalPlannerUtil planner_util;
 
+            /** Helper object from move_base to find the current velocity of the vehicle */
+            base_local_planner::OdometryHelperRos odom_helper;
+
+            /** Publisher of the global plan for rviz */
             ros::Publisher g_plan_pub;
+
+            /** Publisher for debug messages; e.g. arrows along path, obstacle bobbels */
             ros::Publisher debug_pub;
+
+            /** Publisher for the obstacles; publishing causes a replanning */
             ros::Publisher obstacle_pub;
+
+            /** ~~~ currently not used ~~~ */
             ros::Subscriber vel_sub;
+
+            /** Subscriber for the extended global plan */
             ros::Subscriber global_plan_extended_sub;
 
+            /** current pose of the vehicle; gets set  in computeVelocityCommands every ROS Tick */
             geometry_msgs::PoseStamped current_pose;
-            base_local_planner::OdometryHelperRos odom_helper;
+
+            /** Topic path of the odometrie */
             std::string odom_topic;
             
-
+            /** The global plan that is only the poses */
             std::vector<geometry_msgs::PoseStamped> global_plan;
+
+            /** The Route part of the xtenden route */
             std::vector<psaf_messages::XLanelet> global_route;
 
+            /** ~~ unused ~~ was size of the local plan */
             int bufferSize;
 
+            /** is set to true after the node is inited via ROS */ 
             bool initialized;
 
             /** Actual Max velocity that is allowed to be driven */
@@ -253,11 +303,13 @@ namespace psaf_local_planner {
             /** sets a flag when the slow car and obstacles have been published */ 
             bool slow_car_ahead_published;
 
-            /** */
+            /** Last time the obstacle message was published, allows repeated pubshling */
             ros::Time slow_car_last_published;
 
+            /** ~~ planned ~~ current state of the car */
             LocalPlannerState state;
 
+            /** Counter for the obstacle message to be always incrementing */
             unsigned int obstacle_msg_id_counter;
 
     };
