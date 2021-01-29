@@ -14,9 +14,11 @@ from commonroad.planning.planning_problem import PlanningProblemSet
 from commonroad.scenario.scenario import Tag
 from commonroad.scenario.scenario import Scenario
 import numpy as np
+import math
+from commonroad.scenario.lanelet import Lanelet
 
 import tempfile
-#!/usr/bin/env python
+# !/usr/bin/env python
 
 # Copyright (c) 2019 Computer Vision Center (CVC) at the Universitat Autonoma de
 # Barcelona (UAB).
@@ -42,10 +44,27 @@ import carla
 
 
 class LandMarkPoint:
+    """
+    Class that represents a LandMark Object and contains its absolute position, defined by x, y and its orientation,
+    and its designated id.
+    """
 
-    def __init__(self, x, y, id):
+    def __init__(self, x: float, y: float, orientation: float, id: int):
+        """
+        LandMarkPointObject
+        :param x: x position [m]
+        :param y: y position [m]
+        :param orientation: for this specific purpose: yaw_angle as a rotation by the z-axis [degree]
+        :param id: landmark id, set by carla
+        """
         self.x = x
         self.y = y
+        # get orientation without multiple rotations
+        self.orientation = orientation % 360
+        # get the positive angle
+        if self.orientation < 0:
+            self.orientation = self.orientation + 360
+
         self.mark_id = id
 
     def __eq__(self, other):
@@ -74,17 +93,20 @@ def get_markings():
         marks = world.get_map().get_all_landmarks()
         for mark in marks:
             if mark.name in markings:
-                markings[mark.name].add(LandMarkPoint(mark.transform.location.x, -mark.transform.location.y, int(mark.id)))
+                markings[mark.name].add(
+                    LandMarkPoint(mark.transform.location.x, -mark.transform.location.y, mark.transform.rotation.yaw,
+                                  int(mark.id)))
             else:
                 markings[mark.name] = set()
-                markings[mark.name].add(LandMarkPoint(mark.transform.location.x, -mark.transform.location.y, int(mark.id)))
+                markings[mark.name].add(
+                    LandMarkPoint(mark.transform.location.x, -mark.transform.location.y, mark.transform.rotation.yaw,
+                                  int(mark.id)))
         return markings
     finally:
 
         print('destroying actors')
         # client.apply_batch([carla.command.DestroyActor(x) for x in actor_list])
         print('done.')
-
 
 
 class MapProvider:
@@ -156,7 +178,7 @@ class MapProvider:
             roadNetwork.load_opendrive(opendrive)
             lanelet = roadNetwork.export_commonroad_scenario()
             landmarks = get_markings()
-            self._traffic_lights_to_scenario(landmarks,lanelet)
+            self._traffic_lights_to_scenario(landmarks, lanelet)
             rospy.loginfo("MapProvider: Conversion done!")
         return lanelet
 
@@ -169,7 +191,7 @@ class MapProvider:
         nearest = None
         curr_radius = 1
         step_size = 0.5
-        max_radius  = 100
+        max_radius = 100
         while curr_radius < max_radius or nearest is not None:
             nearest = scenario.lanelet_network.lanelets_in_proximity(np.array([goal.x, goal.y]), curr_radius)
             if len(nearest) == 0:
@@ -179,12 +201,15 @@ class MapProvider:
                 return nearest[0]
         return None
 
-    def _traffic_lights_to_scenario(self, landmarks, scenario):
+    def _traffic_lights_to_scenario(self, landmarks, map):
         lights = landmarks['Signal_3Light_Post01']
         for light in lights:
-            lanelet = self._find_nearest_lanlet(light, scenario)
-            print("[{}, {}] ID: {} -> {} (lanlet_id)".format(light.x, light.y, light.mark_id, lanelet.lanelet_id))
-
+            lanelet = self._find_nearest_lanlet(light, map)
+            # check whether the orientation of the traffic light and the corresponding lanelet matches
+            # allow a absolut tolerance of 20 degrees to consider a traffic light associated with the lanelet
+            if math.isclose(light.orientation, self._get_lanelet_end_orientation(lanelet), abs_tol=20):
+                # add traffic light to the predecessor of the lanelet
+                print("[{}, {}] ID: {} -> {} (lanlet_id)".format(light.x, light.y, light.mark_id, lanelet.lanelet_id))
 
     """
     The generate methods are just for debugging purposes 
@@ -222,6 +247,24 @@ class MapProvider:
         else:
             rospy.logerr("MapProvider: lanelet not available")
             rospy.logerr("MapProvider: No file generated")
+
+    def _get_lanelet_end_orientation(self, lanelet: Lanelet):
+        prev_pos = lanelet.center_vertices[-2]
+        pos = lanelet.center_vertices[-1]
+
+        # describes the relativ position of the pos to the prev pos
+        rel_x = 1 if (pos[0] - prev_pos[0]) >= 0 else -1
+        rel_y = 1 if (pos[1] - prev_pos[1]) >= 0 else -1
+
+        euler_angle_yaw = math.degrees(math.atan2(rel_y * abs(pos[1] - prev_pos[1]), rel_x * abs(pos[0] - prev_pos[0])))
+
+        # get orientation without multiple rotations
+        euler_angle_yaw = euler_angle_yaw % 360
+        # get the positive angle
+        if euler_angle_yaw < 0:
+            euler_angle_yaw = euler_angle_yaw + 360
+
+        return euler_angle_yaw
 
 
 def main():
