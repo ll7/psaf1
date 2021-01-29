@@ -77,42 +77,122 @@ namespace psaf_local_planner {
 
     class PsafLocalPlanner : public nav_core::BaseLocalPlanner {
         public:
+            /**
+             * Constructor: Nothing happens here, other than standard values are getting inited
+             */
             PsafLocalPlanner();
             ~PsafLocalPlanner();
-                
+            
+             /**
+             * Constructs the local planner.
+             * 
+             * Overrides the nav_core::BaseLocalPlanner method; Called upon node creation
+             * @param name: Name of the node in which this plugin runs
+             * @param tf: ?
+             * @param costmap_ros: Pointer to the costmap internal to move_base
+             */
+            void initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS *costmap_ros);
+            
 
             /**
              * Given the current position, orientation, and velocity of the robot, compute velocity commands to send to the base.
+             * 
+             * Overrides the nav_core::BaseLocalPlanner method; Called every ROS Tick
+             * Defacto main loop in the local planner
+             * 
+             * @param cmd_vel: Reference to the main velecity, to be used as the return parameter (no publish)
              */
             bool computeVelocityCommands(geometry_msgs::Twist &cmd_vel);
             
             /**
-             * Constructs the local planner.
-             */ 
-            void initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS *costmap_ros);
-            
-            /**
              * Check if the goal pose has been achieved by the local planner.
+             *
+             * Overrides the nav_core::BaseLocalPlanner method; Called every ROS Tick
+             *
+             *  If this returns true the local planner gets shutdown
              */
             bool isGoalReached();
             
             /**
              * Set the plan that the local planner is following.
+             * 
+             * Overrides the nav_core::BaseLocalPlanner method; Called when the global planner publishes a global plan
              */
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
         private:
+            /**
+             * Publishes the global plan to be displayed in RVIZ
+             * 
+             * @param path: Vector of poses that make up the plan
+             */
             void publishGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& path);
+
+            /**
+             * Callback from dynamic_reconfigure; used to set the local variables dynamically
+             * 
+             * @param config: Object containing all the changed parameters
+             * @param level: Highest level of the changed parameter (see dyn_rec docs)
+             */
             void reconfigure_callback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level);
 
+            /**
+             * Deletes the points in the global plan that have been driven over
+             * 
+             * finds the closests point to the car atleast 2 meter ahead of the vehicle; deletes all before that one
+             */
             void deleteOldPoints();
             
-            
+            /**
+             * Computes the steering angle the car should take based on the current location of the car
+             * 
+             * @param target_location: Next point that should be targeted by the car; is affected by the lookahead
+             * @param current_location: Current Location + Rotation of the car
+             * @return angle of the wheels in rad
+             */
             double compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location);
+
+            /**
+             * Esitmates the curvature on the upcomuing road for the next [estimate_curvature_distance] distance
+             * Used a 3 point method to calculate the radius of curves along the global plan
+             * Finds the minimum radius in the next [estimate_curvature_distance] distance
+             * 
+             * Uses following formula for max speed in curves:
+             *   max speed in curves: v <= sqrt(µ_haft * r * g)
+             *   µ_haft ~= 0.8 - 1.0
+             * 
+             * @param current_location: current pose of the car
+             */
             void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
+
+            /**
+             * Helper function for calculating the radius of the curve on the global plan
+             * 
+             * third point is selected in the middle between first and last
+             * @param first: index of the first point on the global plan of this curve
+             * @param last: index of the last point on the global plan of this curve
+             * @return radius of the circle in meters
+             */
             double calculateRadius(unsigned int first, unsigned int last);
 
+            /**
+             * Checks the distance which is free on the global plan using the costmap
+             * 
+             * @return true if a obstacle was found in the bounds of the costmap
+             * @param distance: return value of the distance forward 
+             * @param relativeX: return value of relative X position at which the obstacle was found
+             * @param relativeY: return value of relative Y position at which the obstacle was found
+             */
             bool check_distance_forward(double& distance, double &relativeX, double &relativeY);
-
+            
+            /**
+             * Send a raytrace along the costmap from the current position of the car
+             * 
+             * @param m_target_x: x position where to raytrace to in global map coordinates (in meters)
+             * @param m_target_y: x position where to raytrace to in global map coordinates (in meters)
+             * @param coll_x: x position where the collision happend on the costmap in global map coordinates (in meters)
+             * @param coll_y: x position where the collision happend on the costmap in global map coordinates (in meters)
+             * @return distance of the raytrace
+             */
             double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
             void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
             void checkForSlowCar(double velocity_distance_diff);

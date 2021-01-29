@@ -25,6 +25,11 @@ namespace psaf_local_planner
 
     /**
      * Constructs the local planner.
+     * 
+     * Overrides the nav_core::BaseLocalPlanner method; Called upon node creation
+     * @param name: Name of the node in which this plugin runs
+     * @param tf: ?
+     * @param costmap_ros: Pointer to the costmap internal to move_base
      */
     void PsafLocalPlanner::initialize(std::string name, tf2_ros::Buffer *tf, costmap_2d::Costmap2DROS *costmap_ros)
     {
@@ -170,7 +175,7 @@ namespace psaf_local_planner
         global_route = msg.route;
         goal_reached = false;
         
-        publishGlobalPlan(plan);
+        // publishGlobalPlan(plan);
     }
 
 }
