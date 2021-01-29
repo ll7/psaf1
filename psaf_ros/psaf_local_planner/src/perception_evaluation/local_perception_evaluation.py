@@ -2,9 +2,8 @@
 from typing import List
 
 import rospy
-from std_msgs.msg import UInt8
 from carla_msgs.msg import CarlaEgoVehicleControl, CarlaEgoVehicleStatus
-from psaf_messages.msg import TrafficSignInfo, SpeedSign, TrafficLight
+from psaf_messages.msg import TrafficSignInfo, TrafficLight, TrafficSituation
 import numpy as np
 
 
@@ -14,7 +13,7 @@ class LocalPerceptionEvaluation:
     """
 
     def __init__(self):
-        self.traffic_light_publisher = rospy.Publisher("/psaf/local_planner/traffic_light", TrafficLight, queue_size=1)
+        self.traffic_situation_publisher = rospy.Publisher("/psaf/local_planner/traffic_situation", TrafficSituation, queue_size=1)
 
         rospy.Subscriber("/carla/ego_vehicle/vehicle_control_cmd", CarlaEgoVehicleControl,
                          self.callback_ego_vehicle_cmd)
@@ -66,7 +65,7 @@ class LocalPerceptionEvaluation:
         :return: None
         """
         # TODO
-        self.traffic_light_publisher.publish(self.next_traffic_light)
+        self.traffic_situation_publisher.publish(self.next_traffic_light)
 
 
 if __name__ == '__main__':
