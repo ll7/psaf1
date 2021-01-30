@@ -47,11 +47,11 @@ class CommonRoadMapProvider(MapProvider):
 
         # length and orientation differences
         # up to which two lanelets are considered as neighbouring lanelets
-        self.max_length_diff = 0.1  # in percent
-        self.max_neighbour_angle_diff = 10  # in degree
+        self.max_length_diff = 0.05  # in percent
+        self.max_neighbour_angle_diff = 5  # in degree
 
         # define the standard intersection width, which is used to search for neighbouring lanelets in intersections
-        self.inter_width = 15  # in meter
+        self.inter_width = 20  # in meter
 
     def update_world(self, world_info: CarlaWorldInfo):
         """
@@ -199,6 +199,9 @@ class CommonRoadMapProvider(MapProvider):
                     curr_end_point = near_lanelet.center_vertices[-1]
                     curr_length = np.linalg.norm(np.array(curr_end_point) - np.array(curr_start_point))
 
+                    # neighbouring distance - should be less than half the intersection
+                    neigh_dist = np.linalg.norm(np.array(curr_end_point) - np.array(start_point))
+
                     curr_start_orientation = self._get_lanelet_orientation_to_light(near_lanelet, use_end=False)
                     curr_end_orientation = self._get_lanelet_orientation_to_light(near_lanelet, use_end=True)
 
@@ -209,7 +212,8 @@ class CommonRoadMapProvider(MapProvider):
                     # do these two lanelets fulfill the neighbouring criteria (defined in init)
                     if start_angle_diff < self.max_neighbour_angle_diff and \
                             end_angle_diff < self.max_neighbour_angle_diff and \
-                            math.isclose(length, curr_length, rel_tol=self.max_length_diff):
+                            math.isclose(length, curr_length, rel_tol=self.max_length_diff) and \
+                            neigh_dist < self.inter_width/2:
                         self.intersection[near_lanelet.lanelet_id] = True
 
     def _traffic_lights_to_scenario(self, lights: list):
