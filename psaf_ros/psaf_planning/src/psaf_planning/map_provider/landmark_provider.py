@@ -86,4 +86,4 @@ class LandMarkProvider:
                                       int(mark.id)))
             return markings
         finally:
-            print("done")
+            pass
