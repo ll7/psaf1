@@ -112,7 +112,7 @@ namespace psaf_local_planner
                 odom_helper.getRobotVel(robot_vel);
 
                 if (robot_vel.pose.position.x < 0.01) {
-                    ROS_INFO("costmap is free: %i", costmap_raytracer.checkForNoMovement(2 * M_PI, 20));
+                    ROS_INFO("costmap is free: %i", costmap_raytracer.checkForNoMovement(M_PI, 25, 5));
                 }
 
             }

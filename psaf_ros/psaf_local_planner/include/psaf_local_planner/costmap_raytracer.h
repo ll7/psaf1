@@ -55,9 +55,10 @@ namespace psaf_local_planner {
              * 
              * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
              * @param distance: max distance that should be looked at by the raytrace
+             * @param confidence: the count how often it should check for the area to be free of movement
              * @return returns true if there was no movement between this and the last function call
              */
-            bool checkForNoMovement(double angle, double distance);
+            bool checkForNoMovement(double angle, double distance, unsigned int required_confidence);
 
             /**
              * Epsilon that is used to determine whether two points are the same collision on the costmap
@@ -65,6 +66,9 @@ namespace psaf_local_planner {
              * calulcation uses manhattan norm for the distance calucaltion
              */
             static constexpr double MANHATTAN_EPSILON = 0.4;
+
+            /** Time in seconds that should cause the old maps to be reset if there wasn't a movement check inbetween */
+            static constexpr int MOVEMENT_CHECK_MAX_ITERATION_PAUSE_SECONDS = 3;
         private:
             /** The pointer to the costmap, updates automatically when the costmap changes */
             costmap_2d::Costmap2DROS *costmap_ros;
@@ -78,5 +82,8 @@ namespace psaf_local_planner {
 
             std::vector<RaytraceCollisionData> second_last_raytrace_results;
             std::vector<RaytraceCollisionData> last_raytrace_results;
+            
+            unsigned int confidence;
+            ros::Time last_movement_check;
     };
 };
