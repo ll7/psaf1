@@ -48,6 +48,8 @@ namespace psaf_local_planner
             dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
             dyn_serv->setCallback(f);
 
+            costmap_raytracer = CostmapRaytracer(costmap_ros, &current_pose, &debug_pub);
+
             initialized = true;
         }
         else
@@ -103,6 +105,16 @@ namespace psaf_local_planner
 
                 cmd_vel.linear.x = target_velocity - velocity_distance_diff;
                 cmd_vel.angular.z = angle;
+
+
+                // test code
+                geometry_msgs::PoseStamped robot_vel;
+                odom_helper.getRobotVel(robot_vel);
+
+                if (robot_vel.pose.position.x < 0.01) {
+                    ROS_INFO("costmap is free: %i", costmap_raytracer.checkForNoMovement(2 * M_PI, 20));
+                }
+
             }
         }
         else

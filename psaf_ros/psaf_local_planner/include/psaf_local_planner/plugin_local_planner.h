@@ -30,6 +30,7 @@
 #include <base_local_planner/goal_functions.h>
 #include <boost/algorithm/clamp.hpp>
 #include <assert.h>
+#include "psaf_local_planner/costmap_raytracer.h"
 
 
 namespace psaf_local_planner {
@@ -68,12 +69,6 @@ namespace psaf_local_planner {
         DRIVING_INTERSECTION, 
         STOPPED_INTERSECTION_REDLIGHT,
         STOPPED_INTERSECTION_STOP_SIGN,
-    };
-
-    class RaytraceCollisionData {
-        public:
-            RaytraceCollisionData(double x, double y, double angle, double distance);
-            double x, y, angle, distance;
     };
 
 
@@ -193,26 +188,6 @@ namespace psaf_local_planner {
              * @param relativeY: return value of relative Y position at which the obstacle was found
              */
             bool checkDistanceForward(double& distance, double &relative_x, double &relative_y);
-            
-            /**
-             * Send a raytrace along the costmap from the current position of the car
-             * 
-             * @param m_target_x: x position where to raytrace to in global map coordinates (in meters)
-             * @param m_target_y: x position where to raytrace to in global map coordinates (in meters)
-             * @param coll_x: x position where the collision happend on the costmap in global map coordinates (in meters)
-             * @param coll_y: x position where the collision happend on the costmap in global map coordinates (in meters)
-             * @return distance of the raytrace; returns infinity if there was no collision between those two points
-             */
-            double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
-
-            /**
-             * Sends out a bunch of raytraces around the car in a semi circle with the given angle
-             * 
-             * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
-             * @param distance: max distance that should be looked at by the raytrace
-             * @param collisions: in case of collisions they are getting added to the vector
-             */
-            void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
 
             /**
              * Function that checks for a slow car ahead using the slowdown of the own car
@@ -235,6 +210,9 @@ namespace psaf_local_planner {
              * @return pointer to the target point
              */
             geometry_msgs::PoseStamped& findLookaheadTarget();
+
+            /** Helper object for raytracing */
+            psaf_local_planner::CostmapRaytracer costmap_raytracer;
 
             /** The dynamic reconfigure server local for this node */
             dynamic_reconfigure::Server<psaf_local_planner::PsafLocalPlannerParameterConfig> *dyn_serv;

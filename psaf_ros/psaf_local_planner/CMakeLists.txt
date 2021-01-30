@@ -147,7 +147,9 @@ add_library(psaf_local_planner
         src/psaf_local_planner/Driving.cpp
         src/psaf_local_planner/Util.cpp
         src/psaf_local_planner/Intersection.cpp
-        src/psaf_local_planner/LocalPerception.cpp)
+        src/psaf_local_planner/LocalPerception.cpp
+        src/psaf_local_planner/costmap_raytracer.cpp
+)
 target_link_libraries(psaf_local_planner ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the library
