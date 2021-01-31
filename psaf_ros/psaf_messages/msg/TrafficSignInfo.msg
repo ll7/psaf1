@@ -11,5 +11,8 @@ SpeedSign[] speedSigns
 # All detected stop marks
 StopMark[] stopMarks
 
+# All detected stop signs
+StopSign[] stopSigns
+
 # All detected traffic lights
 TrafficLight[] trafficLights

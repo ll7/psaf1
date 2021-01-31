@@ -27,6 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   tf2_ros
   visualization_msgs
+  psaf_planning
   psaf_messages
 )
 
@@ -109,7 +110,9 @@ catkin_python_setup()
 #   cfg/DynReconf1.cfg
 #   cfg/DynReconf2.cfg
 # )
-#generate_dynamic_reconfigure_options(config/EgoVehicleControlParameter.cfg)
+generate_dynamic_reconfigure_options(config/PsafLocalPlannerParameter.cfg)
+
+
 
 ###################################
 ## catkin specific configuration ##

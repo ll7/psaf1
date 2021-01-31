@@ -26,6 +26,13 @@
         <param name="controller_frequency" value="20.0" />
     </node>
 
+    <node pkg="costmap_converter" type="standalone_converter" respawn="false" name="standalone_converter" output="screen">
+        <rosparam file="$(find psaf_steering)/config/costmap_converter_params.yaml" command="load" />
+    </node>
+
+
     <!--<include file="$(find psaf_steering)/launch/trajectory_follower.launch" />-->
     <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch" />
+    <include file="$(find psaf_steering)/launch/psaf_steering.launch" />
+
 </launch> 

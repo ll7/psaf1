@@ -9,7 +9,6 @@ from carla_msgs.msg import CarlaWorldInfo
 from opendrive2lanelet.opendriveparser.parser import parse_opendrive
 from opendrive2lanelet.network import Network
 from opendrive2lanelet.osm.lanelet2osm import L2OSMConverter
-
 from commonroad.common.file_writer import CommonRoadFileWriter, OverwriteExistingFile
 from commonroad.planning.planning_problem import PlanningProblemSet
 from commonroad.scenario.scenario import Tag

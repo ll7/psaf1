@@ -3,13 +3,11 @@
 #include <ros/ros.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <costmap_2d/costmap_2d.h>
- #include <costmap_2d/cost_values.h>
+#include <costmap_2d/cost_values.h>
 #include <nav_core/base_local_planner.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Quaternion.h>
-#include <std_msgs/Float64.h>
-#include <std_msgs/Int8.h>
 #include <nav_msgs/Path.h>
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
@@ -24,12 +22,56 @@
 #include <tf2/utils.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
-#include <limits>
-#include "psaf_messages/TrafficSignInfo.h"
-#include "psaf_messages/SpeedSign.h"
+#include <base_local_planner/line_iterator.h>
+#include <psaf_messages/Obstacle.h>
+#include "psaf_local_planner/PsafLocalPlannerParameterConfig.h"
 
 
 namespace psaf_local_planner {
+
+    enum LocalPlannerState {
+        /** 
+         * Car has stopped 
+         * --> DRIVING [on global plan published] 
+         */
+        STOPPED, 
+
+        /**
+         * Car has reached final destination
+         * --> shutdown
+         */
+        GOAL_REACHED, 
+
+        /**
+         * Car is driving on normal, straight lane
+         * --> DRIVING_CURVATURE [on curvature ahead less than x meters with angle over y]
+         * --> DRIVING_INTERSECTION [on driving over a intersection]
+         * --> GOAL_REACHED [on reaching goal reached]
+         */
+        DRIVING, 
+        /**
+         * Car is driving in or ahead of a curvature
+         * --> DRIVING [on: car has left the curvature and is back on a straight track]
+         * --> DRIVING_INTERSECTION_AHEAD [on: car has left the curvature and has a intersection ahead of it]
+         */
+        DRIVING_CURVATURE, 
+
+        /**
+         * 
+         */
+        DRIVING_INTERSECTION_AHEAD,
+        DRIVING_INTERSECTION, 
+        STOPPED_INTERSECTION_REDLIGHT,
+        STOPPED_INTERSECTION_STOP_SIGN,
+    };
+
+    class RaytraceCollisionData {
+        public:
+            RaytraceCollisionData(double x, double y, double angle, double distance);
+            double x, y, angle, distance;
+    };
+
+
     class PsafLocalPlanner : public nav_core::BaseLocalPlanner {
         public:
             PsafLocalPlanner();
@@ -56,41 +98,42 @@ namespace psaf_local_planner {
              */
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
         private:
-            void publishLocalPlan(const std::vector<geometry_msgs::PoseStamped>& path);
             void publishGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& path);
-            
+            void reconfigure_callback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level);
+
             void deleteOldPoints();
             
-            /**
-             * Fills the point buffer with points of the route
-             */
-            void fillPointBuffer();
             
             double compute_steering_angle(geometry_msgs::Pose target_location, geometry_msgs::Pose current_location);
             void estimate_curvature_and_set_target_velocity(geometry_msgs::Pose current_location);
-            bool check_distance_forward(double& distance);
+            double calculateRadius(unsigned int first, unsigned int last);
 
-            void trafficSignCallback(const psaf_messages::TrafficSignInfo::ConstPtr &msg);
-            void velocityCallback(const std_msgs::Int8::ConstPtr &msg);
+            bool check_distance_forward(double& distance, double &relativeX, double &relativeY);
+
+            double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
+            void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
+            void checkForSlowCar(double velocity_distance_diff);
+            void globalPlanExtendedCallback(const geometry_msgs::Twist &msg);
+            
+            dynamic_reconfigure::Server<psaf_local_planner::PsafLocalPlannerParameterConfig> *dyn_serv;
 
             geometry_msgs::PoseStamped& find_lookahead_target();
 
             costmap_2d::Costmap2DROS* costmap_ros;
             base_local_planner::LocalPlannerUtil planner_util;
 
-            ros::Publisher g_plan_pub, l_plan_pub, curvature_pub;
+            ros::Publisher g_plan_pub;
             ros::Publisher debug_pub;
+            ros::Publisher obstacle_pub;
             ros::Subscriber vel_sub;
-            ros::Subscriber traffic_sign_sub;
+            ros::Subscriber global_plan_extended_sub;
 
             geometry_msgs::PoseStamped current_pose;
             base_local_planner::OdometryHelperRos odom_helper;
             std::string odom_topic;
-
-
             
 
-            std::vector<geometry_msgs::PoseStamped> local_plan, global_plan;
+            std::vector<geometry_msgs::PoseStamped> global_plan;
             int bufferSize;
 
             bool initialized;
@@ -113,6 +156,24 @@ namespace psaf_local_planner {
             /** set to true when the goal is reached*/
             bool goal_reached;
 
+            /** The distance for which it should look for a curvature*/
+            double estimate_curvature_distance;
+
+            /** The max distance it should check for a collision*/
+            double check_collision_max_distance;
+
+            /** counts the iterations the car has been detected as slow before us */
+            int slow_car_ahead_counter;
+
+            /** sets a flag when the slow car and obstacles have been published */ 
+            bool slow_car_ahead_published;
+
+            /** */
+            ros::Time slow_car_last_published;
+
+            LocalPlannerState state;
+
+            unsigned int obstacle_msg_id_counter;
 
     };
 };

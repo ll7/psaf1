@@ -85,7 +85,7 @@ class BatchProcessor:
 
             # scenario_id = scenario.benchmark_id
             scenario_id = self.scenario_ids[idx]
-            if scenario_id != scenario.benchmark_id:
+            if scenario_id != scenario.scenario_id:
                 scenarios_with_different_ids.append(scenario_id)
                 self.logger.warning("Benchmark ID and scenario name differs in scenario: [{:<20}]".format(scenario_id))
 
@@ -144,7 +144,7 @@ class BatchProcessor:
                     fig = plt.figure(figsize=(size_x, size_x / ratio_x_y))
                     fig.gca().axis('equal')
 
-                    fig.suptitle(scenario.benchmark_id, fontsize=20)
+                    fig.suptitle(scenario.scenario_id, fontsize=20)
 
                     draw_route(route, draw_route_lanelets=True, draw_reference_path=True, plot_limits=plot_limits)
 
