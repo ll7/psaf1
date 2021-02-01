@@ -1,17 +1,11 @@
 # !/usr/bin/env python
-import tempfile
 
 import rospy
 from carla_msgs.msg import CarlaWorldInfo
-from commonroad.common.file_writer import CommonRoadFileWriter
 from commonroad.scenario.trajectory import State
 from commonroad.planning.goal import GoalRegion
 from commonroad.common.util import Interval
 from commonroad.geometry.shape import Circle
-from commonroad.common.file_writer import CommonRoadFileWriter
-from commonroad.common.file_writer import OverwriteExistingFile
-from commonroad.scenario.scenario import Location
-from commonroad.scenario.scenario import Tag
 
 from psaf_planning.map_provider.landmark_provider import LandMarkProvider, LandMarkPoint
 from psaf_planning.map_provider.map_provider import MapProvider
