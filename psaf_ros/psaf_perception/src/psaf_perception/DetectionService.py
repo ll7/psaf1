@@ -120,6 +120,7 @@ class DetectionService:
                 msg = StopLine()
                 msg.x = each.x + each.w / 2
                 msg.y = each.y + each.h / 2
+                msg.distance = each.distance
                 # Add to list
                 self.stop_lines.append(msg)
 

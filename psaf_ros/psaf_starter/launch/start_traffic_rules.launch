@@ -68,7 +68,7 @@
 
     <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch"/>
 
-    <include file="$(find psaf_local_planner)/launch/psaf_local_traffic_planner_service.launch"/>
+    <include file="$(find psaf_local_planner)/launch/psaf_local_perception_evaluation_service.launch"/>
 
     <include file="$(find psaf_perception)/launch/psaf_perception_detection_service.launch">
         <arg name='use_gpu' value='$(arg use_gpu)'/>
