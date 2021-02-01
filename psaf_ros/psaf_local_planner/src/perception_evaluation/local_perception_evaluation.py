@@ -58,7 +58,7 @@ class LocalPerceptionEvaluation:
                 if traffic_light.distance < 50:
                     x1 = steer * (0.3 if steer > 0 else 0.6) + 0.5
                     # Calculate coordinates
-                    x2 = min([x1 + 0.34, 1.])
+                    x2 = min([x1 + 0.4, 1.])
                     first_check = is_in_traffic_light_area(traffic_light, x1, x2, 0.2, 0.8)
                     if first_check:
                         return True
