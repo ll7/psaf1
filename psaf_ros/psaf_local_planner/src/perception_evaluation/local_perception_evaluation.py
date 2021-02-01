@@ -62,9 +62,9 @@ class LocalPerceptionEvaluation:
                     first_check = is_in_traffic_light_area(traffic_light, x1, x2, 0.2, 0.8)
                     if first_check:
                         return True
-                    # check for traffic lights that are in front of the car on the other side of the intersection (american style)
-                    center_x = steer * (0.25 if steer > 0 else 0.3) + 0.5
-                    center_y = 0.375
+                # check for traffic lights that are in front of the car on the other side of the intersection (american style)
+                center_x = steer * (0.25 if steer > 0 else 0.3) + 0.5
+                center_y = 0.375
 
                 # scale width and height by distance -> size decrease with distance
                 scaling = 1 - math.exp(-(traffic_light.distance) / 100)
