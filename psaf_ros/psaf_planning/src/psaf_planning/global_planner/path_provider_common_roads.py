@@ -314,6 +314,9 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 else:
                     tmp_message = deepcopy(message)
                     tmp_message.route_portion = message.route_portion[len(message.route_portion) // 2:]
+                    for waypoint in tmp_message.route_portion:
+                        waypoint.duration = waypoint.duration - \
+                                            message.route_portion[len(message.route_portion) // 2].duration
                     extended_route.route.append(deepcopy(tmp_message))
                     time += message.route_portion[-1].duration - message.route_portion[
                         len(message.route_portion) // 2].duration
