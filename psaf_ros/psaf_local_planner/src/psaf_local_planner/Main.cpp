@@ -13,6 +13,7 @@ namespace psaf_local_planner
                                             slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
     {
         std::cout << "Hi";
+        this->state_machine = new LocalPlannerStateMachine();
     }
 
     PsafLocalPlanner::~PsafLocalPlanner()
@@ -47,6 +48,8 @@ namespace psaf_local_planner
             dyn_serv = new dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>(private_nh);
             dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
             dyn_serv->setCallback(f);
+
+            this->state_machine->init();
 
             initialized = true;
         }

@@ -1,74 +1,60 @@
 #pragma once
 
+// General
+#include <string>
+#include <filesystem>
+#include <assert.h>
+
+// ros
 #include <ros/ros.h>
+
+
+// Messages
+#include <geometry_msgs/Quaternion.h>
+#include <nav_msgs/Path.h>
+#include <nav_msgs/Path.h>
+#include <visualization_msgs/MarkerArray.h>
+#include <visualization_msgs/Marker.h>
+
+// Geometry messages
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Twist.h>
+
+// Tf2
+#include <tf2/utils.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
+
+// Nav / move stack
+#include <nav_core/base_local_planner.h>
+
+#include <base_local_planner/line_iterator.h>
+#include <base_local_planner/goal_functions.h>
+#include <base_local_planner/odometry_helper_ros.h>
+#include <base_local_planner/local_planner_util.h>
+#include <base_local_planner/world_model.h>
+#include <base_local_planner/costmap_model.h>
+
 #include <costmap_2d/costmap_2d_ros.h>
 #include <costmap_2d/costmap_2d.h>
 #include <costmap_2d/cost_values.h>
-#include <nav_core/base_local_planner.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/Twist.h>
-#include <geometry_msgs/Quaternion.h>
-#include <nav_msgs/Path.h>
-#include <base_local_planner/world_model.h>
-#include <base_local_planner/costmap_model.h>
-#include <nav_msgs/Path.h>
-#include <string>
-#include <filesystem>
-#include <tf2_ros/buffer.h>
-#include <ros/ros.h>
-#include <base_local_planner/odometry_helper_ros.h>
-#include <base_local_planner/local_planner_util.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2/utils.h>
-#include <visualization_msgs/MarkerArray.h>
-#include <visualization_msgs/Marker.h>
-#include <base_local_planner/line_iterator.h>
+
+
+// internal
 #include <psaf_messages/Obstacle.h>
 #include <psaf_messages/XRoute.h>
 #include <psaf_messages/XLanelet.h>
 #include <psaf_local_planner/PsafLocalPlannerParameterConfig.h>
-#include <base_local_planner/goal_functions.h>
+#include <psaf_local_planner/state_machine.h>
+
+// external non ros
 #include <boost/algorithm/clamp.hpp>
-#include <assert.h>
+
 
 
 namespace psaf_local_planner {
 
-    enum LocalPlannerState {
-        /** 
-         * Car has stopped 
-         * --> DRIVING [on global plan published] 
-         */
-        STOPPED, 
-
-        /**
-         * Car has reached final destination
-         * --> shutdown
-         */
-        GOAL_REACHED, 
-
-        /**
-         * Car is driving on normal, straight lane
-         * --> DRIVING_CURVATURE [on curvature ahead less than x meters with angle over y]
-         * --> DRIVING_INTERSECTION [on driving over a intersection]
-         * --> GOAL_REACHED [on reaching goal reached]
-         */
-        DRIVING, 
-        /**
-         * Car is driving in or ahead of a curvature
-         * --> DRIVING [on: car has left the curvature and is back on a straight track]
-         * --> DRIVING_INTERSECTION_AHEAD [on: car has left the curvature and has a intersection ahead of it]
-         */
-        DRIVING_CURVATURE, 
-
-        /**
-         * 
-         */
-        DRIVING_INTERSECTION_AHEAD,
-        DRIVING_INTERSECTION, 
-        STOPPED_INTERSECTION_REDLIGHT,
-        STOPPED_INTERSECTION_STOP_SIGN,
-    };
 
     class RaytraceCollisionData {
         public:
@@ -308,8 +294,8 @@ namespace psaf_local_planner {
             /** Last time the obstacle message was published, allows repeated pubshling */
             ros::Time slow_car_last_published;
 
-            /** ~~ planned ~~ current state of the car */
-            LocalPlannerState state;
+            /** The state machine */
+            LocalPlannerStateMachine* state_machine;
 
             /** Counter for the obstacle message to be always incrementing */
             unsigned int obstacle_msg_id_counter;
