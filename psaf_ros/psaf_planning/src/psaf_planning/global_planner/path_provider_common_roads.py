@@ -301,7 +301,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
             if lane_change_instructions[i] == 0:
                 if not do_lane_change:
                     extended_route.route.append(deepcopy(self.manager.message_by_lanelet[lane_id]))
-                    time += self.manager.time_by_lanelet[lane_id][-1]
+                    time += self.manager.message_by_lanelet[lane_id].route_portion[-1].duration
 
                     # heuristic adds defined amount of seconds for each traffic light
                     time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
@@ -309,8 +309,8 @@ class PathProviderCommonRoads(PathProviderAbstract):
                     message = deepcopy(self.manager.message_by_lanelet[lane_id])
                     message.route_portion = message.route_portion[len(message.route_portion) // 2:]
                     extended_route.route.append(deepcopy(message))
-                    time += self.manager.time_by_lanelet[lane_id][-1] - self.manager.time_by_lanelet[lane_id][
-                        len(message.route_portion) // 2]
+                    time += message.route_portion[-1].duration - message.route_portion[
+                        len(message.route_portion) // 2].duration
 
                     # heuristic adds defined amount of seconds for each traffic light
                     time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
@@ -321,9 +321,10 @@ class PathProviderCommonRoads(PathProviderAbstract):
                     message = deepcopy(self.manager.message_by_lanelet[lane_id])
                     message.route_portion = message.route_portion[:len(message.route_portion) // 2]
                     extended_route.route.append(deepcopy(message))
-                    time += self.manager.time_by_lanelet[lane_id][len(message.route_portion) // 2]
+                    time += message.route_portion[len(message.route_portion) // 2].duration
                 else:
-                    rospy.logerr("This should not have happened, CHECK!")  # TODO: Check if it occurs
+                    # lane changing over at least two lanes at once -> do not count the skipped middle lane
+                    pass
 
                 do_lane_change = True
         return extended_route, time
@@ -380,7 +381,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
         candidate_holder = route_planner.plan_routes()
         all_routes, num_routes = candidate_holder.retrieve_all_routes()
 
-
         rospy.loginfo("PathProvider: Computing feasible path from a to b")
         path_poses = []
         x_route = XRoute(id=-1)
@@ -412,7 +412,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
                     self._visualization(all_routes[i], i)
             rospy.loginfo("PathProvider: Computation of feasible path done")
 
-
         else:
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
             path_poses = [self._get_pose_stamped(start_point, start_point)]
@@ -432,4 +431,3 @@ class PathProviderCommonRoads(PathProviderAbstract):
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
             self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
-            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)
