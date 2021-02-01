@@ -94,7 +94,7 @@ class CommonRoadManager:
         time = 0.0
         prev_point = None
         for i, point in enumerate(lanelet.center_vertices):
-            if i > 1:
+            if i > 0:
                 time += self._calculate_duration_entry(previous=prev_point, current=point, prev_speed=speed)
             # check for speed signs
             for speed_sign in speed_signs:

@@ -40,10 +40,11 @@ class ProblemStatus(Enum):
 
 class PathProviderCommonRoads(PathProviderAbstract):
 
-    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10,
+    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 20,
                  role_name: str = "ego_vehicle",
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
-                 max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30):
+                 max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
+                 cost_stop_sign: int = 5):
         super(PathProviderCommonRoads, self).__init__(init_rospy, polling_rate, timeout_iter, role_name,
                                                       enable_debug=enable_debug)
         self.map_provider = CommonRoadMapProvider(debug=True)
@@ -51,6 +52,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.step_size = step_size
         self.max_radius = max_radius
         self.cost_traffic_light = cost_traffic_light
+        self.cost_stop_sign = cost_stop_sign
         self.path_poses = []
         self.planning_problem = None
         self.manager = None
@@ -300,27 +302,28 @@ class PathProviderCommonRoads(PathProviderAbstract):
         do_lane_change = False
         time = 0
         for i, lane_id in enumerate(route.list_ids_lanelets):
+            message = deepcopy(self.manager.message_by_lanelet[lane_id])
             if lane_change_instructions[i] == 0:
                 if not do_lane_change:
-                    extended_route.route.append(deepcopy(self.manager.message_by_lanelet[lane_id]))
-                    time += self.manager.message_by_lanelet[lane_id].route_portion[-1].duration
+                    extended_route.route.append(deepcopy(message))
+                    time += message.route_portion[-1].duration
 
                     # heuristic adds defined amount of seconds for each traffic light
-                    time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
+                    time += int(message.hasLight) * self.cost_traffic_light
+                    time += int(message.hasStop) * self.cost_stop_sign
                 else:
-                    message = deepcopy(self.manager.message_by_lanelet[lane_id])
                     message.route_portion = message.route_portion[len(message.route_portion) // 2:]
                     extended_route.route.append(deepcopy(message))
                     time += message.route_portion[-1].duration - message.route_portion[
                         len(message.route_portion) // 2].duration
 
-                    # heuristic adds defined amount of seconds for each traffic light
-                    time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
+                    # heuristic adds defined amount of seconds for each traffic light and stop signs on the lanelet
+                    time += int(message.hasLight) * self.cost_traffic_light
+                    time += int(message.hasStop) * self.cost_stop_sign
 
                     do_lane_change = False
             else:
                 if not do_lane_change:
-                    message = deepcopy(self.manager.message_by_lanelet[lane_id])
                     message.route_portion = message.route_portion[:len(message.route_portion) // 2]
                     extended_route.route.append(deepcopy(message))
                     time += message.route_portion[len(message.route_portion) // 2].duration
