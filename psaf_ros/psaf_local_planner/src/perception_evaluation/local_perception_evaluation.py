@@ -118,6 +118,6 @@ class LocalPerceptionEvaluation:
 
 
 if __name__ == '__main__':
-    rospy.init_node("Local_Traffic_Rules_planner")
+    rospy.init_node("Local_perception_evaluation")
     planner = LocalPerceptionEvaluation()
     rospy.spin()
