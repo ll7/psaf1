@@ -312,8 +312,9 @@ class PathProviderCommonRoads(PathProviderAbstract):
                     time += int(message.hasLight) * self.cost_traffic_light
                     time += int(message.hasStop) * self.cost_stop_sign
                 else:
-                    message.route_portion = message.route_portion[len(message.route_portion) // 2:]
-                    extended_route.route.append(deepcopy(message))
+                    tmp_message = deepcopy(message)
+                    tmp_message.route_portion = message.route_portion[len(message.route_portion) // 2:]
+                    extended_route.route.append(deepcopy(tmp_message))
                     time += message.route_portion[-1].duration - message.route_portion[
                         len(message.route_portion) // 2].duration
 
@@ -324,14 +325,16 @@ class PathProviderCommonRoads(PathProviderAbstract):
                     do_lane_change = False
             else:
                 if not do_lane_change:
-                    message.route_portion = message.route_portion[:len(message.route_portion) // 2]
-                    extended_route.route.append(deepcopy(message))
+                    tmp_message = deepcopy(message)
+                    tmp_message.route_portion = message.route_portion[:len(message.route_portion) // 2]
+                    extended_route.route.append(deepcopy(tmp_message))
                     time += message.route_portion[len(message.route_portion) // 2].duration
                 else:
                     # lane changing over at least two lanes at once -> do not count the skipped middle lane
                     pass
 
                 do_lane_change = True
+
         return extended_route, time
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
