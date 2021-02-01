@@ -22,30 +22,10 @@ class CommonRoadManager:
         self.neighbourhood = self._analyze_neighbourhood(self.map)
         self.original_neighbourhood = deepcopy(self.neighbourhood)
         self.message_by_lanelet = {}
-        # test scenario
-        self._dummy_test(368)
 
         self._fill_message_dict()
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
-
-    # just for now , remove later !!!!!
-    def _dummy_test(self, id_insert):
-        pos = len(self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices) // 2
-        pos = self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices[pos]
-        traffic_light = TrafficLight(1, [], pos)
-        id_set = set()
-        id_set.add(id_insert)
-        self.map.lanelet_network.add_traffic_light(traffic_light, lanelet_ids=deepcopy(id_set))
-        signelement = TrafficSignElement(TrafficSignIDGermany.MAX_SPEED, ["20"])
-        sign = TrafficSign(15, first_occurrence=deepcopy(id_set), position=pos, traffic_sign_elements=[signelement])
-        self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
-
-        signelement = TrafficSignElement(TrafficSignIDGermany.STOP, [])
-        pos = len(self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices) - 1
-        pos = self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices[pos]
-        sign = TrafficSign(16, first_occurrence=deepcopy(id_set), position=pos, traffic_sign_elements=[signelement])
-        self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
 
     def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int):
         # add the new lanelets to the dict
@@ -56,10 +36,10 @@ class CommonRoadManager:
         del self.message_by_lanelet[matching_lanelet_id]
 
     def _fill_message_dict(self):
-        rospy.loginfo("CommonRoadManager: Message and duration hashmap calculation started!")
+        rospy.loginfo("CommonRoadManager: Message calculation started!")
         for lanelet in self.map.lanelet_network.lanelets:
             self._generate_xlanelet(lanelet)
-        rospy.loginfo("CommonRoadManager: Hashmap calculation done!")
+        rospy.loginfo("CommonRoadManager: Message calculation done!")
 
     def _calculate_duration_entry(self, previous: list, current: list, prev_speed: float):
         # calculate the duration between two waypoints

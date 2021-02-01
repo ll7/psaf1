@@ -1,7 +1,6 @@
 # !/usr/bin/env python
 
 import rospy
-from carla_msgs.msg import CarlaWorldInfo
 from commonroad.scenario.trajectory import State
 from commonroad.planning.goal import GoalRegion
 from commonroad.common.util import Interval
@@ -10,7 +9,6 @@ from commonroad.geometry.shape import Circle
 from psaf_planning.map_provider.landmark_provider import LandMarkProvider, LandMarkPoint
 from psaf_planning.map_provider.map_provider import MapProvider
 from geometry_msgs.msg import Point
-from commonroad.scenario.scenario import Scenario
 from commonroad.scenario.lanelet import Lanelet
 from commonroad.scenario.traffic_sign import TrafficSignIDGermany, TrafficLight, TrafficSign, TrafficSignElement
 from copy import deepcopy
@@ -19,13 +17,20 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-from commonroad.planning.planning_problem import PlanningProblem, PlanningProblemSet
+from commonroad.planning.planning_problem import PlanningProblem
 from commonroad.visualization.draw_dispatch_cr import draw_object
+
+from io import BytesIO
+from lxml import etree
+from carla_msgs.msg import CarlaWorldInfo
+from opendrive2lanelet.opendriveparser.parser import parse_opendrive
+from opendrive2lanelet.network import Network
+from commonroad.scenario.scenario import Scenario, ScenarioID
 
 
 class CommonRoadMapProvider(MapProvider):
 
-    def __init__(self, init_rospy: bool = False):
+    def __init__(self, init_rospy: bool = False, debug: bool = False):
         if init_rospy:
             rospy.init_node('CommonRoadMapProvider', anonymous=True)
         super(CommonRoadMapProvider, self).__init__()
@@ -34,6 +39,8 @@ class CommonRoadMapProvider(MapProvider):
         self.landmark_provider: LandMarkProvider = None
         self.cur_mark_id = -1
         self.planning_problem = None
+        self.debug = debug
+        self.opendrive_loaded = False
 
         # orientation difference between traffic light and lanelet in degree,
         # up to which the a lanelet and a traffic light is considered a match
@@ -54,6 +61,7 @@ class CommonRoadMapProvider(MapProvider):
         """
         Check if a new map was sent and receive it
         """
+        self.opendrive_loaded = False
         self.map_ready = False
         rospy.loginfo("CommonRoadMapProvider: Received new map info")
         if self.map_name == world_info.map_name:
@@ -62,9 +70,9 @@ class CommonRoadMapProvider(MapProvider):
             self.cur_mark_id = -1
             self.map_name = world_info.map_name
             self.map = world_info.opendrive
-            self.map_ready = True
+            self.opendrive_loaded = True
             rospy.loginfo("CommonRoadMapProvider: Received: " + self.map_name)
-            self.map_cr = self.convert_od_to_lanelet()
+            self.map_cr = self._gen_raw_scenario()
             rospy.loginfo("CommonRoadMapProvider: Getting landmarks")
             self.landmark_provider = LandMarkProvider()
             rospy.loginfo("CommonRoadMapProvider: detecting intersections")
@@ -79,11 +87,30 @@ class CommonRoadMapProvider(MapProvider):
                 elif 'stop' in key.lower():
                     rospy.loginfo("CommonRoadMapProvider: Stop signs and marks")
                     self._stop_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key))
+            if self.debug:
+                self.planning_problem = self._generate_dummy_planning_problem()
+                self._visualize_scenario(self.map_cr, self.planning_problem)
+            rospy.loginfo("CommonRoadMapProvider: Conversion done!")
+            self.map_ready = True
 
-            rospy.loginfo("CommonRoadMapProvider: DONE")
+    def convert_od_to_lanelet(self) -> Scenario:
+        if self.map_ready:
+            return self.map_cr
+        return None
 
-            self.planning_problem = self._generate_dummy_planning_problem()
-            self._visualize_scenario(self.map_cr, self.planning_problem)
+    def _gen_raw_scenario(self):
+        """
+        Create a CommonRoad scenario from the OpenDrive received OpenDrive map
+        """
+        lanelet: Scenario = None
+        if self.opendrive_loaded:
+            rospy.loginfo("CommonRoadMapProvider: Start conversion...")
+            opendrive = parse_opendrive(etree.parse(BytesIO(self.map.encode('utf-8'))).getroot())
+            roadNetwork = Network()
+            roadNetwork.load_opendrive(opendrive)
+            scenario_id = ScenarioID(country_id="DEU", map_name="psaf")
+            lanelet = roadNetwork.export_commonroad_scenario(benchmark_id=scenario_id)
+        return lanelet
 
     def _get_all_fitting_neighbour_lanelets(self, lanelet_id: int) -> list:
         """
@@ -316,7 +343,7 @@ class CommonRoadMapProvider(MapProvider):
         if prob is not None:
             draw_object(prob)
         plt.gca().set_aspect('equal')
-        plt.savefig("route_.png")
+        plt.savefig(self.map_name + ".png")
         plt.close()
 
     def _add_light_to_lanelet(self, lanelet_id: int):

@@ -24,6 +24,7 @@ import sys
 from copy import deepcopy
 import rospy
 from sensor_msgs.msg import NavSatFix
+from psaf_planning.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
 
 from enum import Enum
 from psaf_messages.msg import XRoute
@@ -45,6 +46,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30):
         super(PathProviderCommonRoads, self).__init__(init_rospy, polling_rate, timeout_iter, role_name,
                                                       enable_debug=enable_debug)
+        self.map_provider = CommonRoadMapProvider(debug=True)
         self.radius = initial_search_radius
         self.step_size = step_size
         self.max_radius = max_radius

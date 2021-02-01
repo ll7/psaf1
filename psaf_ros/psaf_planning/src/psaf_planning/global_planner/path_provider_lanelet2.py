@@ -13,6 +13,8 @@ from psaf_planning.global_planner.path_provider_abstract import PathProviderAbst
 from copy import deepcopy
 from sensor_msgs.msg import NavSatFix
 
+from psaf_planning.map_provider.map_provider import MapProvider
+
 
 class PathProviderLanelet2(PathProviderAbstract):
 
@@ -27,6 +29,7 @@ class PathProviderLanelet2(PathProviderAbstract):
         """
         super(PathProviderLanelet2, self).__init__(init_rospy, polling_rate, timeout_iter, role_name,
                                                    enable_debug=enable_debug)
+        self.map_provider = MapProvider()
         self.path_long = Path()
         self.map_path = self._get_map_path(polling_rate, timeout_iter)
         if not self.map_path:
