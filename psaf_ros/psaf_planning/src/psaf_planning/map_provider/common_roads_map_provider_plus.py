@@ -46,7 +46,7 @@ class CommonRoadMapProvider(MapProvider):
         self.max_angle_diff = 20  # in degree
         # orientation difference between speed sign and lanelet in degree,
         # up to which the a lanelet and a speed sign is considered a match
-        self.max_angle_diff_speed_sign = 45  # in degree
+        self.max_angle_diff_speed_sign = 45 # in degree
 
         # length and orientation differences
         # up to which two lanelets are considered as neighbouring lanelets
@@ -116,7 +116,7 @@ class CommonRoadMapProvider(MapProvider):
         """
         sign_added = False  # only true if a sign was added
         for sign in signs:
-            mapped_lanelets = self._find_nearest_lanlet(sign.pos_as_point())
+            mapped_lanelets = self._find_nearest_lanelet(sign.pos_as_point())
             if mapped_lanelets is not None:
                 for lanelet in mapped_lanelets:
                     sign_pos_index = self._find_vertex_index(lanelet, sign.pos_as_point())
@@ -141,7 +141,7 @@ class CommonRoadMapProvider(MapProvider):
                 rospy.logerr("CommonRoadMapProvider: Sing ID - " +
                              str(sign.mark_id) + " - Orientation did not match")
 
-    def _find_nearest_lanlet(self, goal: Point):
+    def _find_nearest_lanelet(self, goal: Point):
         """
         Given a Point (x,y,z) -> find nearest lanelet
         :param goal: point to which the nearest lanelet should be searched
