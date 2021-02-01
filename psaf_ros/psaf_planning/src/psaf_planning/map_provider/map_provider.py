@@ -12,10 +12,7 @@ from opendrive2lanelet.osm.lanelet2osm import L2OSMConverter
 from commonroad.common.file_writer import CommonRoadFileWriter, OverwriteExistingFile
 from commonroad.planning.planning_problem import PlanningProblemSet
 from commonroad.scenario.scenario import Tag
-from commonroad.scenario.scenario import Scenario
-import numpy as np
-import math
-from commonroad.scenario.lanelet import Lanelet
+from commonroad.scenario.scenario import Scenario, ScenarioID
 
 import tempfile
 
@@ -87,7 +84,8 @@ class MapProvider:
             opendrive = parse_opendrive(etree.parse(BytesIO(self.map.encode('utf-8'))).getroot())
             roadNetwork = Network()
             roadNetwork.load_opendrive(opendrive)
-            lanelet = roadNetwork.export_commonroad_scenario()
+            scenario_id = ScenarioID(country_id="DEU", map_name="psaf")
+            lanelet = roadNetwork.export_commonroad_scenario(benchmark_id=scenario_id)
             rospy.loginfo("MapProvider: Conversion done!")
         return lanelet
 

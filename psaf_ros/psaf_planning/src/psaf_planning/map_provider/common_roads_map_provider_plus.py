@@ -43,10 +43,10 @@ class CommonRoadMapProvider(MapProvider):
 
         # orientation difference between traffic light and lanelet in degree,
         # up to which the a lanelet and a traffic light is considered a match
-        self.max_angle_diff = 20  # in degree
+        self.max_angle_diff_light = 20  # in degree
         # orientation difference between speed sign and lanelet in degree,
         # up to which the a lanelet and a speed sign is considered a match
-        self.max_angle_diff_speed_sign = 45 # in degree
+        self.max_angle_diff_sign = 45  # in degree
 
         # length and orientation differences
         # up to which two lanelets are considered as neighbouring lanelets
@@ -79,10 +79,15 @@ class CommonRoadMapProvider(MapProvider):
             self._traffic_lights_to_scenario(self.landmark_provider.get_marks_by_categorie('Signal_3Light_Post01'))
             for key in self.landmark_provider.available_categories():
                 if 'Speed' in key:
-                    rospy.loginfo("CommonRoadMapProvider: Adding " + key + " Signs")
-                    self._add_speed_signs(self.landmark_provider.get_marks_by_categorie(key),
-                                          int(str(key).split("_", 1)[1]))
+                    rospy.loginfo("CommonRoadMapProvider: Adding " + key + " signs")
+                    self._speed_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key),
+                                                  int(str(key).split("_", 1)[1]))
+                elif 'stop' in key.lower():
+                    rospy.loginfo("CommonRoadMapProvider: Stop signs and marks")
+                    self._stop_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key))
+
             rospy.loginfo("CommonRoadMapProvider: DONE")
+
             self.planning_problem = self._generate_dummy_planning_problem()
             self._visualize_scenario(self.map_cr, self.planning_problem)
 
@@ -108,7 +113,22 @@ class CommonRoadMapProvider(MapProvider):
             neighbour_lanelets.append(lane_under_obs)
         return neighbour_lanelets
 
-    def _add_speed_signs(self, signs: list, speed: int):
+    def _stop_signs_to_scenario(self, stops: list):
+        """
+        Add the stop signs or marks to the scenario
+        :param stops: list of stop signs or marks as LandMarkPoints
+        """
+        for stop in stops:
+            mapped_lanelets = self._find_traffic_rule_lanelet(stop, self.max_angle_diff_sign, neighbouring=False)
+            if len(mapped_lanelets) > 0:
+                for lanelet in mapped_lanelets:
+                    index = self._find_vertex_index(lanelet, stop.pos_as_point())
+                    self._add_sign_to_lanelet(lanelet.lanelet_id, index, TrafficSignIDGermany.STOP)
+            else:
+                rospy.logerr("CommonRoadMapProvider: Stop ID - " +
+                             str(stop.mark_id) + " - did not match to any lanelet")
+
+    def _speed_signs_to_scenario(self, signs: list, speed: int):
         """
         Given a list of speed sing positions -> add speed signs to lanelets
         :param signs: list of speed sign positions
@@ -124,7 +144,7 @@ class CommonRoadMapProvider(MapProvider):
                     angle_diff = 180 - abs(abs(sign.orientation - lane_orientation) - 180)
                     # add speed sign if the angle_diff matches and
                     # discard all other matches in mapped_lanelets since the sign can't be on that lanes
-                    if angle_diff < self.max_angle_diff_speed_sign:
+                    if angle_diff < self.max_angle_diff_sign:
                         self._add_sign_to_lanelet(lanelet_id=lanelet.lanelet_id, pos_index=sign_pos_index,
                                                   typ=TrafficSignIDGermany.MAX_SPEED, additional=[speed])
                         neighbours = self._get_all_fitting_neighbour_lanelets(lanelet.lanelet_id)
@@ -160,10 +180,11 @@ class CommonRoadMapProvider(MapProvider):
                 return nearest
         return None
 
-    def _find_traffic_light_lanelet(self, light: LandMarkPoint):
+    def _find_traffic_rule_lanelet(self, light: LandMarkPoint, max_angle_diff: float, neighbouring: bool = True):
         """
         Given a traffic light -> find the lanelet to which the traffic light is effective
         :param light: trafficLight as a LandMarkPoint
+        :param max_angle_diff: max allowed differenced between orientation of the traffic rule to be applied
         :return: lanelets to which the traffic light is effective
         """
         curr_radius = self.inter_width * 3
@@ -183,7 +204,7 @@ class CommonRoadMapProvider(MapProvider):
                     lane_orientation = self._get_lanelet_orientation_to_light(lane, use_end=True)
                     angle_diff = 180 - abs(abs(light.orientation - lane_orientation) - 180)
 
-                    if not is_intersection and angle_diff < self.max_angle_diff:
+                    if not is_intersection and angle_diff < max_angle_diff:
                         # get distance of the end point of that lanelet to the traffic light
                         dist_end = np.linalg.norm(np.array([light.x, light.y]) - np.array(lane.center_vertices[-1]))
                         # get distance of the start point of that lanelet to the traffic light
@@ -197,7 +218,8 @@ class CommonRoadMapProvider(MapProvider):
         if solution_found:
             best = min(solution_list, key=lambda x: x[1])
             best_lanelets = [nearest[best[0]]]
-            best_lanelets.extend(self._get_all_fitting_neighbour_lanelets(best_lanelets[0].lanelet_id))
+            if neighbouring:
+                best_lanelets.extend(self._get_all_fitting_neighbour_lanelets(best_lanelets[0].lanelet_id))
 
         return best_lanelets
 
@@ -264,7 +286,7 @@ class CommonRoadMapProvider(MapProvider):
                     if start_angle_diff < self.max_neighbour_angle_diff and \
                             end_angle_diff < self.max_neighbour_angle_diff and \
                             math.isclose(length, curr_length, rel_tol=self.max_length_diff) and \
-                            neigh_dist < self.inter_width / 2:
+                            neigh_dist < self.inter_width:
                         self.intersection[near_lanelet.lanelet_id] = True
 
     def _traffic_lights_to_scenario(self, lights: list):
@@ -273,7 +295,7 @@ class CommonRoadMapProvider(MapProvider):
         :param lights: list of trafficLights as LandMarkPoints
         """
         for light in lights:
-            mapped_lanelets = self._find_traffic_light_lanelet(light)
+            mapped_lanelets = self._find_traffic_rule_lanelet(light, self.max_angle_diff_light)
             if len(mapped_lanelets) > 0:
                 for lanelet in mapped_lanelets:
                     self._add_light_to_lanelet(lanelet.lanelet_id)
@@ -290,7 +312,7 @@ class CommonRoadMapProvider(MapProvider):
                                                                    {'draw_traffic_signs': True,
                                                                     'show_traffic_signs': 'all',
                                                                     # 'all' or list of TrafficSignIDs
-                                                                    'speed_limit_unit': 'kmh',
+                                                                    'speed_limit_unit': 'ms',
                                                                     # 'mph', 'kmh', 'ms', 'auto'
                                                                     'show_label': False,
                                                                     'scale_factor': 0.25,
@@ -311,14 +333,14 @@ class CommonRoadMapProvider(MapProvider):
         id_set.add(lanelet_id)
         self.map_cr.lanelet_network.add_traffic_light(traffic_light, lanelet_ids=deepcopy(id_set))
 
-    def _add_sign_to_lanelet(self, lanelet_id: int, pos_index: int, typ: TrafficSignIDGermany, additional: list):
+    def _add_sign_to_lanelet(self, lanelet_id: int, pos_index: int, typ: TrafficSignIDGermany, additional: list = []):
         self.cur_mark_id += 1
         pos = self.map_cr.lanelet_network.find_lanelet_by_id(lanelet_id).center_vertices[pos_index]
-        signelement = TrafficSignElement(typ, additional)
+        sign_element = TrafficSignElement(typ, additional)
         id_set = set()
         id_set.add(lanelet_id)
         sign = TrafficSign(self.cur_mark_id, first_occurrence=deepcopy(id_set), position=pos,
-                           traffic_sign_elements=[signelement])
+                           traffic_sign_elements=[sign_element])
         self.map_cr.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
 
     def _get_lanelet_orientation_to_light(self, lanelet: Lanelet, use_end: bool = True):
@@ -349,7 +371,7 @@ class CommonRoadMapProvider(MapProvider):
         point = [pos.x, pos.y]
         distance = (lanelet.center_vertices - point) ** 2.
         distance = (distance[:, 0] + distance[:, 1])
-        return np.argmin(distance)
+        return np.argmin(distance).item()
 
     def _get_lanelet_orientation_to_sign(self, lanelet: Lanelet, index: int):
         angles = list()
@@ -365,7 +387,7 @@ class CommonRoadMapProvider(MapProvider):
                 pos = lanelet.center_vertices[index + i]
                 prev_pos = lanelet.center_vertices[index]
 
-            # describes the relativ position of the pos to the prev pos
+            # describes the relative position of the pos to the prev pos
             rel_x = 1 if (pos[0] - prev_pos[0]) >= 0 else -1
             rel_y = 1 if (prev_pos[1] - pos[1]) >= 0 else -1
 
