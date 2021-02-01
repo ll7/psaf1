@@ -34,9 +34,19 @@ class LocalPerceptionEvaluation:
         self.steer = 0.
 
     def callback_ego_vehicle_cmd(self, data: CarlaEgoVehicleControl):
+        """
+        Collects the ego vehicle data as callback for the subscriber
+        :param data: the message
+        :return: None
+        """
         self.steer = data.steer
 
-    def look_for_traffic_light(self, stamp, traffic_lights: List[TrafficLight]):
+    def look_for_traffic_light(self, traffic_lights: List[TrafficLight]):
+        """
+        Analyzes the given list of traffic lights and compute the current state regarding the traffic light
+        :param traffic_lights: list of traffic lights
+        :return: None
+        """
 
         # Copy the value to work always with he same data
         steer = self.steer
@@ -81,11 +91,11 @@ class LocalPerceptionEvaluation:
         :param traffic_signs: the message
         :return: None
         """
-        self.look_for_traffic_light(traffic_signs.header.stamp, traffic_signs.trafficLights)
+        self.look_for_traffic_light(traffic_signs.trafficLights)
 
     def callback_stop_lines(self, stop_lines: StopLineInfo):
         """
-           Callback to handle the traffic sign data
+           Callback to handle the stop line info
            :param stop_lines: the message
            :return: None
            """
@@ -95,7 +105,7 @@ class LocalPerceptionEvaluation:
 
     def periodic_planner_input_update(self, event):
         """
-        Function that should be run periodically to update the local planner control topics
+        Function that should be run periodically to update the local planner traffic situation topic
         :return: None
         """
         msg = TrafficSituation()
