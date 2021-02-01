@@ -3,6 +3,7 @@
 import glob
 import os
 import sys
+from geometry_msgs.msg import Point
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -38,6 +39,9 @@ class LandMarkPoint:
             self.orientation = self.orientation + 360
 
         self.mark_id = id
+
+    def pos_as_point(self) -> Point:
+        return Point(self.x, self.y, 0)
 
     def __eq__(self, other):
         return self.mark_id == other.mark_id

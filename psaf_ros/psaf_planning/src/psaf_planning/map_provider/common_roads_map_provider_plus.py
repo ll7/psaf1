@@ -38,7 +38,7 @@ class CommonRoadMapProvider(MapProvider):
         self.intersection = {}
         self.map_cr: Scenario = None
         self.landmark_provider: LandMarkProvider = None
-        self.cur_light_id = -1
+        self.cur_mark_id = -1
         self.planning_problem = None
 
         # orientation difference between traffic light and lanelet in degree,
@@ -62,7 +62,7 @@ class CommonRoadMapProvider(MapProvider):
         if self.map_name == world_info.map_name:
             rospy.loginfo("CommonRoadMapProvider: Map already loaded")
         else:
-            self.cur_light_id = -1
+            self.cur_mark_id = -1
             self.map_name = world_info.map_name
             self.map = world_info.opendrive
             self.map_ready = True
@@ -74,9 +74,54 @@ class CommonRoadMapProvider(MapProvider):
             self._detect_intersections()
             rospy.loginfo("CommonRoadMapProvider: Adding traffic lights")
             self._traffic_lights_to_scenario(self.landmark_provider.get_marks_by_categorie('Signal_3Light_Post01'))
+            for key in self.landmark_provider.available_categories():
+                if 'Speed' in key:
+                    rospy.loginfo("CommonRoadMapProvider: Adding " + key + " Signs")
+                    self._add_speed_signs(self.landmark_provider.get_marks_by_categorie(key), int(str(key).split("_", 1)[1]))
             rospy.loginfo("CommonRoadMapProvider: DONE")
             self.planning_problem = self._generate_dummy_planning_problem()
             self._visualize_scenario(self.map_cr, self.planning_problem)
+
+    def _get_all_fitting_neighbour_lanelets(self, lanelet_id: int) -> list:
+        # get all right neighbours
+        lane_under_obs = self.map_cr.lanelet_network.find_lanelet_by_id(lanelet_id)
+        neighbour_lanelets = []
+        while lane_under_obs.adj_right_same_direction and lane_under_obs.adj_right is not None:
+            lane_under_obs = self.map_cr.lanelet_network.find_lanelet_by_id(
+                lane_under_obs.adj_right)
+            neighbour_lanelets.append(lane_under_obs)
+
+        lane_under_obs = self.map_cr.lanelet_network.find_lanelet_by_id(lanelet_id)
+        # get all left neighbours
+        while lane_under_obs.adj_left_same_direction and lane_under_obs.adj_left is not None:
+            lane_under_obs = self.map_cr.lanelet_network.find_lanelet_by_id(
+                lane_under_obs.adj_left)
+            neighbour_lanelets.append(lane_under_obs)
+        return neighbour_lanelets
+
+    def _add_speed_signs(self, signs: list, speed: int):
+        sign_added = False
+        for sign in signs:
+            mapped_lanelets = self._find_nearest_lanlet(sign.pos_as_point())
+            if mapped_lanelets is not None:
+                for lanelet in mapped_lanelets:
+                    sign_pos_index =self._find_vertex_index(lanelet, sign.pos_as_point())
+                    lane_orientation = self._get_lanelet_orientation_to_sign(lanelet, sign_pos_index)
+                    angle_diff = 180 - abs(abs(sign.orientation - lane_orientation) - 180)
+                    if angle_diff < self.max_angle_diff:
+                        self._add_sign_to_lanelet(lanelet_id=lanelet.lanelet_id, pos_index=sign_pos_index, typ=TrafficSignIDGermany.MAX_SPEED, additional=[speed])
+                        neighbours = self._get_all_fitting_neighbour_lanelets(lanelet.lanelet_id)
+                        sign_added = True
+                        for lanelet in neighbours:
+                            self._add_sign_to_lanelet(lanelet_id=lanelet.lanelet_id, pos_index=sign_pos_index,
+                                                      typ=TrafficSignIDGermany.MAX_SPEED,additional=[speed])
+                        break
+            else:
+                rospy.logerr("CommonRoadMapProvider: Sing ID - " +
+                             str(sign.mark_id) + " - did not match to any lanelet")
+        if not sign_added:
+            rospy.logerr("CommonRoadMapProvider: Sing ID - " +
+                         str(sign.mark_id) + " - Orientation did not match")
 
     def _find_nearest_lanlet(self, goal: Point):
         """
@@ -94,7 +139,7 @@ class CommonRoadMapProvider(MapProvider):
                 nearest = None
                 curr_radius += step_size
             else:
-                return nearest[0]
+                return nearest
         return None
 
     def _find_traffic_light_lanelet(self, light: LandMarkPoint):
@@ -134,19 +179,7 @@ class CommonRoadMapProvider(MapProvider):
         if solution_found:
             best = min(solution_list, key=lambda x: x[1])
             best_lanelets = [nearest[best[0]]]
-
-            neighbour_lanelets = best_lanelets[0]
-
-            # get all right neighbours
-            while neighbour_lanelets.adj_right_same_direction and neighbour_lanelets.adj_right is not None:
-                neighbour_lanelets = self.map_cr.lanelet_network.find_lanelet_by_id(neighbour_lanelets.adj_right)
-                best_lanelets.append(neighbour_lanelets)
-
-            neighbour_lanelets = best_lanelets[0]
-            # get all left neighbours
-            while neighbour_lanelets.adj_left_same_direction and neighbour_lanelets.adj_left is not None:
-                neighbour_lanelets = self.map_cr.lanelet_network.find_lanelet_by_id(neighbour_lanelets.adj_left)
-                best_lanelets.append(neighbour_lanelets)
+            best_lanelets.extend(self._get_all_fitting_neighbour_lanelets(best_lanelets[0].lanelet_id))
 
         return best_lanelets
 
@@ -240,12 +273,21 @@ class CommonRoadMapProvider(MapProvider):
         plt.close()
 
     def _add_light_to_lanelet(self, lanelet_id: int):
-        self.cur_light_id += 1
+        self.cur_mark_id += 1
         pos = self.map_cr.lanelet_network.find_lanelet_by_id(lanelet_id).center_vertices[-1]
-        traffic_light = TrafficLight(self.cur_light_id, [], pos)
+        traffic_light = TrafficLight(self.cur_mark_id, [], pos)
         id_set = set()
         id_set.add(lanelet_id)
         self.map_cr.lanelet_network.add_traffic_light(traffic_light, lanelet_ids=deepcopy(id_set))
+
+    def _add_sign_to_lanelet(self, lanelet_id: int, pos_index: int, typ: TrafficSignIDGermany, additional: list):
+        self.cur_mark_id += 1
+        pos = self.map_cr.lanelet_network.find_lanelet_by_id(lanelet_id).center_vertices[pos_index]
+        signelement = TrafficSignElement(typ, additional)
+        id_set = set()
+        id_set.add(lanelet_id)
+        sign = TrafficSign(self.cur_mark_id, first_occurrence=deepcopy(id_set), position=pos, traffic_sign_elements=[signelement])
+        self.map_cr.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
 
     def _get_lanelet_orientation_to_light(self, lanelet: Lanelet, use_end: bool = True):
         index_1 = 0
@@ -269,6 +311,46 @@ class CommonRoadMapProvider(MapProvider):
             euler_angle_yaw = euler_angle_yaw + 360
 
         return euler_angle_yaw
+    def _find_vertex_index(self, lanelet: Lanelet, pos: Point):
+        # compute distances (we are not using the sqrt for computational effort)
+        point = [pos.x, pos.y]
+        distance = (lanelet.center_vertices - point) ** 2.
+        distance = (distance[:, 0] + distance[:, 1])
+        return np.argmin(distance)
+
+
+    def _get_lanelet_orientation_to_sign(self, lanelet: Lanelet, index: int):
+        angles = list()
+        for i in range(-2, 2, 1):
+            prev_pos = 0
+            pos = 0
+            if i < 0:
+                prev_pos = lanelet.center_vertices[index+i]
+                pos = lanelet.center_vertices[index]
+            elif i == 0:
+                continue
+            else:
+                pos = lanelet.center_vertices[index+i]
+                prev_pos = lanelet.center_vertices[index]
+
+            # describes the relativ position of the pos to the prev pos
+            rel_x = 1 if (pos[0] - prev_pos[0]) >= 0 else -1
+            rel_y = 1 if (prev_pos[1] - pos[1]) >= 0 else -1
+
+            euler_angle_yaw = math.degrees(math.atan2(rel_y * abs(pos[1] - prev_pos[1]), rel_x * abs(pos[0] - prev_pos[0])))
+            # get orientation without multiple rotations
+            euler_angle_yaw = euler_angle_yaw % 360
+            # get the positive angle
+            if euler_angle_yaw < 0:
+                euler_angle_yaw = euler_angle_yaw + 360
+            angles.append(euler_angle_yaw)
+        for i in range(0, len(angles)-1):
+            angle_diff = 180 - abs(abs(angles[i] -angles[i+1] ) - 180)
+            if angle_diff < 20:
+                return angles[i]
+        rospy.logerr("USE AVG, NOT GOOD")
+        return np.sum(angles)/len(angles)
+
 
     def _generate_dummy_planning_problem(self) -> PlanningProblem:
         """
