@@ -20,12 +20,26 @@ class StopLineDetector(AbstractDetector):
 
         self.logger_name = "TrafficLightDetector"
 
-        self.ratio_range_percent = range(1,15)
+        self.ratio_range_per_mille = range(5, 150)
 
         self.canny_threshold = 100
 
         self.camera = SegmentationCamera(role_name=role_name,id="front")
         self.camera.set_on_image_listener(self.__on_new_image)
+
+    @classmethod
+    def __heuristic_calc_distance_by_y(cls, y:float)->float:
+        """
+        Calculates the distance in meters by using the y coordinate of the detected object
+        :param y: the y coordinate of the stop line center
+        :return:
+        """
+        a_4= 4341.4
+        a_3 = - 13727
+        a_2 = 16300
+        a_1 = - 8635.5
+        a_0 = 1727.4
+        return a_4*y**4+a_3*y**3+a_2*y**2+a_1*y+a_0
 
     def __on_new_image(self, segmentation_image, time):
         (H, W) = segmentation_image.shape[:2]
@@ -46,8 +60,8 @@ class StopLineDetector(AbstractDetector):
 
         for x1, y1, w, h in boxes:
             if y1>0.3 and x1+w< 0.9:
-                if int(h/w*100) in self.ratio_range_percent and w> 0.3:
-                    detected.append(DetectedObject(x1, y1,w,h,label=Labels.StopLine))
+                if int(h/w*1000) in self.ratio_range_per_mille and w> 0.3:
+                    detected.append(DetectedObject(x1, y1, w, h, distance=self.__heuristic_calc_distance_by_y(y1), label=Labels.StopLine))
 
         self.inform_listener(detected)
 
@@ -87,6 +101,8 @@ if __name__ == "__main__":
                 # draw a bounding box rectangle and label on the image
                 color = (255, 0, 0)
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+                text = "{:.1f}m: x:{:.3f}-y:{:.3f}".format(element.distance, element.x,element.y)
+                cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
         show_image("Stop line detection", image)
 
