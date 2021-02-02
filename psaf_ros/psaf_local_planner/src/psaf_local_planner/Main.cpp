@@ -165,6 +165,9 @@ namespace psaf_local_planner
             it++;
         }
 
+        // TODO: convert to meter once distance has been added to distance
+        deleted_points += to_delete;
+
         // actually delete the points now
         if (to_delete > 0) {
             global_plan.erase(global_plan.begin(), global_plan.begin() + to_delete);

@@ -253,6 +253,9 @@ namespace psaf_local_planner {
             /** The Route part of the xtenden route */
             std::vector<psaf_messages::XLanelet> global_route;
 
+            /** How many points have been deleted from the global path*/
+            unsigned int deleted_points;
+
             /** is set to true after the node is inited via ROS */ 
             bool initialized;
             
