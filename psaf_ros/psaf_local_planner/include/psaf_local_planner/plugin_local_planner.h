@@ -28,6 +28,7 @@
 #include <psaf_messages/XLanelet.h>
 #include <psaf_local_planner/PsafLocalPlannerParameterConfig.h>
 #include <base_local_planner/goal_functions.h>
+#include <base_local_planner/costmap_model.h>
 #include <boost/algorithm/clamp.hpp>
 #include <assert.h>
 #include "psaf_local_planner/costmap_raytracer.h"

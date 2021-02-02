@@ -69,6 +69,10 @@ namespace psaf_local_planner
         double sum_distance = 0;
         int count_error = 0;
 
+        auto costmap = costmap_ros->getCostmap();
+        auto model = base_local_planner::CostmapModel(*costmap);
+        auto footprint = costmap_ros->getRobotFootprint();
+
         for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
         {
             if (sum_distance > check_collision_max_distance)
@@ -81,9 +85,12 @@ namespace psaf_local_planner
             unsigned int cx, cy;
             if (costmap_ros->getCostmap()->worldToMap(current_point.getX(), current_point.getY(), cx, cy))
             {
-                unsigned char cost = costmap_ros->getCostmap()->getCost(cx, cy);
 
-                if (cost > 128 && cost != costmap_2d::NO_INFORMATION)
+                
+                int cost = model.footprintCost(current_pose.pose.position, footprint, 0.5, 0.5);
+                // unsigned char cost = costmap_ros->getCostmap()->getCost(cx, cy);
+
+                if (cost > 0)
                 {
                     count_error += 1;
                     if (count_error >= 2)
