@@ -47,7 +47,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
                  cost_stop_sign: int = 5):
         super(PathProviderCommonRoads, self).__init__(init_rospy, polling_rate, timeout_iter, role_name,
                                                       enable_debug=enable_debug)
-        self.map_provider = CommonRoadMapProvider(debug=True)
+        self.map_provider = CommonRoadMapProvider(debug=enable_debug)
         self.radius = initial_search_radius
         self.step_size = step_size
         self.max_radius = max_radius
