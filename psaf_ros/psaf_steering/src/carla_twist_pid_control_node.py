@@ -360,9 +360,11 @@ class CarlaAckermannControl(object):
 
         if self.info.current.speed - diff_break > self.info.target.speed:
             self.info.output.brake = 1.0
+            self.info.output.throttle = 0.0
         
         if self.info.current.speed  < self.info.target.speed - diff_accel:
             self.info.output.throttle = 1.0
+            self.info.output.brake = 0.0
 
     def vehicle_control_cycle(self):
         """

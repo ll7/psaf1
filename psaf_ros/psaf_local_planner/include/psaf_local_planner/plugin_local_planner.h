@@ -289,6 +289,9 @@ namespace psaf_local_planner {
             /** Last time the obstacle message was published, allows repeated pubshling */
             ros::Time slow_car_last_published;
 
+            /** */
+            unsigned int slow_car_last_published_deleted_points;
+
             /** ~~ planned ~~ current state of the car */
             LocalPlannerState state;
 
