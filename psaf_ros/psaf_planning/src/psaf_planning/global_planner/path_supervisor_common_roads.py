@@ -26,7 +26,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.status_pub.publish("Init Done")
 
     def _callback_obstacle(self, obstacle: Obstacle):
-        if not self.busy and self.manager.map is not None and len(self.path.poses) > 0:
+        if not self.busy and self.manager.map is not None and self.path_message.id > 0:
             self.busy = True
             # check if an old
             if self.last_id >= obstacle.id:
@@ -130,8 +130,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         # and orientation
         self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
         rospy.loginfo("PathSupervisor: Replanning instruction received")
-        self.get_path_from_a_to_b(debug=self.enable_debug)
-        self._trigger_move_base(self.path.poses[-1])
+        self.get_path_from_a_to_b()
         rospy.loginfo("PathSupervisor: global planner plugin triggered")
         self.status_pub.publish("Replanning done")
 

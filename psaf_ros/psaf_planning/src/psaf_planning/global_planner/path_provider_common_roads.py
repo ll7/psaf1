@@ -53,7 +53,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.max_radius = max_radius
         self.cost_traffic_light = cost_traffic_light
         self.cost_stop_sign = cost_stop_sign
-        self.path_poses = []
+        self.path_message = XRoute()
         self.planning_problem = None
         self.manager = None
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter))
@@ -417,6 +417,8 @@ class PathProviderCommonRoads(PathProviderAbstract):
             # TODO: serialize message for optimizer
             pass
 
+        # save message
+        self.path_message = x_route
         # publish message and trigger the global planner plugin
         self.xroute_pub.publish(x_route)
         self._trigger_move_base(self._get_pose_stamped(start_point, start_point))
