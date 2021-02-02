@@ -22,7 +22,7 @@
             "id": "map"
         },
         {
-            "type": "vehicle.bmw.grandtourer",
+            "type": "vehicle.tesla.model3",
             "id": "ego_vehicle",
             "sensors": 
             [
