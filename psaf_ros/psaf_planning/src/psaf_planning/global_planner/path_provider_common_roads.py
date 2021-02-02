@@ -18,12 +18,13 @@ from SMP.route_planner.route_planner.route import Route
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
 from psaf_abstraction_layer.sensors.GPS import GPS_Position
-from psaf_planning.common_road_manager import CommonRoadManager
+from psaf_planning.global_planner.common_road_manager import CommonRoadManager
 from geometry_msgs.msg import Point
 import sys
 from copy import deepcopy
 import rospy
 from sensor_msgs.msg import NavSatFix
+from psaf_planning.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
 
 from enum import Enum
 from psaf_messages.msg import XRoute
@@ -39,16 +40,19 @@ class ProblemStatus(Enum):
 
 class PathProviderCommonRoads(PathProviderAbstract):
 
-    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10,
+    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 20,
                  role_name: str = "ego_vehicle",
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
-                 max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30):
+                 max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
+                 cost_stop_sign: int = 5):
         super(PathProviderCommonRoads, self).__init__(init_rospy, polling_rate, timeout_iter, role_name,
                                                       enable_debug=enable_debug)
+        self.map_provider = CommonRoadMapProvider(debug=True)
         self.radius = initial_search_radius
         self.step_size = step_size
         self.max_radius = max_radius
         self.cost_traffic_light = cost_traffic_light
+        self.cost_stop_sign = cost_stop_sign
         self.path_poses = []
         self.planning_problem = None
         self.manager = None
@@ -212,7 +216,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
         ratio_x_y = (plot_limits[1] - plot_limits[0]) / (plot_limits[3] - plot_limits[2])
         fig = plt.figure(figsize=(size_x, size_x / ratio_x_y))
         fig.gca().axis('equal')
-
         draw_route(route, draw_route_lanelets=True, draw_reference_path=True, plot_limits=plot_limits)
         plt.savefig("route_" + str(num) + ".png")
         plt.close()
@@ -299,34 +302,42 @@ class PathProviderCommonRoads(PathProviderAbstract):
         do_lane_change = False
         time = 0
         for i, lane_id in enumerate(route.list_ids_lanelets):
+            message = deepcopy(self.manager.message_by_lanelet[lane_id])
             if lane_change_instructions[i] == 0:
                 if not do_lane_change:
-                    extended_route.route.append(deepcopy(self.manager.message_by_lanelet[lane_id]))
-                    time += self.manager.time_by_lanelet[lane_id][-1]
-
-                    # heuristic adds defined amount of seconds for each traffic light
-                    time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
-                else:
-                    message = deepcopy(self.manager.message_by_lanelet[lane_id])
-                    message.route_portion = message.route_portion[len(message.route_portion) // 2:]
                     extended_route.route.append(deepcopy(message))
-                    time += self.manager.time_by_lanelet[lane_id][-1] - self.manager.time_by_lanelet[lane_id][
-                        len(message.route_portion) // 2]
+                    time += message.route_portion[-1].duration
 
                     # heuristic adds defined amount of seconds for each traffic light
-                    time += int(self.manager.message_by_lanelet[lane_id].hasLight) * self.cost_traffic_light
+                    time += int(message.hasLight) * self.cost_traffic_light
+                    time += int(message.hasStop) * self.cost_stop_sign
+                else:
+                    tmp_message = deepcopy(message)
+                    tmp_message.route_portion = message.route_portion[len(message.route_portion) // 2:]
+                    for waypoint in tmp_message.route_portion:
+                        waypoint.duration = waypoint.duration - \
+                                            message.route_portion[len(message.route_portion) // 2].duration
+                    extended_route.route.append(deepcopy(tmp_message))
+                    time += message.route_portion[-1].duration - message.route_portion[
+                        len(message.route_portion) // 2].duration
+
+                    # heuristic adds defined amount of seconds for each traffic light and stop signs on the lanelet
+                    time += int(message.hasLight) * self.cost_traffic_light
+                    time += int(message.hasStop) * self.cost_stop_sign
 
                     do_lane_change = False
             else:
                 if not do_lane_change:
-                    message = deepcopy(self.manager.message_by_lanelet[lane_id])
-                    message.route_portion = message.route_portion[:len(message.route_portion) // 2]
-                    extended_route.route.append(deepcopy(message))
-                    time += self.manager.time_by_lanelet[lane_id][len(message.route_portion) // 2]
+                    tmp_message = deepcopy(message)
+                    tmp_message.route_portion = message.route_portion[:len(message.route_portion) // 2]
+                    extended_route.route.append(deepcopy(tmp_message))
+                    time += message.route_portion[len(message.route_portion) // 2].duration
                 else:
-                    rospy.logerr("This should not have happened, CHECK!")  # TODO: Check if it occurs
+                    # lane changing over at least two lanes at once -> do not count the skipped middle lane
+                    pass
 
                 do_lane_change = True
+
         return extended_route, time
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
@@ -381,7 +392,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
         candidate_holder = route_planner.plan_routes()
         all_routes, num_routes = candidate_holder.retrieve_all_routes()
 
-
         rospy.loginfo("PathProvider: Computing feasible path from a to b")
         path_poses = []
         x_route = XRoute(id=-1)
@@ -413,7 +423,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
                     self._visualization(all_routes[i], i)
             rospy.loginfo("PathProvider: Computation of feasible path done")
 
-
         else:
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
             path_poses = [self._get_pose_stamped(start_point, start_point)]
@@ -433,4 +442,3 @@ class PathProviderCommonRoads(PathProviderAbstract):
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
             self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
-            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)

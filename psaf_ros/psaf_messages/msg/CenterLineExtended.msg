@@ -9,3 +9,6 @@ float32 z
 
 # Max speed
 uint8 speed
+
+# duration up to that waypoint within the lanelet
+float32 duration

@@ -10,7 +10,6 @@ from typing import *
 
 import numpy as np
 import rospy
-import sys
 
 
 class CommonRoadManager:
@@ -23,73 +22,35 @@ class CommonRoadManager:
         self.neighbourhood = self._analyze_neighbourhood(self.map)
         self.original_neighbourhood = deepcopy(self.neighbourhood)
         self.message_by_lanelet = {}
-        self.time_by_lanelet = {}
 
-        # test scenario
-        self._dummy_test(368)
-
-        self._fill_dicts()
+        self._fill_message_dict()
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
-        self.original_time_by_lanelet = deepcopy(self.time_by_lanelet)
 
-    # just for now , remove later !!!!!
-    def _dummy_test(self, id_insert):
-        pos = len(self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices) // 2
-        pos = self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices[pos]
-        traffic_light = TrafficLight(1, [], pos)
-        id_set = set()
-        id_set.add(id_insert)
-        self.map.lanelet_network.add_traffic_light(traffic_light, lanelet_ids=deepcopy(id_set))
-        signelement = TrafficSignElement(TrafficSignIDGermany.MAX_SPEED, ["20"])
-        sign = TrafficSign(15, first_occurrence=deepcopy(id_set), position=pos, traffic_sign_elements=[signelement])
-        self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
-
-        signelement = TrafficSignElement(TrafficSignIDGermany.STOP, [])
-        pos = len(self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices) - 1
-        pos = self.map.lanelet_network.find_lanelet_by_id(id_insert).center_vertices[pos]
-        sign = TrafficSign(16, first_occurrence=deepcopy(id_set), position=pos, traffic_sign_elements=[signelement])
-        self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
-
-    def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int, sep_index: int):
+    def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int):
         # add the new lanelets to the dict
-        self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_front))
-        self._generate_XLanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back))
-        # add new time
-        self.time_by_lanelet[lanelet_front] = self.time_by_lanelet[matching_lanelet_id][:sep_index]
-        self.time_by_lanelet[lanelet_back] = [x - self.time_by_lanelet[matching_lanelet_id][sep_index] for x in
-                                              self.time_by_lanelet[matching_lanelet_id][sep_index:]]
-        # remove old time from dict
-        del self.time_by_lanelet[matching_lanelet_id]
+        self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_front))
+        self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back))
+
         # remove old lanelet from dict
         del self.message_by_lanelet[matching_lanelet_id]
 
-    def _fill_dicts(self):
-        rospy.loginfo("CommonRoadManager: Message and duration hashmap calculation started!")
+    def _fill_message_dict(self):
+        rospy.loginfo("CommonRoadManager: Message calculation started!")
         for lanelet in self.map.lanelet_network.lanelets:
-            self._generate_XLanelet(lanelet)
-            self._generate_duration_dict(lanelet)
-        rospy.loginfo("CommonRoadManager: Hashmap calculation done!")
+            self._generate_xlanelet(lanelet)
+        rospy.loginfo("CommonRoadManager: Message calculation done!")
 
-    def _generate_duration_dict(self, lanelet: Lanelet):
-        x_lanelet = self.message_by_lanelet[lanelet.lanelet_id]
-        waypoint_list = x_lanelet.route_portion
+    def _calculate_duration_entry(self, previous: list, current: list, prev_speed: float):
+        # calculate the duration between two waypoints
 
-        # create the duration list, which will be filled with the cumulative sum
-        # entry for first waypoint is zero, because there is not yet any time spent on that lanelet
-        duration = [0]
+        distance = np.linalg.norm(np.array(current) - np.array(previous))
+        # calculate time by distance [m] and speed [km/h] -> transform to [m/s]
+        time_spent = distance / (prev_speed / 3.6)
 
-        for i in range(1, len(waypoint_list)):
-            prev = np.array((waypoint_list[i - 1].x, waypoint_list[i - 1].y, waypoint_list[i - 1].z))
-            curr = np.array((waypoint_list[i].x, waypoint_list[i].y, waypoint_list[i].z))
-            distance = np.linalg.norm(curr - prev)
-            # calculate time by distance [m] and speed [km/h] -> transform to [m/s]
-            time_spent = distance / (waypoint_list[i - 1].speed / 3.6)
-            duration.append(duration[i - 1] + time_spent)
+        return time_spent
 
-        self.time_by_lanelet[lanelet.lanelet_id] = duration
-
-    def _generate_XLanelet(self, lanelet: Lanelet):
+    def _generate_xlanelet(self, lanelet: Lanelet):
         stop = False
         for sign_id in lanelet.traffic_signs:
             sign = self.map.lanelet_network.find_traffic_sign_by_id(sign_id)
@@ -129,15 +90,22 @@ class CommonRoadManager:
 
         # generate CenterLineExtended
         center_line_extended = []
+        speed = self.default_speed
+        time = 0.0
+        prev_point = None
         for i, point in enumerate(lanelet.center_vertices):
+            if i > 0:
+                time += self._calculate_duration_entry(previous=prev_point, current=point, prev_speed=speed)
             # check for speed signs
-            speed = self.default_speed
             for speed_sign in speed_signs:
                 if i >= speed_sign[0]:
                     speed = speed_sign[1]
+                else:
+                    break
 
+            prev_point = point
             # fill center_line_extended
-            center_line_extended.append(CenterLineExtended(x=point[0], y=point[1], z=0, speed=speed))
+            center_line_extended.append(CenterLineExtended(x=point[0], y=point[1], z=0, speed=speed, duration=time))
 
         return center_line_extended
 
@@ -252,7 +220,7 @@ class CommonRoadManager:
             self.map.lanelet_network.add_lanelet(lanelet_2)
             # clean references
             self._fast_reference_cleanup(lanelet_id)
-            self._update_message_dict(lanelet_copy.lanelet_id, id_lane_1, id_lane_2, sep_index)
+            self._update_message_dict(lanelet_copy.lanelet_id, id_lane_1, id_lane_2)
             return id_lane_1, id_lane_2
         return None, None
 
@@ -263,7 +231,7 @@ class CommonRoadManager:
         :param exclude: id that should not be used
         :return: new unique lanelet id
         """
-        max_uint16 = 2**16
+        max_uint16 = 2 ** 16
         while True:
             lane_id = 0
             if id_start == -1:

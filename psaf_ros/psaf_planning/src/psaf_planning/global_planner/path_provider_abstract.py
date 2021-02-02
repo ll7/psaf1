@@ -2,7 +2,7 @@
 
 from abc import abstractmethod
 import rospy
-from psaf_planning.map_provider import MapProvider
+from psaf_planning.map_provider.map_provider import MapProvider
 from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
 from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from nav_msgs.msg import Path
@@ -18,7 +18,6 @@ from lanelet2.projection import UtmProjector
 from lanelet2.io import Origin
 import numpy as np
 from std_msgs.msg import String
-from copy import deepcopy
 
 
 class PathProviderAbstract:
@@ -43,7 +42,6 @@ class PathProviderAbstract:
         self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
         self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
         self.status_pub.publish("PathProvider not ready")
-        self.map_provider = MapProvider()
         self.path = Path()
         self.start = None
         self.start_orientation = None

@@ -40,7 +40,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
             self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
-            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)
             for point in obstacle.obstacles:
                 if self._add_obstacle(point):
                     self.status_pub.publish("Replanning done")
@@ -145,7 +144,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
             self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
-            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)
+
 
 def main():
     provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
