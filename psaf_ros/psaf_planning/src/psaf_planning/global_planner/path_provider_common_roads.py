@@ -144,9 +144,9 @@ class PathProviderCommonRoads(PathProviderAbstract):
             # check whether start and target point are on that lanelet
             self.planning_problem = None
             start_index = PathProviderCommonRoads.find_nearest_path_index(route=start_lanelet.center_vertices,
-                                                                          compare_point=start, use_posestamped=False)
+                                                                          compare_point=start, use_xcenterline=False)
             end_index = PathProviderCommonRoads.find_nearest_path_index(route=start_lanelet.center_vertices,
-                                                                        compare_point=target, use_posestamped=False)
+                                                                        compare_point=target, use_xcenterline=False)
             # if the target point is ahead of the start point
             if start_index > end_index:
                 # split lanelet in between those two points to fix that issue for a further iteration
@@ -184,12 +184,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.planning_problem = PlanningProblem(0, start_state, goal_region)
         return ProblemStatus.Success
 
-    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, debug=False):
+    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None):
         """
         Returns the shortest path from start to goal
         :param  from_a: Start point [GPS Coord] optional
         :param  to_b:   End point [GPS Coord] optional
-        :param debug: Default value = False ; Generate Debug output
         :return: Path or only start if no path was found at all, or no map information is received
         """
         start = self.start
@@ -199,10 +198,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
             start = from_a
             goal = to_b
 
-        if not debug:
-            self._compute_route(start, goal)
-        else:
-            self._compute_route(start, goal, debug=True)
+        self._compute_route(start, goal)
 
         return self.path
 
@@ -221,13 +217,13 @@ class PathProviderCommonRoads(PathProviderAbstract):
         plt.close()
 
     @staticmethod
-    def find_nearest_path_index(route, compare_point: Point, use_posestamped: bool = True,
+    def find_nearest_path_index(route, compare_point: Point, use_xcenterline: bool = True,
                                 reversed: bool = False, prematured_stop: bool = False):
         """
         Get index of the a point x in path which is next to a given point y
         :param route: List of route points, which are eather of type [x][y] or PoseStamped
         :param compare_point: Point to compare the route_point -> Type Point
-        :param use_posestamped:  route_point is a PoseStamped -> Type Bool
+        :param use_xcenterline:  route_point is a PoseStamped -> Type Bool
         :return: index
         """
         min_distance = float("inf")
@@ -240,7 +236,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
                 index = len(route) - 1 - i
             temp_distance = PathProviderCommonRoads._euclidean_2d_distance_from_to_position(route_point=route[index],
                                                                                             compare_point=compare_point,
-                                                                                            use_posestamped=use_posestamped)
+                                                                                            use_xcenterline=use_xcenterline)
             if temp_distance < min_distance:
                 min_distance = temp_distance
                 min_index = index
@@ -252,17 +248,17 @@ class PathProviderCommonRoads(PathProviderAbstract):
         return min_index
 
     @staticmethod
-    def _euclidean_2d_distance_from_to_position(route_point, compare_point: Point, use_posestamped: bool = True):
+    def _euclidean_2d_distance_from_to_position(route_point, compare_point: Point, use_xcenterline: bool = True):
         """
         This helper function calculates the euclidean distance between 2 Points
         :param route_point: Has to be the point entry in path. -> PoseStamped
         :param compare_point: Point to compare the route_point -> Type Point
-        :param use_posestamped:  route_point is a PoseStamped -> Type Bool
+        :param use_xcenterline:  route_point is a PoseStamped -> Type Bool
         :return: distance
         """
-        if use_posestamped:
-            return ((route_point.pose.position.x - compare_point.x) ** 2 +
-                    (route_point.pose.position.y - compare_point.y) ** 2) ** 0.5
+        if use_xcenterline:
+            return ((route_point.x - compare_point.x) ** 2 +
+                    (route_point.y - compare_point.y) ** 2) ** 0.5
         else:
             return ((route_point[0] - compare_point.x) ** 2 +
                     (route_point[1] - compare_point.y) ** 2) ** 0.5
@@ -340,12 +336,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         return extended_route, time
 
-    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
+    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position):
         """
         Compute shortest path
         :param from_a: Start point -- GPS Coord in float: latitude, longitude, altitude
         :param to_b: End point   -- GPS Coord in float: latitude, longitude, altitude
-        :param debug: Default value = False ; Generate Debug output
         """""
 
         # first transform GPS_Position
@@ -366,21 +361,20 @@ class PathProviderCommonRoads(PathProviderAbstract):
 
         if status is ProblemStatus.BadStart:
             # planning_problem is None if e.g. start or goal position has not been found
-            # Creates a empty path message, which is by consent filled with, and only with the starting_point
             rospy.logerr("PathProvider: Path computation aborted, insufficient start_point")
-            self._create_path_message([self._get_pose_stamped(start_point, start_point)])
+            self.status_pub.publish("Path computation aborted, insufficient start_point")
             return
         elif status is ProblemStatus.BadTarget:
             rospy.logerr("PathProvider: Path computation aborted, insufficient target_point")
-            self._create_path_message([self._get_pose_stamped(start_point, start_point)])
+            self.status_pub.publish("Path computation aborted, insufficient target_point")
             return
         elif status is ProblemStatus.BadLanelet:
             rospy.logerr("PathProvider: Path computation aborted, Lanelet Network Error -> Contact Support")
-            self._create_path_message([self._get_pose_stamped(start_point, start_point)])
+            self.status_pub.publish("Path computation aborted, Lanelet Network Error")
             return
         elif status is ProblemStatus.BadMap:
             rospy.logerr("PathProvider: Path computation aborted, Map not (yet) loaded")
-            self._create_path_message([self._get_pose_stamped(start_point, start_point)])
+            self.status_pub.publish("Path computation aborted, Map not (yet) loaded")
             return
 
         # COMPUTE SHORTEST ROUTE
@@ -393,47 +387,53 @@ class PathProviderCommonRoads(PathProviderAbstract):
         all_routes, num_routes = candidate_holder.retrieve_all_routes()
 
         rospy.loginfo("PathProvider: Computing feasible path from a to b")
-        path_poses = []
         x_route = XRoute(id=-1)
         if num_routes >= 1:
-            x_route = self._get_shortest_route(all_routes)
             # Path was found!
-            for lane in x_route.route:
-                prev_local_point = None
-                for point in lane.route_portion:
-                    local_point = Point(point.x, point.y, 0)
-                    if prev_local_point is None:
-                        prev_local_point = local_point
+            x_route = self._get_shortest_route(all_routes)
 
-                    path_poses.append(self._get_pose_stamped(local_point, prev_local_point))
-                    prev_local_point = local_point
             # Prune path to get exact start and end points
-            real_start_index = PathProviderCommonRoads.find_nearest_path_index(path_poses,
+            real_start_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[0].route_portion,
                                                                                start_point,
                                                                                prematured_stop=True,
-                                                                               use_posestamped=True)
+                                                                               use_xcenterline=True)
             x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
-            real_end_index = PathProviderCommonRoads.find_nearest_path_index(path_poses,
+            real_end_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[-1].route_portion,
                                                                              target_point, prematured_stop=True,
-                                                                             use_posestamped=True)
+                                                                             use_xcenterline=True)
             x_route.route[-1].route_portion = x_route.route[-1].route_portion[:real_end_index]
-            if debug:
+
+            if self.enable_debug:
                 # if debug: show results in .png
                 for i in range(0, num_routes):
                     self._visualization(all_routes[i], i)
+
             rospy.loginfo("PathProvider: Computation of feasible path done")
 
         else:
-            # Creates a empty path message, which is by consent filled with, and only with the starting_point
-            path_poses = [self._get_pose_stamped(start_point, start_point)]
             rospy.logerr("PathProvider: No possible path was found")
 
-        # save current path_poses
-        self.path_poses = path_poses
+        if self.enable_debug:
+            # TODO: serialize message for optimizer
+            pass
 
-        # create self.path messages
-        self._create_path_message(path_poses, debug)
+        # publish message and trigger the global planner plugin
         self.xroute_pub.publish(x_route)
+        self._trigger_move_base(self._get_pose_stamped(start_point, start_point))
+
+    def _callback_goal(self, data):
+        """
+        Callback function of psaf goal set subscriber
+        :param data: data received
+        """
+        self._reset_map()
+        self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
+        self.start = self.GPS_Sensor.get_position()
+        self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
+        rospy.loginfo("PathProvider: Received start and goal position")
+        self.get_path_from_a_to_b()
+        rospy.loginfo("PathProvider: global planner plugin triggered")
+        self.status_pub.publish("PathProvider done")
 
     def _reset_map(self):
         # first reset map
