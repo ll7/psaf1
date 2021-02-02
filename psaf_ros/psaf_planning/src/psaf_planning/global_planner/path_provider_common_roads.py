@@ -53,7 +53,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.max_radius = max_radius
         self.cost_traffic_light = cost_traffic_light
         self.cost_stop_sign = cost_stop_sign
-        self.path_message = XRoute()
+        self.path_message = XRoute(id=-1)  # initial id is not valid
         self.planning_problem = None
         self.manager = None
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter))
