@@ -10,6 +10,7 @@ project(psaf_messages)
 find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
+  sensor_msgs
   message_generation
 )
 
@@ -61,6 +62,7 @@ add_message_files(
    CenterLineExtended.msg
    XRoute.msg
    XLanelet.msg
+   PlanningInstruction.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -83,6 +85,7 @@ generate_messages(
   std_msgs
   psaf_messages
   geometry_msgs
+  sensor_msgs
 )
 
 ################################################
