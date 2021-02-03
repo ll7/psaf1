@@ -26,7 +26,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.status_pub.publish("Init Done")
 
     def _callback_obstacle(self, obstacle: Obstacle):
-        if not self.busy and self.manager.map is not None and self.path_message.id > 0:
+        if not self.busy and self.manager.map is not None and self.path_message.id >= 0:
             self.busy = True
             # check if an old
             if self.last_id >= obstacle.id:

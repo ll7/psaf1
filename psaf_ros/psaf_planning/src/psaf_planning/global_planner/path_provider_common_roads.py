@@ -1,7 +1,11 @@
 #!/usr/bin/env python
+import math
 
 from lanelet2.core import GPSPoint
-from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
+from tf.transformations import quaternion_from_euler
+
+from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from commonroad.scenario.trajectory import State
 from commonroad.planning.goal import GoalRegion
 import matplotlib.pyplot as plt
@@ -17,17 +21,20 @@ from SMP.route_planner.route_planner.route_planner import RoutePlanner
 from SMP.route_planner.route_planner.route import Route
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
-from psaf_abstraction_layer.sensors.GPS import GPS_Position
 from psaf_planning.global_planner.common_road_manager import CommonRoadManager
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import PoseStamped, Point, Quaternion
 import sys
 from copy import deepcopy
 import rospy
 from sensor_msgs.msg import NavSatFix
 from psaf_planning.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
-
+from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
 from enum import Enum
 from psaf_messages.msg import XRoute
+from lanelet2.projection import UtmProjector
+from lanelet2.io import Origin
+from std_msgs.msg import String
+import actionlib
 
 
 class ProblemStatus(Enum):
@@ -38,16 +45,25 @@ class ProblemStatus(Enum):
     BadMap = 5
 
 
-class PathProviderCommonRoads(PathProviderAbstract):
+class PathProviderCommonRoads:
 
     def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 20,
                  role_name: str = "ego_vehicle",
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
                  cost_stop_sign: int = 5):
-        super(PathProviderCommonRoads, self).__init__(init_rospy, polling_rate, timeout_iter, role_name,
-                                                      enable_debug=enable_debug)
+        if init_rospy:
+            # initialize node
+            rospy.init_node('pathProvider', anonymous=True)
+        self.enable_debug = enable_debug
+        self.role_name = role_name
+        self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
+        self.origin = Origin(0, 0)
+        self.projector = UtmProjector(self.origin)
         self.map_provider = CommonRoadMapProvider(debug=enable_debug)
+        self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
+        self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
+        self.status_pub.publish("PathProvider not ready")
         self.radius = initial_search_radius
         self.step_size = step_size
         self.max_radius = max_radius
@@ -83,7 +99,7 @@ class PathProviderCommonRoads(PathProviderAbstract):
             sys.exit(-1)
         return scenario
 
-    def _find_nearest_lanlet(self, goal: Point) -> Lanelet:
+    def _find_nearest_lanelet(self, goal: Point) -> Lanelet:
         """
         Given a Point (x,y,z) -> find nearest lanelet
         :param goal: point to which the nearest lanelet should be searched
@@ -126,11 +142,11 @@ class PathProviderCommonRoads(PathProviderAbstract):
         start_lanelet: Lanelet
         matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([start.x, start.y])])
         if len(matching_lanelet[0]) == 0:
-            start_lanelet = self._find_nearest_lanlet(start)
+            start_lanelet = self._find_nearest_lanelet(start)
         else:
             start_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
         # get nearest lanelet to target
-        goal_lanelet: Lanelet = self._find_nearest_lanlet(target)
+        goal_lanelet: Lanelet = self._find_nearest_lanelet(target)
 
         if start_lanelet is None:
             self.planning_problem = None
@@ -199,8 +215,6 @@ class PathProviderCommonRoads(PathProviderAbstract):
             goal = to_b
 
         self._compute_route(start, goal)
-
-        return self.path
 
     def _visualization(self, route, num):
         plot_limits = get_plot_limits_from_reference_path(route)
@@ -436,6 +450,47 @@ class PathProviderCommonRoads(PathProviderAbstract):
         self.get_path_from_a_to_b()
         rospy.loginfo("PathProvider: global planner plugin triggered")
         self.status_pub.publish("PathProvider done")
+
+    def _trigger_move_base(self, target: PoseStamped):
+        """
+        This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
+        The last entry can be the goal if a path was found or the starting point if no path was found
+        """
+        client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        client.wait_for_server()
+
+        goal = MoveBaseGoal()
+        goal.target_pose = target
+
+        client.send_goal(goal)
+
+    def _get_pose_stamped(self, pos: Point, prev_pos: Point):
+        """
+        This function calculates the euler angle alpha acoording to the direction vector of two given points.
+        Thereafter this information is transformed to the Quaternion representation
+         and the PoseStamped Object is generated
+        :param pos: Position in x,y,z
+        :param prev_pos: Previous Position in x,y,z
+        :return: PoseStamped
+        """
+        p = PoseStamped()
+
+        p.pose.position.x = pos.x
+        p.pose.position.y = pos.y
+        p.pose.position.z = pos.z
+
+        # describes the relativ position of the pos to the prev pos
+        rel_x = 1 if (pos.x - prev_pos.x) >= 0 else -1
+        rel_y = 1 if (pos.y - prev_pos.y) >= 0 else -1
+
+        euler_angle_yaw = math.atan2(rel_y * abs(pos.y - prev_pos.y), rel_x * abs(pos.x - prev_pos.x))
+
+        # only 2D space is relevant, therefore angles beta and gamma can be set to zero
+        q = quaternion_from_euler(0.0, 0.0, euler_angle_yaw)
+        p.pose.orientation = Quaternion(*q)
+        p.header.frame_id = "map"
+
+        return p
 
     def _reset_map(self):
         # first reset map
