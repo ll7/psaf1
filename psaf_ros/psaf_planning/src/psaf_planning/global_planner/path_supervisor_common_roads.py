@@ -46,7 +46,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self._replan()
             self.busy = False
         else:
-            rospy.logerr("PathSupervisor: replanning aborted, contact support !!")
+            rospy.logerr("PathSupervisor: Replanning aborted, contact support !!")
             self.status_pub.publish("Replanning aborted, contact support")
 
     def _add_obstacle(self, obstacle: Point):
@@ -130,7 +130,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
         rospy.loginfo("PathSupervisor: Replanning instruction received")
         self.get_path_from_a_to_b()
-        rospy.loginfo("PathSupervisor: global planner plugin triggered")
         self.status_pub.publish("Replanning done")
 
     def _reset_map(self):

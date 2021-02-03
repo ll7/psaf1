@@ -190,7 +190,7 @@ class PathProviderCommonRoads:
         start_state: State = State(position=np.array([start_position[0], start_position[1]]), velocity=0,
                                    time_step=0, slip_angle=0, yaw_rate=0, orientation=self.start_orientation[2])
 
-        circle = Circle(5, center=np.array([goal_lanelet.center_vertices[len(goal_lanelet.center_vertices) // 2][0],
+        circle = Circle(1, center=np.array([goal_lanelet.center_vertices[len(goal_lanelet.center_vertices) // 2][0],
                                             goal_lanelet.center_vertices[len(goal_lanelet.center_vertices) // 2][1]]))
         goal_state: State = State(position=circle, time_step=Interval(0, 10000.0))
 
@@ -413,7 +413,7 @@ class PathProviderCommonRoads:
                                                                                use_xcenterline=True)
             x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
             real_end_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[-1].route_portion,
-                                                                             target_point, prematured_stop=True,
+                                                                             target_point, prematured_stop=False,
                                                                              use_xcenterline=True)
             x_route.route[-1].route_portion = x_route.route[-1].route_portion[:real_end_index]
 
@@ -422,10 +422,13 @@ class PathProviderCommonRoads:
                 for i in range(0, num_routes):
                     self._visualization(all_routes[i], i)
 
-            rospy.loginfo("PathProvider: Computation of feasible path done")
+            if len(x_route.route) == 1 and len(x_route.route[0].route_portion) == 0:
+                # already on target point
+                rospy.logerr("PathProvider: Already on target point, no waypoints generated")
 
         else:
             rospy.logerr("PathProvider: No possible path was found")
+            return
 
         if self.enable_debug:
             # TODO: serialize message for optimizer
@@ -433,6 +436,7 @@ class PathProviderCommonRoads:
 
         # save message
         self.path_message = x_route
+
         # publish message and trigger the global planner plugin
         self.xroute_pub.publish(x_route)
         self._trigger_move_base(self._get_pose_stamped(start_point, start_point))
@@ -448,7 +452,6 @@ class PathProviderCommonRoads:
         self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
         rospy.loginfo("PathProvider: Received start and goal position")
         self.get_path_from_a_to_b()
-        rospy.loginfo("PathProvider: global planner plugin triggered")
         self.status_pub.publish("PathProvider done")
 
     def _trigger_move_base(self, target: PoseStamped):
@@ -463,10 +466,11 @@ class PathProviderCommonRoads:
         goal.target_pose = target
 
         client.send_goal(goal)
+        rospy.loginfo("PathProvider: global planner plugin triggered")
 
     def _get_pose_stamped(self, pos: Point, prev_pos: Point):
         """
-        This function calculates the euler angle alpha acoording to the direction vector of two given points.
+        This function calculates the euler angle alpha according to the direction vector of two given points.
         Thereafter this information is transformed to the Quaternion representation
          and the PoseStamped Object is generated
         :param pos: Position in x,y,z
@@ -479,7 +483,7 @@ class PathProviderCommonRoads:
         p.pose.position.y = pos.y
         p.pose.position.z = pos.z
 
-        # describes the relativ position of the pos to the prev pos
+        # describes the relative position of the pos to the prev pos
         rel_x = 1 if (pos.x - prev_pos.x) >= 0 else -1
         rel_y = 1 if (pos.y - prev_pos.y) >= 0 else -1
 
