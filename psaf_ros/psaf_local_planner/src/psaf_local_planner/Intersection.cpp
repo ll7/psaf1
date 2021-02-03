@@ -5,11 +5,17 @@ namespace psaf_local_planner
 {
 
     void PsafLocalPlanner::trafficSituationCallback(const psaf_messages::TrafficSituation::ConstPtr &msg)
-    {
-        detected_traffic_lights = msg->trafficLight;
+    {   
+        if(msg->trafficLight.size()>0){
+             this->traffic_light_state = msg->trafficLight.front();
+        }else{
+            psaf_messages::TrafficLight new_light;
+            new_light.state = psaf_messages::TrafficLight::STATE_UNKNOWN;
+             this->traffic_light_state = new_light;
+            
+        }
+        this->stop_line_distance = msg->distanceToStopLine;
         if (msg->distanceToStopLine < 100) {
-            stop_line_distance = msg->distanceToStopLine;
-            //this->state_machine->setState(LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP);
             ROS_INFO("StopLine detected %f", stop_line_distance);
         }
 

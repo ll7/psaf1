@@ -239,6 +239,12 @@ namespace psaf_local_planner {
              * @returns target_vel: current target velocity with attention to traffic lights
              */
             double getTargetVelIntersection();
+
+            /**
+             * Calculates the current stopping distance if the car makes a full braking
+             * @returns the stopping distance in meters
+             */
+            double getCurrentStoppingDistance();
             
             /** 
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
@@ -325,10 +331,10 @@ namespace psaf_local_planner {
             /** Counter for the obstacle message to be always incrementing */
             unsigned int obstacle_msg_id_counter;
 
-            /** Detected traffic lights from perception_evaluation */
-            std::vector<psaf_messages::TrafficLight> detected_traffic_lights;
+            /** Detected traffic light state -> null means that there is no Traffic light state*/
+            psaf_messages::TrafficLight traffic_light_state;
 
-            /** Distance to detected stop sign */
+            /** Distance to detected stop line */
             double stop_line_distance;
 
     };

@@ -18,4 +18,57 @@ namespace psaf_local_planner
         this->state = state;
     }
 
+    void LocalPlannerStateMachine::updateState(bool trafficLightDetected,psaf_messages::TrafficLight trafficLightKnowledge,
+        double stoppingDistance,double currentSpeed, double distanceToStopLine){
+
+        switch(this->state){
+            case LocalPlannerState::UNKNOWN:
+                this->state=LocalPlannerState::UNKNOWN;
+            break;
+
+            case LocalPlannerState::DRIVING:
+                if(trafficLightDetected){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_NEAR;
+                }
+            break;
+            case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
+                if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN && trafficLightKnowledge.distance < stoppingDistance){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                }else if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_RED && trafficLightKnowledge.distance < stoppingDistance){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
+                }if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_RED && trafficLightKnowledge.distance >= stoppingDistance){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN;
+                }else if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_YELLOW){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
+                }
+            break;
+            case LocalPlannerState::TRAFFIC_LIGHT_GO:
+                if(currentSpeed> 2.8){
+                    this->state = LocalPlannerState::DRIVING;
+                }
+            break;
+            case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
+                if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                }else if(distanceToStopLine< 2.0){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_WAITING;
+                }
+            break;
+            case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
+                if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                }else if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_RED){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
+                }
+            break;
+            case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
+                if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN){
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                }
+            break;
+            default:
+            break;
+        }
+    }
+
 }

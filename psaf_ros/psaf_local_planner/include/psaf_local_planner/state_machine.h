@@ -1,3 +1,4 @@
+#include <psaf_messages/TrafficLight.h>
 namespace psaf_local_planner
 {
 
@@ -26,10 +27,25 @@ namespace psaf_local_planner
         LocalPlannerStateMachine();
         ~LocalPlannerStateMachine();
 
-        void init();
+        /**
+         * Initialize the state machine 
+         */
+        void init();    
 
+        /**
+         * Returns the current state
+         * @return the current state
+         */
         LocalPlannerState getState();
+
+        //TODO: remove
+        /**
+         * Deprecated remove in future
+         */
         void setState(LocalPlannerState state);
+
+        void updateState(bool trafficLightDetected,psaf_messages::TrafficLight trafficLightKnowledge,double stoppingDistance,
+            double current_speed, double distanceToStopLine);
     private:
         LocalPlannerState state;
     };
