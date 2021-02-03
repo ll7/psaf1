@@ -314,5 +314,8 @@ namespace psaf_local_planner {
             /** Counter for the obstacle message to be always incrementing */
             unsigned int obstacle_msg_id_counter;
 
+            /** Factor by which the new route can be slower as the old route and still be accepted as new route */
+            double duration_factor;
+
     };
 };
