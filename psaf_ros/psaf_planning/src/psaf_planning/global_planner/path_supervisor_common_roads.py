@@ -1,7 +1,6 @@
-import sys
+#!/usr/bin/env python
 
 from psaf_messages.msg import Obstacle
-from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
 from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads
 import rospy
 from lanelet2.core import GPSPoint
@@ -146,7 +145,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
 
 def main():
-    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
+    provider = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
     rospy.spin()
 
 
