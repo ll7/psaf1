@@ -19,7 +19,7 @@ namespace psaf_local_planner
     PsafLocalPlanner::~PsafLocalPlanner()
     {
         g_plan_pub.shutdown();
-        vel_sub.shutdown();
+        traffic_situation_sub.shutdown();
         delete dyn_serv;
     }
 
@@ -45,6 +45,8 @@ namespace psaf_local_planner
             planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
             this->costmap_ros = costmap_ros;
 
+            traffic_situation_sub = private_nh.subscribe("/psaf/local_planner/traffic_situation", 10, &PsafLocalPlanner::trafficSituationCallback, this);
+
             dyn_serv = new dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>(private_nh);
             dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
             dyn_serv->setCallback(f);
@@ -67,7 +69,6 @@ namespace psaf_local_planner
         if (initialized)
         {
             costmap_ros->getRobotPose(current_pose);
-
             deleteOldPoints();
 
             if (global_plan.size() <= 1)
@@ -76,35 +77,14 @@ namespace psaf_local_planner
                 cmd_vel.linear.x = 0;
                 cmd_vel.angular.z = 0;
                 goal_reached = true;
-            }
-            else
-            {
-                estimateCurvatureAndSetTargetVelocity(current_pose.pose);
+            } else {
                 auto target_point = findLookaheadTarget();
-
                 double angle = computeSteeringAngle(target_point.pose, current_pose.pose);
-                double distance, relX, relY;
 
-                double velocity_distance_diff;
+                target_velocity = getTargetVelDriving();
+                target_velocity = getTargetVelIntersection();
 
-                if (target_velocity > 0 && !checkDistanceForward(distance, relX, relY)) {
-                    if (distance < 5) {
-                        ROS_INFO("attempting to stop");
-                        velocity_distance_diff = target_velocity;
-                    } else {
-                        // TODO: validate if working
-                        // slow formula, working okay ish
-                        velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
-                        // faster formula, requires faster controller
-                        //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
-                    }
-
-                    ROS_INFO("distance forward: %f, max velocity: %f", distance, target_velocity);
-                }
-
-                checkForSlowCar(velocity_distance_diff);
-
-                cmd_vel.linear.x = target_velocity - velocity_distance_diff;
+                cmd_vel.linear.x = target_velocity;
                 cmd_vel.angular.z = angle;
             }
         }

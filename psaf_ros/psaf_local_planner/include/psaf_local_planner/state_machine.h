@@ -13,7 +13,8 @@ namespace psaf_local_planner
         TRAFFIC_LIGHT_GO,
         TRAFFIC_LIGHT_WILL_STOP,
         TRAFFIC_LIGHT_SLOW_DOWN,
-        TRAFFIC_LIGHT_WAITING
+        TRAFFIC_LIGHT_WAITING,
+        DONE
     };
 
     class LocalPlannerStateMachine
@@ -28,6 +29,7 @@ namespace psaf_local_planner
         void init();
 
         LocalPlannerState getState();
+        void setState(LocalPlannerState state);
     private:
         LocalPlannerState state;
     };

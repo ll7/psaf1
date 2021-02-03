@@ -13,4 +13,9 @@ namespace psaf_local_planner
     LocalPlannerState LocalPlannerStateMachine::getState(){
         return this->state;
     }
+
+    void LocalPlannerStateMachine::setState(LocalPlannerState state){
+        this->state = state;
+    }
+
 }

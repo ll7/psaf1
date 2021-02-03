@@ -15,6 +15,7 @@
 #include <nav_msgs/Path.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
+#include <std_msgs/Float64.h>
 
 // Geometry messages
 #include <geometry_msgs/PoseStamped.h>
@@ -45,6 +46,8 @@
 #include <psaf_messages/Obstacle.h>
 #include <psaf_messages/XRoute.h>
 #include <psaf_messages/XLanelet.h>
+#include <psaf_messages/TrafficLight.h>
+#include <psaf_messages/TrafficSituation.h>
 #include <psaf_local_planner/PsafLocalPlannerParameterConfig.h>
 #include <psaf_local_planner/state_machine.h>
 
@@ -124,6 +127,13 @@ namespace psaf_local_planner {
             void reconfigureCallback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level);
 
             /**
+             * Callback from perception_evaluation; used to receive upcoming traffic lights and stop lines
+             *
+             * @param msg: TrafficSituation-Message
+             */
+            void trafficSituationCallback(const psaf_messages::TrafficSituation::ConstPtr &msg);
+
+            /**
              * Deletes the points in the global plan that have been driven over
              * 
              * finds the closests point to the car atleast 2 meter ahead of the vehicle; deletes all before that one
@@ -151,8 +161,16 @@ namespace psaf_local_planner {
              * Should be called in any case no matter the state; sets the base velocity
              * 
              * @param current_location: current pose of the car
+             * @returns target_vel: target velocity for driving mode
              */
-            void estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location);
+            double estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location);
+
+            /**
+             * Retruns target speed with check for obstacles in the way
+             *
+             * @returns target_vel: target velocity for driving with vehicles
+             */
+            double getTargetVelDriving();
 
 
             /**
@@ -214,6 +232,13 @@ namespace psaf_local_planner {
              * @param msg: The message getting received
              */
             void globalPlanExtendedCallback(const psaf_messages::XRoute &msg);
+
+            /**
+             * Calculates suitable target speed according to current traffic light state
+             *
+             * @returns target_vel: current target velocity with attention to traffic lights
+             */
+            double getTargetVelIntersection();
             
             /** 
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
@@ -243,8 +268,8 @@ namespace psaf_local_planner {
             /** Publisher for the obstacles; publishing causes a replanning */
             ros::Publisher obstacle_pub;
 
-            /** ~~~ currently not used ~~~ */
-            ros::Subscriber vel_sub;
+            /** Subscriber for the traffic situation message from perception_evaluation */
+            ros::Subscriber traffic_situation_sub;
 
             /** Subscriber for the extended global plan */
             ros::Subscriber global_plan_extended_sub;
@@ -299,6 +324,12 @@ namespace psaf_local_planner {
 
             /** Counter for the obstacle message to be always incrementing */
             unsigned int obstacle_msg_id_counter;
+
+            /** Detected traffic lights from perception_evaluation */
+            std::vector<psaf_messages::TrafficLight> detected_traffic_lights;
+
+            /** Distance to detected stop sign */
+            double stop_line_distance;
 
     };
 };
