@@ -430,13 +430,18 @@ class PathProviderCommonRoads:
             # Path was found!
             x_route = self._get_shortest_route(all_routes)
 
-            # TODO: Adjust duration entry after pruning
             # Prune path to get exact start and end points
             real_start_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[0].route_portion,
                                                                                start_point,
                                                                                prematured_stop=True,
                                                                                use_xcenterline=True)
             x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
+
+            # adjust duration entry of start lanelet to match the criteria of a cumulative sum, starting by zero
+            for waypoint in reversed(x_route.route[0].route_portion):
+                waypoint.duration = waypoint.duration - \
+                                    x_route.route[0].route_portion[0].duration
+
             real_end_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[-1].route_portion,
                                                                              target_point, prematured_stop=False,
                                                                              use_xcenterline=True)
