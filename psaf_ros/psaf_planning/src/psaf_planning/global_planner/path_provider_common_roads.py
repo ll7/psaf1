@@ -367,8 +367,8 @@ class PathProviderCommonRoads:
 
                     time += message.route_portion[-1].duration - message.route_portion[
                         len(message.route_portion) // 2].duration
-                    dist += message.route_portion[-1].dist - message.route_portion[
-                        len(message.route_portion) // 2].dist
+                    dist += message.route_portion[-1].distance - message.route_portion[
+                        len(message.route_portion) // 2].distance
 
                     # heuristic adds defined amount of seconds for each traffic light and stop signs on the lanelet
                     time += int(message.hasLight) * self.cost_traffic_light
