@@ -25,7 +25,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.status_pub.publish("Init Done")
 
     def _callback_obstacle(self, obstacle: Obstacle):
-        if not self.busy and self.manager.map is not None and self.path_message.id >= 0:
+        if not self.busy and self.manager.map is not None and self.path_message.id > 0:
             self.busy = True
             # check if an old
             if self.last_id >= obstacle.id:
@@ -45,6 +45,12 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             # generate new plan
             self._replan()
             self.busy = False
+        elif self.busy:
+            rospy.logerr("PathSupervisor: Replanning aborted, still busy !!")
+            self.status_pub.publish("Replanning aborted, still busy")
+        elif self.path_message.id == 0:
+            rospy.logerr("PathSupervisor: Replanning aborted, initial plan not valid !!")
+            self.status_pub.publish("Replanning aborted, initial plan not valid")
         else:
             rospy.logerr("PathSupervisor: Replanning aborted, contact support !!")
             self.status_pub.publish("Replanning aborted, contact support")

@@ -69,11 +69,11 @@ class PathProviderCommonRoads:
         self.max_radius = max_radius
         self.cost_traffic_light = cost_traffic_light
         self.cost_stop_sign = cost_stop_sign
-        self.path_message = XRoute(id=-1)  # initial id is not valid
+        self.path_message = XRoute()
         self.planning_problem = None
         self.manager = None
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter))
-        self.route_id = 0
+        self.route_id = 1  # 1 is the first valid id, 0 is reserved as invalid
         rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
         self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
         self.status_pub.publish("PathProvider ready")
@@ -200,11 +200,12 @@ class PathProviderCommonRoads:
         self.planning_problem = PlanningProblem(0, start_state, goal_region)
         return ProblemStatus.Success
 
-    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None):
+    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, u_turn: bool = False):
         """
         Returns the shortest path from start to goal
         :param  from_a: Start point [GPS Coord] optional
         :param  to_b:   End point [GPS Coord] optional
+        :param u_turn: if True: check if a u_turn at the start is beneficial
         :return: Path or only start if no path was found at all, or no map information is received
         """
         start = self.start
@@ -214,7 +215,26 @@ class PathProviderCommonRoads:
             start = from_a
             goal = to_b
 
-        self._compute_route(start, goal)
+        if u_turn:
+            x_route_u = self._compute_route(start, goal, u_turn=True)
+            x_route_no_u = self._compute_route(start, goal, u_turn=False)
+            # TODO: compare times or distance based on obey_traffic_rules param and save best
+            x_route = x_route_u
+        else:
+            x_route = self._compute_route(start, goal, u_turn=False)
+
+        # if the path is valid
+        if x_route.id > 0:
+            # publish message and trigger the global planner plugin
+            self.xroute_pub.publish(x_route)
+            # save message
+            self.path_message = x_route
+
+            # trigger move_base with dummy point
+            dummy_point = Point(0, 0, 0)
+            self._trigger_move_base(self._get_pose_stamped(dummy_point, dummy_point))
+        else:
+            rospy.logerr("PathProvider: Invalid path, no path published")
 
     def _visualization(self, route, num):
         plot_limits = get_plot_limits_from_reference_path(route)
@@ -350,12 +370,17 @@ class PathProviderCommonRoads:
 
         return extended_route, time
 
-    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position):
+    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, u_turn: bool = False):
         """
         Compute shortest path
         :param from_a: Start point -- GPS Coord in float: latitude, longitude, altitude
         :param to_b: End point   -- GPS Coord in float: latitude, longitude, altitude
+        :param u_turn: if True plan route with a initial u_turn
         """""
+        if u_turn:
+            rospy.loginfo("PathProvider: Computing feasible path from a to b, with initial U_Turn")
+        else:
+            rospy.loginfo("PathProvider: Computing feasible path from a to b")
 
         # first transform GPS_Position
         gps_point_start = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
@@ -400,12 +425,12 @@ class PathProviderCommonRoads:
         candidate_holder = route_planner.plan_routes()
         all_routes, num_routes = candidate_holder.retrieve_all_routes()
 
-        rospy.loginfo("PathProvider: Computing feasible path from a to b")
-        x_route = XRoute(id=-1)
+        x_route = XRoute()
         if num_routes >= 1:
             # Path was found!
             x_route = self._get_shortest_route(all_routes)
 
+            # TODO: Adjust duration entry after pruning
             # Prune path to get exact start and end points
             real_start_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[0].route_portion,
                                                                                start_point,
@@ -423,8 +448,9 @@ class PathProviderCommonRoads:
                     self._visualization(all_routes[i], i)
 
             if len(x_route.route) == 1 and len(x_route.route[0].route_portion) == 0:
-                # already on target point
+                # already on target point, invalidate path
                 rospy.logerr("PathProvider: Already on target point, no waypoints generated")
+                x_route.id = 0
 
         else:
             rospy.logerr("PathProvider: No possible path was found")
@@ -434,12 +460,7 @@ class PathProviderCommonRoads:
             # TODO: serialize message for optimizer
             pass
 
-        # save message
-        self.path_message = x_route
-
-        # publish message and trigger the global planner plugin
-        self.xroute_pub.publish(x_route)
-        self._trigger_move_base(self._get_pose_stamped(start_point, start_point))
+        return x_route
 
     def _callback_goal(self, data):
         """
