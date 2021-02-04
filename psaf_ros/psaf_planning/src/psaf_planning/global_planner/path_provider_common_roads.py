@@ -482,7 +482,6 @@ class PathProviderCommonRoads:
 
         else:
             rospy.logerr("PathProvider: No possible path was found")
-            return
 
         if self.enable_debug:
             # TODO: serialize message for optimizer
