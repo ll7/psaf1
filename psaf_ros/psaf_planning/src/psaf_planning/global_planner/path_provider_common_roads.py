@@ -306,7 +306,7 @@ class PathProviderCommonRoads:
         min_value = float("inf")
         best_path = None
         for route in routes_list:
-            extended_path, time_spent = self._generate_extended_route_path(route)
+            extended_path, distance, time_spent = self._generate_extended_route_path(route)
             if self.enable_debug:
                 for xlane in extended_path.route:
                     for portion in xlane.route_portion:
@@ -323,7 +323,7 @@ class PathProviderCommonRoads:
     def _generate_extended_route_path(self, route: Route):
         """
         Generate the extended_route_path and provide a heuristic evaluation of the time,
-        passed while traveling on that route
+        passed while traveling on that route. Additional the covered distance is calculated.
         :param route: Route
         :return: extended route and its corresponding time duration heuristic
         """
@@ -331,12 +331,16 @@ class PathProviderCommonRoads:
         extended_route = XRoute(id=self.route_id, route=[])
         do_lane_change = False
         time = 0
+        dist = 0
         for i, lane_id in enumerate(route.list_ids_lanelets):
             message = deepcopy(self.manager.message_by_lanelet[lane_id])
             if lane_change_instructions[i] == 0:
+                # no lane change -> isLaneChange is False by default
+
                 if not do_lane_change:
                     extended_route.route.append(deepcopy(message))
                     time += message.route_portion[-1].duration
+                    dist += message.route_portion[-1].distance
 
                     # heuristic adds defined amount of seconds for each traffic light
                     time += int(message.hasLight) * self.cost_traffic_light
@@ -344,12 +348,19 @@ class PathProviderCommonRoads:
                 else:
                     tmp_message = deepcopy(message)
                     tmp_message.route_portion = message.route_portion[len(message.route_portion) // 2:]
+                    # make sure to correct entries in route_portion
                     for waypoint in tmp_message.route_portion:
                         waypoint.duration = waypoint.duration - \
                                             message.route_portion[len(message.route_portion) // 2].duration
+                        waypoint.distance = waypoint.distance - \
+                                            message.route_portion[len(message.route_portion) // 2].distance
+
                     extended_route.route.append(deepcopy(tmp_message))
+
                     time += message.route_portion[-1].duration - message.route_portion[
                         len(message.route_portion) // 2].duration
+                    dist += message.route_portion[-1].dist - message.route_portion[
+                        len(message.route_portion) // 2].dist
 
                     # heuristic adds defined amount of seconds for each traffic light and stop signs on the lanelet
                     time += int(message.hasLight) * self.cost_traffic_light
@@ -357,18 +368,21 @@ class PathProviderCommonRoads:
 
                     do_lane_change = False
             else:
+                # lane change -> set isLaneChange True
+                message.isLaneChange = True
                 if not do_lane_change:
                     tmp_message = deepcopy(message)
                     tmp_message.route_portion = message.route_portion[:len(message.route_portion) // 2]
                     extended_route.route.append(deepcopy(tmp_message))
-                    time += message.route_portion[len(message.route_portion) // 2].duration
+                    time += message.route_portion[(len(message.route_portion) // 2)-1].duration
+                    dist += message.route_portion[(len(message.route_portion) // 2)-1].distance
                 else:
                     # lane changing over at least two lanes at once -> do not count the skipped middle lane
                     pass
 
                 do_lane_change = True
 
-        return extended_route, time
+        return extended_route, dist, time
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, u_turn: bool = False):
         """
