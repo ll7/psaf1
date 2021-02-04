@@ -51,10 +51,11 @@ class PathProviderCommonRoads:
                  role_name: str = "ego_vehicle",
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
-                 cost_stop_sign: int = 5):
+                 cost_stop_sign: int = 5, respect_traffic_rules: bool = False):
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
+        self.respect_traffic_rules = respect_traffic_rules
         self.enable_debug = enable_debug
         self.role_name = role_name
         self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
@@ -216,12 +217,15 @@ class PathProviderCommonRoads:
             goal = to_b
 
         if u_turn:
-            x_route_u = self._compute_route(start, goal, u_turn=True)
-            x_route_no_u = self._compute_route(start, goal, u_turn=False)
-            # TODO: compare times or distance based on obey_traffic_rules param and save best
-            x_route = x_route_u
+            x_route_u, best_value_u = self._compute_route(start, goal, u_turn=True)
+            x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
+            # compare distance based on obey_traffic_rules param and save best
+            if best_value_u < best_value_no_u:
+                x_route = x_route_u
+            else:
+                x_route = x_route_no_u
         else:
-            x_route = self._compute_route(start, goal, u_turn=False)
+            x_route, _ = self._compute_route(start, goal, u_turn=False)
 
         # if the path is valid
         if x_route.id > 0:
@@ -312,13 +316,17 @@ class PathProviderCommonRoads:
                     for portion in xlane.route_portion:
                         route.reference_path.append([portion.x, portion.y])
                 route.reference_path = np.array(route.reference_path)
-            if time_spent < min_value:
-                min_value = time_spent
-                best_path = extended_path
-
+            if self.respect_traffic_rules:
+                if time_spent < min_value:
+                    min_value = time_spent
+                    best_path = extended_path
+            else:
+                if distance < min_value:
+                    min_value = distance
+                    best_path = extended_path
         self.route_id += 1
         best_path.id = self.route_id
-        return best_path
+        return best_path, min_value
 
     def _generate_extended_route_path(self, route: Route):
         """
@@ -440,9 +448,10 @@ class PathProviderCommonRoads:
         all_routes, num_routes = candidate_holder.retrieve_all_routes()
 
         x_route = XRoute()
+        best_value = float("inf")
         if num_routes >= 1:
             # Path was found!
-            x_route = self._get_shortest_route(all_routes)
+            x_route, best_value = self._get_shortest_route(all_routes)
 
             # Prune path to get exact start and end points
             real_start_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[0].route_portion,
@@ -479,7 +488,7 @@ class PathProviderCommonRoads:
             # TODO: serialize message for optimizer
             pass
 
-        return x_route
+        return x_route, best_value
 
     def _callback_goal(self, data):
         """

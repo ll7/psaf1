@@ -16,10 +16,10 @@ from commonroad.scenario.lanelet import Lanelet
 
 
 class PathSupervisorCommonRoads(PathProviderCommonRoads):
-    def __init__(self, init_rospy: bool = False, enable_debug: bool = False):
+    def __init__(self, init_rospy: bool = False, enable_debug: bool = False, respect_traffic_rules: bool = False):
         if init_rospy:
             rospy.init_node('PathSupervisorCommonRoads', anonymous=True)
-        super(PathSupervisorCommonRoads, self).__init__(init_rospy=not init_rospy, enable_debug=enable_debug)
+        super(PathSupervisorCommonRoads, self).__init__(init_rospy=not init_rospy, enable_debug=enable_debug, respect_traffic_rules=respect_traffic_rules)
         self.busy: bool = False
         rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle)
         self.obstacles = {}
@@ -217,7 +217,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
 
 def main():
-    provider = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
+    respect_traffic_rules = rospy.get_param('/path_provider/respect_traffic_rules', False)
+    provider = PathSupervisorCommonRoads(init_rospy=False, enable_debug=False, respect_traffic_rules=bool(respect_traffic_rules))
     rospy.spin()
 
 
