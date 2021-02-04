@@ -18,8 +18,8 @@ namespace psaf_local_planner {
         this->state = state;
     }
 
-    void
-    LocalPlannerStateMachine::updateState(bool trafficLightDetected, psaf_messages::TrafficLight trafficLightKnowledge,
+    void LocalPlannerStateMachine::updateState(bool trafficLightDetected, 
+                                               psaf_messages::TrafficLight trafficLightKnowledge,
                                           double stoppingDistance, double currentSpeed, double distanceToStopLine) {
 
         switch (this->state) {

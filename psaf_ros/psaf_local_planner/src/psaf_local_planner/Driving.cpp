@@ -261,6 +261,10 @@ namespace psaf_local_planner
         return 0.0;
     }
 
+    double PsafLocalPlanner::getCurrentStoppingDistance(){
+        return pow(this->current_speed,2)*0.1296+current_speed;
+    }
+
     double PsafLocalPlanner::getTargetVelDriving()
     {
                 double target_vel = estimateCurvatureAndSetTargetVelocity(current_pose.pose);

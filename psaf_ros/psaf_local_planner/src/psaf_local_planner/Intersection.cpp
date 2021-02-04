@@ -31,7 +31,7 @@ namespace psaf_local_planner {
         }
 
         this->state_machine->updateState(traffic_light_detected, this->traffic_light_state,
-                                         this->stop_line_distance, this->current_speed, this->stop_line_distance);
+                                         this->getCurrentStoppingDistance(), this->current_speed, this->stop_line_distance);
     }
 
     double PsafLocalPlanner::getTargetVelIntersection() {
