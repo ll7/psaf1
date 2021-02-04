@@ -1,0 +1,5 @@
+<!-- -->
+<launch>
+  <node pkg="psaf_planning" type="path_supervisor_common_roads.py" name="path_provider" output="screen">
+  </node>
+</launch>

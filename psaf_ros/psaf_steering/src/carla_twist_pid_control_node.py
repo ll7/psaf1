@@ -301,7 +301,6 @@ class CarlaAckermannControl(object):
         self.set_target_speed(ros_twist.linear.x * self.input_multiplier)
         self.set_target_accel(0)
         self.set_target_jerk(0)
-        print(ros_twist.angular.z )
 
         self.input_speed = ros_twist.linear.x * self.input_multiplier
         self.input_accel = 0.
@@ -352,6 +351,19 @@ class CarlaAckermannControl(object):
         """
         self.info.target.jerk = target_jerk
 
+    def override_speed(self):
+        """
+        fully breaks or fully stops when the diff is greater than x
+        """
+        diff_accel = 1
+        diff_break = 1
+
+        if self.info.current.speed - diff_break > self.info.target.speed:
+            self.info.output.brake = 1.0
+        
+        if self.info.current.speed  < self.info.target.speed - diff_accel:
+            self.info.output.throttle = 1.0
+
     def vehicle_control_cycle(self):
         """
         Perform a vehicle control cycle and sends out CarlaEgoVehicleControl message
@@ -366,6 +378,8 @@ class CarlaAckermannControl(object):
         self.run_accel_control_loop()
         if not self.info.output.hand_brake:
             self.update_drive_vehicle_control_command()
+
+            self.override_speed()
 
             # only send out the Carla Control Command if AckermannDrive messages are -> Attention: this breaks the controlling somehow, prefer always sending
             # received in the last second (e.g. to allows manually controlling the vehicle)

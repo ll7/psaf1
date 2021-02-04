@@ -1,7 +1,6 @@
-import sys
+#!/usr/bin/env python
 
 from psaf_messages.msg import Obstacle
-from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
 from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads
 import rospy
 from lanelet2.core import GPSPoint
@@ -26,7 +25,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.status_pub.publish("Init Done")
 
     def _callback_obstacle(self, obstacle: Obstacle):
-        if not self.busy and self.manager.map is not None and len(self.path.poses) > 0:
+        if not self.busy and self.manager.map is not None and self.path_message.id > 0:
             self.busy = True
             # check if an old
             if self.last_id >= obstacle.id:
@@ -40,15 +39,20 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
             self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
-            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)
             for point in obstacle.obstacles:
                 if self._add_obstacle(point):
                     self.status_pub.publish("Replanning done")
             # generate new plan
             self._replan()
             self.busy = False
+        elif self.busy:
+            rospy.logerr("PathSupervisor: Replanning aborted, still busy !!")
+            self.status_pub.publish("Replanning aborted, still busy")
+        elif self.path_message.id == 0:
+            rospy.logerr("PathSupervisor: Replanning aborted, initial plan not valid !!")
+            self.status_pub.publish("Replanning aborted, initial plan not valid")
         else:
-            rospy.logerr("PathSupervisor: replanning aborted, contact support !!")
+            rospy.logerr("PathSupervisor: Replanning aborted, contact support !!")
             self.status_pub.publish("Replanning aborted, contact support")
 
     def _add_obstacle(self, obstacle: Point):
@@ -131,9 +135,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         # and orientation
         self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
         rospy.loginfo("PathSupervisor: Replanning instruction received")
-        self.get_path_from_a_to_b(debug=self.enable_debug)
-        self._trigger_move_base(self.path.poses[-1])
-        rospy.loginfo("PathSupervisor: global planner plugin triggered")
+        self.get_path_from_a_to_b()
         self.status_pub.publish("Replanning done")
 
     def _reset_map(self):
@@ -145,10 +147,10 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
             self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
-            self.manager.time_by_lanelet = deepcopy(self.manager.original_time_by_lanelet)
+
 
 def main():
-    provider: PathProviderAbstract = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
+    provider = PathSupervisorCommonRoads(init_rospy=True, enable_debug=False)
     rospy.spin()
 
 
