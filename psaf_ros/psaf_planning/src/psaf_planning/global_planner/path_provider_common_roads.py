@@ -374,8 +374,8 @@ class PathProviderCommonRoads:
                     tmp_message = deepcopy(message)
                     tmp_message.route_portion = message.route_portion[:len(message.route_portion) // 2]
                     extended_route.route.append(deepcopy(tmp_message))
-                    time += message.route_portion[(len(message.route_portion) // 2)-1].duration
-                    dist += message.route_portion[(len(message.route_portion) // 2)-1].distance
+                    time += message.route_portion[(len(message.route_portion) // 2) - 1].duration
+                    dist += message.route_portion[(len(message.route_portion) // 2) - 1].distance
                 else:
                     # lane changing over at least two lanes at once -> do not count the skipped middle lane
                     pass
@@ -451,10 +451,10 @@ class PathProviderCommonRoads:
                                                                                use_xcenterline=True)
             x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
 
-            # adjust duration entry of start lanelet to match the criteria of a cumulative sum, starting by zero
+            # adjust duration and distance of start lanelet to match the criteria of a cumulative sum, starting by zero
             for waypoint in reversed(x_route.route[0].route_portion):
-                waypoint.duration = waypoint.duration - \
-                                    x_route.route[0].route_portion[0].duration
+                waypoint.duration = waypoint.duration - x_route.route[0].route_portion[0].duration
+                waypoint.distance = waypoint.distance - x_route.route[0].route_portion[0].distance
 
             real_end_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[-1].route_portion,
                                                                              target_point, prematured_stop=False,
