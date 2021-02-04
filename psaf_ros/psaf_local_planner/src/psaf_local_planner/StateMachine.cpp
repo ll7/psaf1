@@ -28,11 +28,13 @@ namespace psaf_local_planner {
                 break;
 
             case LocalPlannerState::DRIVING:
+                ROS_WARN("STATE IS DRIVING");
                 if (trafficLightDetected) {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_NEAR;
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
+                ROS_WARN("STATE IS NEAR Light");
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN &&
                     trafficLightKnowledge.distance < stoppingDistance) {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
@@ -48,11 +50,13 @@ namespace psaf_local_planner {
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_GO:
+                ROS_WARN("STATE IS GO");
                 if (currentSpeed > 2.8) {
                     this->state = LocalPlannerState::DRIVING;
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
+                ROS_WARN("STATE IS WILL STOP");
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN) {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 } else if (distanceToStopLine < 2.0) {
@@ -60,6 +64,7 @@ namespace psaf_local_planner {
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
+                ROS_WARN("STATE IS SLOW DOWN");
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN) {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 } else if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_RED) {
@@ -67,6 +72,7 @@ namespace psaf_local_planner {
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
+                ROS_WARN("STATE IS WAITING");
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN) {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 }

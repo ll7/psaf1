@@ -20,6 +20,7 @@ namespace psaf_local_planner
     {
         g_plan_pub.shutdown();
         traffic_situation_sub.shutdown();
+        vehicle_status_sub.shutdown();
         delete dyn_serv;
     }
 
@@ -71,6 +72,7 @@ namespace psaf_local_planner
         if (initialized)
         {
             costmap_ros->getRobotPose(current_pose);
+
             deleteOldPoints();
 
             if (global_plan.size() <= 1)

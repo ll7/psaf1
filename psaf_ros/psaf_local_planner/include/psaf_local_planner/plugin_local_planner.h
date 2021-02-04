@@ -74,28 +74,28 @@ namespace psaf_local_planner {
              */
             PsafLocalPlanner();
             ~PsafLocalPlanner();
-            
+
              /**
              * Constructs the local planner.
-             * 
+             *
              * Overrides the nav_core::BaseLocalPlanner method; Called upon node creation
              * @param name: Name of the node in which this plugin runs
              * @param tf: ?
              * @param costmap_ros: Pointer to the costmap internal to move_base
              */
             void initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS *costmap_ros);
-            
+
 
             /**
              * Given the current position, orientation, and velocity of the robot, compute velocity commands to send to the base.
-             * 
+             *
              * Overrides the nav_core::BaseLocalPlanner method; Called every ROS Tick
              * Defacto main loop in the local planner
-             * 
+             *
              * @param cmd_vel: Reference to the main velecity, to be used as the return parameter (no publish)
              */
             bool computeVelocityCommands(geometry_msgs::Twist &cmd_vel);
-            
+
             /**
              * Check if the goal pose has been achieved by the local planner.
              *
@@ -107,21 +107,21 @@ namespace psaf_local_planner {
             
             /**
              * Set the plan that the local planner is following.
-             * 
+             *
              * Overrides the nav_core::BaseLocalPlanner method; Called when the global planner publishes a global plan
              */
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
         private:
             /**
              * Publishes the global plan to be displayed in RVIZ
-             * 
+             *
              * @param path: Vector of poses that make up the plan
              */
             void publishGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& path);
 
             /**
              * Callback from dynamic_reconfigure; used to set the local variables dynamically
-             * 
+             *
              * @param config: Object containing all the changed parameters
              * @param level: Highest level of the changed parameter (see dyn_rec docs)
              */
@@ -143,14 +143,14 @@ namespace psaf_local_planner {
 
             /**
              * Deletes the points in the global plan that have been driven over
-             * 
+             *
              * finds the closests point to the car atleast 2 meter ahead of the vehicle; deletes all before that one
              */
             void deleteOldPoints();
             
             /**
              * Computes the steering angle the car should take based on the current location of the car
-             * 
+             *
              * @param target_location: Next point that should be targeted by the car; is affected by the lookahead
              * @param current_location: Current Location + Rotation of the car
              * @return angle of the wheels in rad
@@ -161,13 +161,13 @@ namespace psaf_local_planner {
              * Esitmates the curvature on the upcomuing road for the next [estimate_curvature_distance] distance
              * Used a 3 point method to calculate the radius of curves along the global plan
              * Finds the minimum radius in the next [estimate_curvature_distance] distance
-             * 
+             *
              * Uses following formula for max speed in curves:
              *   max speed in curves: v <= sqrt(µ_haft * r * g)
              *   µ_haft ~= 0.8 - 1.0
-             * 
+             *
              * Should be called in any case no matter the state; sets the base velocity
-             * 
+             *
              * @param current_location: current pose of the car
              * @returns target_vel: target velocity for driving mode
              */
@@ -188,7 +188,7 @@ namespace psaf_local_planner {
 
             /**
              * Helper function for calculating the radius of the curve on the global plan
-             * 
+             *
              * third point is selected in the middle between first and last
              * @param first: index of the first point on the global plan of this curve
              * @param last: index of the last point on the global plan of this curve
@@ -198,17 +198,17 @@ namespace psaf_local_planner {
 
             /**
              * Checks the distance which is free on the global plan using the costmap
-             * 
+             *
              * @return true if a obstacle was found in the bounds of the costmap
-             * @param distance: return value of the distance forward 
+             * @param distance: return value of the distance forward
              * @param relativeX: return value of relative X position at which the obstacle was found
              * @param relativeY: return value of relative Y position at which the obstacle was found
              */
             bool checkDistanceForward(double& distance, double &relative_x, double &relative_y);
-            
+
             /**
              * Send a raytrace along the costmap from the current position of the car
-             * 
+             *
              * @param m_target_x: x position where to raytrace to in global map coordinates (in meters)
              * @param m_target_y: x position where to raytrace to in global map coordinates (in meters)
              * @param coll_x: x position where the collision happend on the costmap in global map coordinates (in meters)
@@ -219,7 +219,7 @@ namespace psaf_local_planner {
 
             /**
              * Sends out a bunch of raytraces around the car in a semi circle with the given angle
-             * 
+             *
              * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
              * @param distance: max distance that should be looked at by the raytrace
              * @param collisions: in case of collisions they are getting added to the vector
@@ -229,14 +229,14 @@ namespace psaf_local_planner {
             /**
              * Function that checks for a slow car ahead using the slowdown of the own car
              * @param velocity_distance_diff: the difference between the max velocity and current that is caused by the slower car ahead
-             * 
+             *
              * pubslishes obstacle positions using raytraces
              */
             void checkForSlowCar(double velocity_distance_diff);
 
             /**
              * Callback for the extened global plan by the global planner
-             * 
+             *
              * @param msg: The message getting received
              */
             void globalPlanExtendedCallback(const psaf_messages::XRoute &msg);
@@ -260,9 +260,9 @@ namespace psaf_local_planner {
              */
             void updateStateMachine();
 
-            /** 
+            /**
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
-             * 
+             *
              * @return pointer to the target point
              */
             geometry_msgs::PoseStamped& findLookaheadTarget();
@@ -299,18 +299,20 @@ namespace psaf_local_planner {
 
             /** current pose of the vehicle; gets set  in computeVelocityCommands every ROS Tick */
             geometry_msgs::PoseStamped current_pose;
-
-            /** Topic path of the odometrie */
+            base_local_planner::OdometryHelperRos odom_helper;
             std::string odom_topic;
             
-            /** The global plan that is only the poses */
+
             std::vector<geometry_msgs::PoseStamped> global_plan;
 
             /** The Route part of the xtenden route */
             std::vector<psaf_messages::XLanelet> global_route;
 
-            /** is set to true after the node is inited via ROS */ 
+            /** is set to true after the node is inited via ROS */
             bool initialized;
+
+            /** Actual Max velocity that is allowed to be driven */
+            double max_velocity;
             
             /** min speed that the car should drive at even through sharp angles */
             double min_velocity;

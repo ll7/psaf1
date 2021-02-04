@@ -41,10 +41,12 @@ qt5_add_resources(SRC_FILES panel_goal.qrc)
 ## Uncomment this if the package has a setup.py. This macro ensures
 catkin_python_setup()
 #build libraries
-add_library(psaf_global_planner_lib src/psaf_planning/plugin_global_planner.cpp) #global planner
-add_library(psaf_panel_goal_lib src/psaf_planning/panel_goal.cpp)                #goal panel
+add_library(psaf_global_planner_lib src/psaf_planning/rviz_plugins/plugin_global_planner.cpp) #global planner
+add_library(psaf_global_planner_lanelet2_lib src/psaf_planning/rviz_plugins/plugin_global_planner_lanelet2.cpp) #global planner lanelet2
+add_library(psaf_panel_goal_lib src/psaf_planning/rviz_plugins/panel_goal.cpp)                #goal panel
 target_link_libraries(psaf_panel_goal_lib ${QT_LIBRARIES} ${catkin_LIBRARIES})   #link goal panel with qt
 target_link_libraries(psaf_global_planner_lib ${catkin_LIBRARIES})   #link goal panel with qt
+target_link_libraries(psaf_global_planner_lanelet2_lib ${catkin_LIBRARIES})   #link goal panel with qt
 
 ################################################
 ## Declare ROS messages, services and actions ##
