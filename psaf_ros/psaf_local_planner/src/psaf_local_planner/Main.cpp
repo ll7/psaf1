@@ -46,6 +46,8 @@ namespace psaf_local_planner
             this->costmap_ros = costmap_ros;
 
             traffic_situation_sub = private_nh.subscribe("/psaf/local_planner/traffic_situation", 10, &PsafLocalPlanner::trafficSituationCallback, this);
+            // Subscribe for vehicle status updates
+            this->vehicle_status_sub = private_nh.subscribe("/carla/ego_vehicle/vehicle_status", 10, &PsafLocalPlanner::odometryCallback, this);
 
             dyn_serv = new dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>(private_nh);
             dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
@@ -80,6 +82,8 @@ namespace psaf_local_planner
             } else {
                 auto target_point = findLookaheadTarget();
                 double angle = computeSteeringAngle(target_point.pose, current_pose.pose);
+
+                updateStateMachine();
 
                 target_velocity = getTargetVelDriving();
                 target_velocity = getTargetVelIntersection();

@@ -30,4 +30,8 @@ namespace psaf_local_planner
         if (!path.empty())
             base_local_planner::publishPlan(path, g_plan_pub);
     }
+
+    void PsafLocalPlanner::odometryCallback(const carla_msgs::CarlaEgoVehicleStatus &msg){
+        this->current_speed = (double) msg.velocity * (msg.control.reverse?-1:1);
+    }
 }

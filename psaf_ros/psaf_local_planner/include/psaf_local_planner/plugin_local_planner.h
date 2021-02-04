@@ -10,7 +10,7 @@
 
 
 // Messages
-#include <geometry_msgs/Quaternion.h>
+#include <carla_msgs/CarlaEgoVehicleStatus.h>
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Path.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -18,6 +18,7 @@
 #include <std_msgs/Float64.h>
 
 // Geometry messages
+#include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 
@@ -134,6 +135,13 @@ namespace psaf_local_planner {
             void trafficSituationCallback(const psaf_messages::TrafficSituation::ConstPtr &msg);
 
             /**
+             * Callback for carla vehicle status messages.
+             * Called by the subscriber
+             * @param msg: CarlaEgoVehicleStatus the messages
+             */
+            void odometryCallback(const carla_msgs::CarlaEgoVehicleStatus &msg);
+
+            /**
              * Deletes the points in the global plan that have been driven over
              * 
              * finds the closests point to the car atleast 2 meter ahead of the vehicle; deletes all before that one
@@ -246,6 +254,12 @@ namespace psaf_local_planner {
              */
             double getCurrentStoppingDistance();
             
+            /**
+             * Update the current state of the state machine
+             * Called in computeVelocityCommands to keep the state up to date
+             */
+            void updateStateMachine();
+
             /** 
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
              * 
@@ -276,6 +290,9 @@ namespace psaf_local_planner {
 
             /** Subscriber for the traffic situation message from perception_evaluation */
             ros::Subscriber traffic_situation_sub;
+
+            /** Subscriber for vehicle status updates */
+            ros::Subscriber vehicle_status_sub;
 
             /** Subscriber for the extended global plan */
             ros::Subscriber global_plan_extended_sub;
@@ -336,6 +353,11 @@ namespace psaf_local_planner {
 
             /** Distance to detected stop line */
             double stop_line_distance;
+
+            /**
+             * The current speed of the car
+             */
+            double current_speed;
 
     };
 };
