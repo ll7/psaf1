@@ -299,9 +299,6 @@ namespace psaf_local_planner {
 
             /** current pose of the vehicle; gets set  in computeVelocityCommands every ROS Tick */
             geometry_msgs::PoseStamped current_pose;
-            base_local_planner::OdometryHelperRos odom_helper;
-            std::string odom_topic;
-            
 
             std::vector<geometry_msgs::PoseStamped> global_plan;
 
