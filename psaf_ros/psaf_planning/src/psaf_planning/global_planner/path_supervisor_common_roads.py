@@ -24,7 +24,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle)
         self.obstacles = {}
         self.last_id = -1
-        lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(104)
         self.status_pub.publish("Init Done")
 
 
@@ -57,8 +56,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
                 for point in obstacle.obstacles:
                     success, car_lanelet = self._add_obstacle(point, car_lanelet, curr_pos, relevant_lanelets)
-                    if success:
-                        relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
+                    relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
                 # generate new plan
                 self._replan()
             self.busy = False
@@ -81,12 +79,14 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         """
         relevant = set()
         lanelet: Lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(car_lanelet)
+        if not self.manager.message_by_lanelet[car_lanelet].isAtIntersection:
+            relevant.add(car_lanelet)
         # add all neighbours and their successors, that are heading in the same direction
         # go through all right neighbours
         neighbour_lanelet = lanelet
         while neighbour_lanelet.adj_right_same_direction and neighbour_lanelet.adj_right is not None:
             if not self.manager.message_by_lanelet[neighbour_lanelet.lanelet_id].isAtIntersection:
-                relevant.add(car_lanelet)
+                relevant.add(neighbour_lanelet.lanelet_id)
             # add the successor, if it's not an intersection
             if len(neighbour_lanelet.successor) == 1:
                 if not self.manager.message_by_lanelet[neighbour_lanelet.successor[0]].isAtIntersection:
@@ -96,7 +96,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         # go through all left neighbours
         while neighbour_lanelet.adj_left_same_direction and neighbour_lanelet.adj_left is not None:
             if not self.manager.message_by_lanelet[neighbour_lanelet.lanelet_id].isAtIntersection:
-                relevant.add(car_lanelet)
+                relevant.add(neighbour_lanelet.lanelet_id)
             # add the successor, if it's not an intersection
             if len(neighbour_lanelet.successor) == 1:
                 if not self.manager.message_by_lanelet[neighbour_lanelet.successor[0]].isAtIntersection:
