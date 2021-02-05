@@ -354,34 +354,37 @@ namespace psaf_local_planner
             distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
 
             if (lanelet.isLaneChange) {
-                if (i + 1 < global_route.size() && compute_direction_threshold <= distance) {
-                    auto &next_lanelet = global_route[i + 1];
-                    if (lanelet.route_portion.size() < 2) {
-                        auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
-                        auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
-                        auto &next = next_lanelet.route_portion[0];
+                if (compute_direction_threshold >= distance) {
+                    if (i + 1 < global_route.size()) {
+                        auto &next_lanelet = global_route[i + 1];
+                        if (lanelet.route_portion.size() >= 2) {
+                            auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
+                            auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
+                            auto &next = next_lanelet.route_portion[0];
 
-                        auto v_last = tf2::Vector3(last.x, last.y, last.z);
-                        auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
-                        auto v_next = tf2::Vector3(next.x, next.y, next.z);
+                            auto v_last = tf2::Vector3(last.x, last.y, last.z);
+                            auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
+                            auto v_next = tf2::Vector3(next.x, next.y, next.z);
 
-                        auto v1 = v_last - v_second_last;
-                        auto v2 = v_next - v_last;
+                            auto v1 = v_last - v_second_last;
+                            auto v2 = v_next - v_last;
 
-                        double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
+                            double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
 
-                        if (angle > 0) {
-                            direction = +1;
+                            if (angle > 0) {
+                                direction = +1;
+                            } else {
+                                direction = -1;
+                            }
+
                         } else {
-                            direction = -1;
+                            ROS_WARN("Not enough points to use three point method");
                         }
-
                     } else {
-                        ROS_WARN("Not enough points to use three point method");
+                        ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
                     }
-                } else {
-                    ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
                 }
+                
 
                 return distance;
             }
