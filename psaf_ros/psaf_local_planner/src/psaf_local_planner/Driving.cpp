@@ -261,4 +261,8 @@ namespace psaf_local_planner
         return 0.0;
     }
 
+    double PsafLocalPlanner::getDistanceToIntersection() {
+        
+    }
+
 }
