@@ -118,14 +118,6 @@ class PathProviderCommonRoads:
         self.status_pub.publish("Couldn't find lanlet for point" + str(goal.x) + ", " + str(goal.y))
         return None
 
-    def _visualize_scenario(self, sce: Scenario, prob: PlanningProblem = None):
-        plt.figure(figsize=(10, 10))
-        draw_object(sce, draw_params={'time_begin': 0})
-        if prob is not None:
-            draw_object(prob)
-        plt.gca().set_aspect('equal')
-        plt.show()
-
     def _generate_planning_problem(self, start: Point, target: Point) -> ProblemStatus:
         """
         Generate the planning problem by setting the starting point and generating a target region
