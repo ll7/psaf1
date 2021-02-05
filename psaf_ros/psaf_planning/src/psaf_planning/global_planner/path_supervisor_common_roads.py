@@ -6,12 +6,11 @@ import rospy
 from lanelet2.core import GPSPoint
 from geometry_msgs.msg import Point
 import numpy as np
-from commonroad.scenario.lanelet import Lanelet
 from commonroad.geometry.shape import Rectangle
 from commonroad.scenario.obstacle import StaticObstacle, ObstacleType
 from commonroad.scenario.trajectory import State
 from copy import deepcopy
-from typing import Set, List
+from typing import List
 from commonroad.scenario.lanelet import Lanelet
 
 
@@ -25,7 +24,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.obstacles = {}
         self.last_id = -1
         self.status_pub.publish("Init Done")
-
 
     def _callback_obstacle(self, obstacle: Obstacle):
         if not self.busy and self.manager.map is not None and self.path_message.id > 0:
@@ -54,8 +52,19 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 # determine relevant lanelets for an obstacle
                 car_lanelet = car_lanelet[0][0]
                 relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
-                for point in obstacle.obstacles:
-                    success, car_lanelet = self._add_obstacle(point, car_lanelet, curr_pos, relevant_lanelets)
+                real_obstacles = {}
+                for obs in obstacle.obstacles:
+                    matching_lanelet = self._get_obstacle_lanelet(relevant_lanelets, obs)
+                    if matching_lanelet == -1:
+                        rospy.logerr(
+                            "PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
+                        self.status_pub.publish(
+                            "Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering")
+                    else:
+                        real_obstacles[matching_lanelet] = obs
+                for lane_id in real_obstacles:
+                    rospy.loginfo("PathSupervisor: Processing obstacle: {}".format(real_obstacles[lane_id]))
+                    success, car_lanelet = self._add_obstacle(real_obstacles[lane_id], car_lanelet, curr_pos, relevant_lanelets)
                     relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
                 # generate new plan
                 self._replan()
