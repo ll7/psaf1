@@ -287,8 +287,11 @@ namespace psaf_local_planner {
             /** sets a flag when the slow car and obstacles have been published */ 
             bool slow_car_ahead_published;
 
-            /** Last time the obstacle message was published, allows repeated pubshling */
+            /** Last time a slow car message was published, allows repeated pubshling */
             ros::Time slow_car_last_published;
+
+            /** Last time the obstacle message was published, prevents sending too often */
+            ros::Time obstacle_last_published;
 
             /** */
             unsigned int slow_car_last_published_deleted_points;

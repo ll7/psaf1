@@ -14,7 +14,11 @@ namespace psaf_local_planner
 
         ROS_INFO("slow car counter: %d", slow_car_ahead_counter);
 
-        if (slow_car_ahead_counter > 30 && (!slow_car_ahead_published || ros::Time::now() - slow_car_last_published > ros::Duration(10.0)) && deleted_points - slow_car_last_published_deleted_points > 100) {
+        if (slow_car_ahead_counter > 30 
+            && (ros::Time::now() - obstacle_last_published > ros::Duration(3.0)) 
+            && (!slow_car_ahead_published || ros::Time::now() - slow_car_last_published > ros::Duration(10.0)) 
+            && deleted_points - slow_car_last_published_deleted_points > 100
+        ) {
             ROS_INFO("publishing obstacle ahead");
             slow_car_ahead_published = true;
             slow_car_last_published = ros::Time::now();
@@ -44,7 +48,10 @@ namespace psaf_local_planner
             obstacle_pub.publish(msg);
         }
 
-        if (slow_car_ahead_counter < 10 && slow_car_ahead_published) {
+        if (slow_car_ahead_counter < 10 
+            && slow_car_ahead_published
+            && (ros::Time::now() - obstacle_last_published > ros::Duration(3.0)) 
+        ) {
             ROS_INFO("publishing loss of obstacle");
             slow_car_ahead_published = false;
 
