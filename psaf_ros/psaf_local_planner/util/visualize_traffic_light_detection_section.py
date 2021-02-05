@@ -2,6 +2,7 @@
 import rospy, math
 from carla_msgs.msg import CarlaEgoVehicleControl, CarlaEgoVehicleStatus
 from geometry_msgs.msg import Twist
+from psaf_messages.msg import TrafficSignInfo
 from std_msgs.msg import Float64
 import cv2
 import numpy as np
@@ -21,19 +22,22 @@ def callback_curvature(data):
 
 # control cmds that pid_controller sends to vehicle
 def callback_cmd(data: CarlaEgoVehicleControl):
-    global x1,y1,x2,y2
+    global center_x,center_y
     # -1. <= steer <= 1.
     print('Steer: ' + str(data.steer))
     # 0. <= throttle <= 1.
     print('Throttle: ' + str(data.throttle))
 
-    width = 0.34
-    x1 = data.steer * (0.3 if data.steer>0 else 0.6) + 0.5
+
+    center_x = data.steer * (0.25 if data.steer>0 else 0.3) +0.5
+    center_y=  0.357
+
+    width = 0.2
 
     # Calculate coordinates
     x2 = min([x1 + width,1])
-    y1 = 0.2
-    y2 = 0.8
+    y1 = 0.25
+    y2 = 0.5
 
 
 # vehicle current status (speed, abs. orientation in world)
@@ -90,19 +94,25 @@ def show_rectangle(image,_):
     # show the output image
     show_image("Detection Area", image)
 
+def callback_traffic_signs(msg:TrafficSignInfo):
+    global x1, y1, x2, y2, center_x, center_y
+
+
 
 def listener():
-    global x1,y1,x2,y2
+    global x1,y1,x2,y2,center_x,center_y
     rospy.init_node('listener', anonymous=True)
 
     rospy.Subscriber("/psaf/local_planner/curvature", Float64, callback_curvature)
     rospy.Subscriber("/carla/ego_vehicle/vehicle_control_cmd", CarlaEgoVehicleControl, callback_cmd)
     rospy.Subscriber("/carla/ego_vehicle/vehicle_status", CarlaEgoVehicleStatus, callback_odom)
     rospy.Subscriber("/carla/ego_vehicle/twist_pid", Twist, callback_setpoint)
+    rospy.Subscriber("/psaf/perception/traffic_signs", TrafficSignInfo, callback_traffic_signs)
 
     cam = RGBCamera()
 
     x1, y1, x2, y2 = 0,0,0,0
+    center_x,center_y = 0,0
     cam.set_on_image_listener(show_rectangle)
 
     # spin() simply keeps python from exiting until this node is stopped

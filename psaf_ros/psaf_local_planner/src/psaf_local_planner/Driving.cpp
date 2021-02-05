@@ -136,10 +136,10 @@ namespace psaf_local_planner
         return r_m;
     }
 
-    void PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location)
+    double PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location)
     {
         if (global_plan.size() < 3)
-            return;
+            return target_velocity;
 
         tf2::Vector3 point1, point2, point3;
         unsigned int first = 0, middle, last = 0;
@@ -211,14 +211,14 @@ namespace psaf_local_planner
 
 
         if (min_radius == INFINITY) {
-            target_velocity = getMaxVelocity();
-            return;
+            return getMaxVelocity();
         }
 
         // max speed in curves: v <= sqrt(µ_haft * r * g)
         // µ_haft ~= 0.8 - 1.0
-        target_velocity = std::min(getMaxVelocity(), std::sqrt(0.8 * min_radius * 9.81));
-        ROS_INFO("radius: %f, target vel: %f", min_radius, target_velocity);
+        double target_vel = std::min(getMaxVelocity(), std::sqrt(0.8 * min_radius * 9.81));
+        ROS_INFO("radius: %f, target vel: %f", min_radius, target_vel);
+        return target_vel;
     }
 
     geometry_msgs::PoseStamped& PsafLocalPlanner::findLookaheadTarget() {
@@ -259,6 +259,41 @@ namespace psaf_local_planner
         }
 
         return 0.0;
+    }
+
+    double PsafLocalPlanner::getCurrentStoppingDistance(){
+        return pow(this->current_speed,2)*0.1296+current_speed;
+    }
+
+    double PsafLocalPlanner::getTargetVelDriving()
+    {
+                double target_vel = estimateCurvatureAndSetTargetVelocity(current_pose.pose);
+
+                double distance, relX, relY;
+
+                double velocity_distance_diff;
+
+                if (target_vel > 0 && !checkDistanceForward(distance, relX, relY))
+                {
+                    if (distance < 5)
+                    {
+                        ROS_INFO("attempting to stop");
+                        velocity_distance_diff = target_vel;
+                    } else {
+                        // TODO: validate if working
+                        // slow formula, working okay ish
+                        velocity_distance_diff = target_velocity - std::min(target_vel, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
+                        // faster formula, requires faster controller
+                        //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
+                    }
+
+                    ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
+                }
+
+                checkForSlowCar(velocity_distance_diff);
+
+                target_vel = target_vel - velocity_distance_diff;
+                return target_vel;
     }
 
 }

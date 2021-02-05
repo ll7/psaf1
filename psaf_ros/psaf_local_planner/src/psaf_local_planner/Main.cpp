@@ -13,12 +13,14 @@ namespace psaf_local_planner
                                             slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
     {
         std::cout << "Hi";
+        this->state_machine = new LocalPlannerStateMachine();
     }
 
     PsafLocalPlanner::~PsafLocalPlanner()
     {
         g_plan_pub.shutdown();
-        vel_sub.shutdown();
+        traffic_situation_sub.shutdown();
+        vehicle_status_sub.shutdown();
         delete dyn_serv;
     }
 
@@ -44,9 +46,15 @@ namespace psaf_local_planner
             planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
             this->costmap_ros = costmap_ros;
 
+            traffic_situation_sub = private_nh.subscribe("/psaf/local_planner/traffic_situation", 10, &PsafLocalPlanner::trafficSituationCallback, this);
+            // Subscribe for vehicle status updates
+            this->vehicle_status_sub = private_nh.subscribe("/carla/ego_vehicle/vehicle_status", 10, &PsafLocalPlanner::odometryCallback, this);
+
             dyn_serv = new dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>(private_nh);
             dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
             dyn_serv->setCallback(f);
+
+            this->state_machine->init();
 
             costmap_raytracer = CostmapRaytracer(costmap_ros, &current_pose, &debug_pub);
 
@@ -80,41 +88,15 @@ namespace psaf_local_planner
             {
                 estimateCurvatureAndSetTargetVelocity(current_pose.pose);
                 auto target_point = findLookaheadTarget();
-
                 double angle = computeSteeringAngle(target_point.pose, current_pose.pose);
-                double distance, relX, relY;
 
-                double velocity_distance_diff;
+                updateStateMachine();
 
-                if (target_velocity > 0 && !checkDistanceForward(distance, relX, relY)) {
-                    if (distance < 5) {
-                        ROS_INFO("attempting to stop");
-                        velocity_distance_diff = target_velocity;
-                    } else {
-                        // TODO: validate if working
-                        // slow formula, working okay ish
-                        velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
-                        // faster formula, requires faster controller
-                        //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
-                    }
+                target_velocity = getTargetVelDriving();
+                target_velocity = getTargetVelIntersection();
 
-                    ROS_INFO("distance forward: %f, max velocity: %f", distance, target_velocity);
-                }
-
-                checkForSlowCar(velocity_distance_diff);
-
-                cmd_vel.linear.x = target_velocity - velocity_distance_diff;
+                cmd_vel.linear.x = target_velocity;
                 cmd_vel.angular.z = angle;
-
-
-                // test code
-                geometry_msgs::PoseStamped robot_vel;
-                odom_helper.getRobotVel(robot_vel);
-
-                if (robot_vel.pose.position.x < 0.01) {
-                    ROS_INFO("costmap is free: %i", costmap_raytracer.checkForNoMovement(M_PI, 25, 5));
-                }
-
             }
         }
         else
@@ -215,6 +197,9 @@ namespace psaf_local_planner
                 points.push_back(pose);
             }
         }
+
+        // Reset state machine
+        this->state_machine->reset();
 
         global_plan = points;
         planner_util.setPlan(global_plan);
