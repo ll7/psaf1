@@ -1,22 +1,29 @@
 #!/usr/bin/env python
+import os
 
 import lanelet2
+import rosbag
 from lanelet2 import traffic_rules, routing, core, geometry
 from lanelet2.projection import UtmProjector
 from lanelet2.core import GPSPoint
 from lanelet2.io import Origin
 import rospy
-from psaf_abstraction_layer.sensors.GPS import GPS_Position
+from tf.transformations import quaternion_from_euler
+from geometry_msgs.msg import PoseStamped, Point, Quaternion
+from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseStamped, Point
-from psaf_planning.global_planner.path_provider_abstract import PathProviderAbstract
-from copy import deepcopy
 from sensor_msgs.msg import NavSatFix
 
 from psaf_planning.map_provider.map_provider import MapProvider
+from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
+from std_msgs.msg import String
+import actionlib
+import pathlib
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+import numpy as np
+import math
 
-
-class PathProviderLanelet2(PathProviderAbstract):
+class PathProviderLanelet2:
 
     def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10,
                  role_name: str = "ego_vehicle", enable_debug: bool = False):
@@ -27,8 +34,19 @@ class PathProviderLanelet2(PathProviderAbstract):
         :param polling_rate: Polling Rate in [Hz]
         :param timeout_iter: Number of polling iterations until timeout occurs
         """
-        super(PathProviderLanelet2, self).__init__(init_rospy, polling_rate, timeout_iter, role_name,
-                                                   enable_debug=enable_debug)
+        if init_rospy:
+            # initialize node
+            rospy.init_node('pathProvider', anonymous=True)
+        self.origin = Origin(0, 0)
+        self.projector = UtmProjector(self.origin)
+        self.role_name = role_name
+        self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
+        self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
+        self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
+        self.status_pub.publish("PathProvider not ready")
+        self.start = None
+        self.goal = None
+        self.enable_debug = enable_debug
         self.map_provider = MapProvider()
         self.path_long = Path()
         self.map_path = self._get_map_path(polling_rate, timeout_iter)
@@ -37,11 +55,37 @@ class PathProviderLanelet2(PathProviderAbstract):
             self.map = None
         else:
             self.map = self._load_map(self.map_path)
-        self.original_map = deepcopy(self.map)
         rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
         self.status_pub.publish("PathProvider ready")
 
+    def __del__(self):
+        # delete path bag files
+        item_list = os.listdir("/tmp")
+        for item in item_list:
+            if item.endswith(".path"):
+                os.remove(os.path.join("/tmp", item))
 
+    def _create_bag_files(self, filename: str, debug=False):
+        """
+        Creates a list of bag file objects
+        :param filename: filename of bag file
+        :return: list of bag file objects
+        """
+        bag_files = []
+        # suffix set to be .path
+        suffix = ".path"
+        # directory
+        dir_str = "/tmp/"
+        bag_files.append(rosbag.Bag(str(dir_str + filename + suffix), "w"))
+        # create second bag file for debugging
+        if debug:
+            # suffix set to be .debug
+            suffix = ".debugpath"
+            # debug directory, common parent folder is four directory levels above current folder
+            dir_str = str(pathlib.Path(__file__).parent.absolute().parents[3]) + "/psaf_scenario/scenarios/"
+            bag_files.append(rosbag.Bag(str(dir_str + filename + suffix), "w"))
+
+        return bag_files
     def _load_map(self, path):
         return lanelet2.io.load(path, self.projector)
 
@@ -123,6 +167,48 @@ class PathProviderLanelet2(PathProviderAbstract):
         self.path_long.header.stamp = rospy.Time.now()
         rospy.loginfo("PathProvider: Path long message created")
         self._serialize_message(self.path, debug)
+
+    def _serialize_message(self, path: Path, debug=False):
+        """
+        Serialize path message and write to bag file
+        """
+
+        bag_files = self._create_bag_files(filename="path", debug=debug)
+        for bag_file in bag_files:
+            bag_file.write('Path', path)
+            bag_file.close()
+
+        rospy.loginfo("PathProvider: Created bag file with path. /tmp/path.path")
+        if debug:
+            rospy.loginfo("PathProvider: Created bag file with path. ../psaf_scenario/scenarios/")
+
+    def _get_pose_stamped(self, pos: Point, prev_pos: Point):
+        """
+        This function calculates the euler angle alpha acoording to the direction vector of two given points.
+        Thereafter this information is transformed to the Quaternion representation
+         and the PoseStamped Object is generated
+        :param pos: Position in x,y,z
+        :param prev_pos: Previous Position in x,y,z
+        :return: PoseStamped
+        """
+        p = PoseStamped()
+
+        p.pose.position.x = pos.x
+        p.pose.position.y = pos.y
+        p.pose.position.z = pos.z
+
+        # describes the relativ position of the pos to the prev pos
+        rel_x = 1 if (pos.x - prev_pos.x) >= 0 else -1
+        rel_y = 1 if (pos.y - prev_pos.y) >= 0 else -1
+
+        euler_angle_yaw = math.atan2(rel_y * abs(pos.y - prev_pos.y), rel_x * abs(pos.x - prev_pos.x))
+
+        # only 2D space is relevant, therefore angles beta and gamma can be set to zero
+        q = quaternion_from_euler(0.0, 0.0, euler_angle_yaw)
+        p.pose.orientation = Quaternion(*q)
+        p.header.frame_id = "map"
+
+        return p
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
         """
@@ -211,5 +297,87 @@ class PathProviderLanelet2(PathProviderAbstract):
         self._create_path_message(path_short_list, debug)
         self._create_path_long_message(path_long_list, debug)
 
+    def _callback_goal(self, data):
+        """
+        Callback function of psaf goal set subscriber
+        :param data: data received
+        """
+        self._reset_map()
+
+        self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
+        self.start = self.GPS_Sensor.get_position()
+        self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
+        rospy.loginfo("PathProvider: Received start and goal position")
+        self.get_path_from_a_to_b(debug=self.enable_debug)
+        self._trigger_move_base(self.path.poses[-1])
+        rospy.loginfo("PathProvider: global planner plugin triggered")
+        self.status_pub.publish("PathProvider done")
+
+    def _trigger_move_base(self, target: PoseStamped):
+        """
+        This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
+        The last entry can be the goal if a path was found or the starting point if no path was found
+        """
+        client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        client.wait_for_server()
+
+        goal = MoveBaseGoal()
+        goal.target_pose = target
+
+        client.send_goal(goal)
+
+    def _create_path_message(self, path_poses: list, debug: bool = False):
+        """
+        Creates the path message
+        :param path_poses: List of PoseStamped poses
+        """
+        # clear potential previous messages, because it would be invalid now
+        self.path = Path()
+        # create self.path messages
+        # pruned poses for use in rviz
+        path_poses_pruned = self._prune_path_to_rviz_max_len(path_poses)
+        self.path.poses = path_poses_pruned
+        self.path.header.frame_id = "map"
+        self.path.header.seq = 1
+        self.path.header.stamp = rospy.Time.now()
+        rospy.loginfo("PathProvider: Path message created")
+        # then serialize message
+        self._serialize_message(self.path, debug)
+
+    def _prune_path_to_rviz_max_len(self, path_poses: list):
+        """
+        Prunes the path poses list to the max allowed length by rviz, which is 16384.
+        Therefore poses from the path are randomly (uniformly distributed) deleted.
+        Start and Target point will be kept!
+        :param path_poses: List of PoseStamped poses
+        :return: pruned path_poses list
+        """
+        # only prune if needed
+        if len(path_poses) <= 16384:
+            return path_poses
+
+        max_len_rviz = 16384
+
+        # get index list of elements without start and target index
+        index_list = np.array(list(range(1, len(path_poses) - 2)))
+
+        # get index of elements which should be deleted
+        index_list_to_del = np.random.choice(index_list, len(path_poses) - max_len_rviz, replace=False, p=None)
+
+        # delete and return
+        return np.delete(path_poses, index_list_to_del).tolist()
+
     def _reset_map(self):
+        pass
+
+
+def main():
+    provider: PathProviderLanelet2 = PathProviderLanelet2(init_rospy=True, enable_debug=False)
+    rospy.spin()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except rospy.ROSInterruptException:
         pass

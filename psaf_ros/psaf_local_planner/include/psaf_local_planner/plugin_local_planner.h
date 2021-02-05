@@ -228,6 +228,11 @@ namespace psaf_local_planner {
              * @param msg: The message getting received
              */
             void globalPlanExtendedCallback(const psaf_messages::XRoute &msg);
+
+            /**
+             * Calculates the max distance to the next intersection
+             */
+            double getDistanceToIntersection();
             
             /** 
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance

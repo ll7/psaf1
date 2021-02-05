@@ -1,0 +1,8 @@
+<!-- -->
+<launch>
+<!--  Arguments begin-->
+<!-- Arguments end-->
+
+  <node pkg="psaf_local_planner" type="local_perception_evaluation.py" name="local_perception_evaluation_service" output="screen">
+  </node>
+</launch>

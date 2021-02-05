@@ -261,4 +261,16 @@ namespace psaf_local_planner
         return 0.0;
     }
 
+    double PsafLocalPlanner::getDistanceToIntersection() {
+        double distance = 0;
+
+        for (auto lanelet : global_route) {
+            distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
+            if (lanelet.isAtIntersection)
+                return distance;
+        }
+
+        return distance;
+    }
+
 }
