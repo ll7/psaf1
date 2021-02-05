@@ -11,10 +11,8 @@ from commonroad.planning.goal import GoalRegion
 import matplotlib.pyplot as plt
 
 from commonroad.geometry.shape import Circle
-from commonroad.scenario.scenario import Scenario
 from commonroad.scenario.lanelet import Lanelet
 from commonroad.planning.planning_problem import PlanningProblem
-from commonroad.visualization.draw_dispatch_cr import draw_object
 from commonroad.common.util import Interval
 
 from SMP.route_planner.route_planner.route_planner import RoutePlanner
