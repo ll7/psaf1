@@ -127,18 +127,19 @@ class PathProviderCommonRoads:
         :return: True if a opposite lanelet was found and the corresponding lanelet,
                  False if not and None
         """
+        neighbour_found = False
         if self.u_turn_distances[0] < self.turning_circle and self.u_turn_distances[1] < self.turning_circle / 2:
             # if free space is smaller than our minimum turning_circle a u_turn is not possible
             return False, None
-
         # first check if start_lanelet has a left adjacent neighbour, which faces in the opposite direction
         temp_lanelet = start_lanelet
         while temp_lanelet.adj_left is not None:
-            temp_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(temp_lanelet.adj_left)
             if not temp_lanelet.adj_left_same_direction:
+                neighbour_found = True
+                temp_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(temp_lanelet.adj_left)
                 break
-
-        if temp_lanelet.lanelet_id == start_lanelet.lanelet_id:
+            temp_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(temp_lanelet.adj_left)
+        if not neighbour_found:
             # no adjacent neighbour found, search for unknown neighbours
 
             center_point = start_lanelet.center_vertices[len(start_lanelet.center_vertices) // 2]
@@ -151,7 +152,7 @@ class PathProviderCommonRoads:
 
             # get all lanelets nearby
             nearest = self.manager.map.lanelet_network.lanelets_in_proximity(np.array(center_point),
-                                                                             self.map_provider.inter_width)
+                                                                             self.map_provider.inter_width*5)
             for near_lanelet in nearest:
                 curr_start_point = near_lanelet.center_vertices[0]
                 curr_end_point = near_lanelet.center_vertices[-1]
@@ -174,8 +175,10 @@ class PathProviderCommonRoads:
                         math.isclose(length, curr_length, rel_tol=self.map_provider.max_length_diff) and \
                         neigh_dist < self.map_provider.inter_width:
                     temp_lanelet = near_lanelet
+                    neighbour_found = True
+                    break
 
-        if temp_lanelet.lanelet_id != start_lanelet.lanelet_id:
+        if neighbour_found:
             # a solution was found, check if it fulfills the distance constrains
             temp_index = PathProviderCommonRoads.find_nearest_path_index(temp_lanelet.center_vertices, start,
                                                                          prematured_stop=False, use_xcenterline=False)
@@ -223,6 +226,7 @@ class PathProviderCommonRoads:
             return ProblemStatus.BadTarget
 
         if u_turn:
+            print("turn to the u")
             u_turn_succes, start_lanelet = self._find_nearest_u_turn_lanelet(start, start_lanelet)
             if not u_turn_succes:
                 return ProblemStatus.BadUTurn
@@ -253,11 +257,9 @@ class PathProviderCommonRoads:
 
         # create start and goal state for planning problem
         start_position = []
-        if len(matching_lanelet[0]) == 0:
-            start_position = [start_lanelet.center_vertices[len(start_lanelet.center_vertices) // 2][0],
-                              start_lanelet.center_vertices[len(start_lanelet.center_vertices) // 2][1]]
-        else:
-            start_position = [start.x, start.y]
+        index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start,
+                                                                prematured_stop=False, use_xcenterline=False)
+        start_position = [start_lanelet.center_vertices[index][0],start_lanelet.center_vertices[index][1]]
 
         start_state: State = State(position=np.array([start_position[0], start_position[1]]), velocity=0,
                                    time_step=0, slip_angle=0, yaw_rate=0, orientation=self.start_orientation[2])
@@ -289,12 +291,14 @@ class PathProviderCommonRoads:
 
         if u_turn:
             x_route_u, best_value_u = self._compute_route(start, goal, u_turn=True)
-            x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
+            # x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
+            # x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
             # compare distance based on obey_traffic_rules param and save best
+            best_value_no_u = float("inf")
             if best_value_u < best_value_no_u:
                 x_route = x_route_u
             else:
-                x_route = x_route_no_u
+                x_route = x_route_u
         else:
             x_route, _ = self._compute_route(start, goal, u_turn=False)
 
