@@ -6,6 +6,7 @@
 bool hasLight
 bool isAtIntersection
 bool hasStop
+bool isLaneChange
 uint32 id
 
 # The list of obstacles relative to the car position
