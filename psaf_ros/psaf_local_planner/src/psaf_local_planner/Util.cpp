@@ -34,4 +34,17 @@ namespace psaf_local_planner
     void PsafLocalPlanner::odometryCallback(const carla_msgs::CarlaEgoVehicleStatus &msg){
         this->current_speed = (double) msg.velocity * (msg.control.reverse?-1:1);
     }
+
+
+    void PsafLocalPlanner::trafficSituationCallback(const psaf_messages::TrafficSituation::ConstPtr &msg) {
+        if (msg->trafficLight.size() > 0) {
+            this->traffic_light_state = msg->trafficLight.front();
+        } else {
+            psaf_messages::TrafficLight new_light;
+            new_light.state = psaf_messages::TrafficLight::STATE_UNKNOWN;
+            this->traffic_light_state = new_light;
+
+        }
+        this->stop_distance_at_intersection = msg->distanceToStopLine;
+    }
 }

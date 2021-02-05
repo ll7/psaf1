@@ -351,7 +351,7 @@ namespace psaf_local_planner {
             psaf_messages::TrafficLight traffic_light_state;
 
             /** Distance to detected stop line */
-            double stop_line_distance;
+            double stop_distance_at_intersection;
 
             /**
              * The current speed of the car

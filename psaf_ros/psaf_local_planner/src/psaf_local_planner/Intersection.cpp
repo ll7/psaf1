@@ -3,23 +3,6 @@
 
 namespace psaf_local_planner {
 
-    void PsafLocalPlanner::trafficSituationCallback(const psaf_messages::TrafficSituation::ConstPtr &msg) {
-        if (msg->trafficLight.size() > 0) {
-            this->traffic_light_state = msg->trafficLight.front();
-        } else {
-            psaf_messages::TrafficLight new_light;
-            new_light.state = psaf_messages::TrafficLight::STATE_UNKNOWN;
-            this->traffic_light_state = new_light;
-
-        }
-        this->stop_line_distance = msg->distanceToStopLine;
-        if (msg->distanceToStopLine < 100) {
-            ROS_INFO("StopLine detected %f", stop_line_distance);
-        }
-
-    }
-
-
     void PsafLocalPlanner::updateStateMachine() {
         bool traffic_light_detected = false;
 
@@ -31,7 +14,7 @@ namespace psaf_local_planner {
         }
 
         this->state_machine->updateState(traffic_light_detected, this->traffic_light_state,
-                                         this->getCurrentStoppingDistance(), this->current_speed, this->stop_line_distance);
+                                         this->getCurrentStoppingDistance(), this->current_speed, this->stop_distance_at_intersection);
     }
 
     double PsafLocalPlanner::getTargetVelIntersection() {
@@ -44,11 +27,11 @@ namespace psaf_local_planner {
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
                 double velocity_distance_diff;
-                if (stop_line_distance < 3) {
+                if (stop_distance_at_intersection < 3) {
                     velocity_distance_diff = target_velocity;
                 } else {
                     velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0 / 18.0 * (-1 + std::sqrt(
-                            1 + 4 * (stop_line_distance - 2))));
+                            1 + 4 * (stop_distance_at_intersection - 2))));
                 }
                 target_vel = target_velocity - velocity_distance_diff;
                 break;
