@@ -55,7 +55,7 @@ namespace psaf_local_planner {
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_GO:
                 ROS_WARN("STATE IS GO");
-                if (currentSpeed > 2.8) {
+                if (currentSpeed > 15/3.6) {
                     this->state = LocalPlannerState::DRIVING;
                 }
                 break;
