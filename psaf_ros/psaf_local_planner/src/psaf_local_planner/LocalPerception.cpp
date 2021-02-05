@@ -18,7 +18,10 @@ namespace psaf_local_planner
 
         ROS_INFO("slow car counter: %d", slow_car_ahead_counter);
 
-        if (slow_car_ahead_counter > 30 && (!slow_car_ahead_published || ros::Time::now() - slow_car_last_published > ros::Duration(3.0))) {
+        if (slow_car_ahead_counter > 30 
+            && (!slow_car_ahead_published || ros::Time::now() - slow_car_last_published > ros::Duration(3.0))
+            && getDistanceToIntersection() > 30
+            ) {
             ROS_INFO("publishing obstacle ahead");
             slow_car_ahead_published = true;
             slow_car_last_published = ros::Time::now();
