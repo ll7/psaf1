@@ -282,6 +282,8 @@ namespace psaf_local_planner
                     } else {
                         // TODO: validate if working
                         // slow formula, working okay ish
+                        // uses formula for Anhalteweg (solved for velocity instead of distance)
+                        // https://www.bussgeldkatalog.org/anhalteweg/
                         velocity_distance_diff = target_velocity - std::min(target_vel, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
                         // faster formula, requires faster controller
                         //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));

@@ -182,6 +182,10 @@ namespace psaf_local_planner
         assert(route_len == global_plan.size());
     }
 
+    double lerp(double v0, double v1, double t) {
+        return (1 - t) * v0 + t * v1;
+    }
+
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
         ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
@@ -240,6 +244,48 @@ namespace psaf_local_planner
 
         global_route = msg.route;
         goal_reached = false;
+
+        // this block uses linear interpolation to ease the curves of lanechanges
+        // takes the last/first 10 points in both directions and distributes the points alonglinear line between them 
+        int size = global_route.size();
+        for (int i = 0; i < size; i++) {
+            auto &lanelet = global_route[i];
+            
+            if (lanelet.isLaneChange && i + 1 < size) {
+                auto &next_lanelet = global_route[i + 1];
+                ROS_INFO("begenning to interpolate %i <-> %i", lanelet.id, next_lanelet.id);
+                int lanelet_route_size = lanelet.route_portion.size();
+                unsigned long max_points = 10; // todo: move to global param
+                unsigned long num_points = std::min(std::min(next_lanelet.route_portion.size(), lanelet.route_portion.size()), max_points);
+
+                double x1 = lanelet.route_portion[lanelet_route_size - num_points].x;
+                double y1 = lanelet.route_portion[lanelet_route_size - num_points].y;
+
+                double x2 = next_lanelet.route_portion[num_points - 1].x;
+                double y2 = next_lanelet.route_portion[num_points - 1].y;
+
+                ROS_INFO("num: %i", num_points);
+
+                // whole lerp is between 0 to 1.0 where 1.0 is at num_points * 2.0
+                for (int j = 0; j < num_points; j++) {
+                    // half the lerp, between points of the last lanelet
+                    // indexing example: 20 - 10 + 9
+                    lanelet.route_portion[lanelet_route_size - num_points + j].x = lerp(x1, x2, (j + 1) / (num_points * 2.0));
+                    lanelet.route_portion[lanelet_route_size - num_points + j].y = lerp(y1, y2, (j + 1) / (num_points * 2.0));
+
+                    ROS_INFO("x: %f y: %f", lanelet.route_portion[lanelet_route_size - num_points + j].x, lanelet.route_portion[lanelet_route_size - num_points + j].y);
+                }
+
+                for (int j = 0; j < num_points; j++) {
+                    // half the lerp, between points of the last lanelet
+                    // indexing example: 20 - 10 + 9
+                    ROS_INFO("t: %f lerp: %f", (num_points + j + 1) / (num_points * 2.0), lerp(x1, x2, (num_points + j + 1) / (num_points * 2.0)));
+                    next_lanelet.route_portion[j].x = lerp(x1, x2, (num_points + j + 1) / (num_points * 2.0));
+                    next_lanelet.route_portion[j].y = lerp(y1, y2, (num_points + j + 1) / (num_points * 2.0));
+                }
+            }
+        }
+
 
         std::vector<geometry_msgs::PoseStamped> points = {};
 
