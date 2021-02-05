@@ -529,21 +529,7 @@ class PathProviderCommonRoads:
             x_route, best_value = self._get_shortest_route(all_routes)
 
             # Prune path to get exact start and end points
-            real_start_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[0].route_portion,
-                                                                               start_point,
-                                                                               prematured_stop=False,
-                                                                               use_xcenterline=True)
-            x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
-
-            # adjust duration and distance of start lanelet to match the criteria of a cumulative sum, starting by zero
-            for waypoint in reversed(x_route.route[0].route_portion):
-                waypoint.duration = waypoint.duration - x_route.route[0].route_portion[0].duration
-                waypoint.distance = waypoint.distance - x_route.route[0].route_portion[0].distance
-
-            real_end_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[-1].route_portion,
-                                                                             target_point, prematured_stop=False,
-                                                                             use_xcenterline=True)
-            x_route.route[-1].route_portion = x_route.route[-1].route_portion[:real_end_index]
+            x_route = self._prune_path(x_route, start_point, target_point)
 
             if self.enable_debug:
                 # if debug: show results in .png
@@ -555,10 +541,6 @@ class PathProviderCommonRoads:
                 rospy.logerr("PathProvider: Already on target point, no waypoints generated")
                 x_route.id = 0
 
-            if u_turn:
-                # Interpolate curvature of u_turn to the first point in the plan
-                pass
-
         else:
             rospy.logerr("PathProvider: No possible path was found")
 
@@ -567,6 +549,47 @@ class PathProviderCommonRoads:
             pass
 
         return x_route, best_value
+
+    def _prune_path(self, path: XRoute, start: Point, target: Point):
+        """
+        Prunes the path by the given start and target point
+        :param path: Path to be pruned
+        :param start:  x,y,z coordinates of the current staring position
+        :param target: x,y,z coordinates of the current goal position
+        :return: pruned path
+        """
+        real_start_index = PathProviderCommonRoads.find_nearest_path_index(path.route[0].route_portion,
+                                                                           start,
+                                                                           prematured_stop=False,
+                                                                           use_xcenterline=True)
+        path.route[0].route_portion = path.route[0].route_portion[real_start_index:]
+
+        # If there is a laneChange on the first lanelet, a point on the second lanelet might be nearer.
+        # That is only the case exactly when the length of the route_portion of the first lanelet is one, because
+        # its last entry is the closest.
+        # In any other case, where the last entry of the first lanelet is indeed the closest point, we only lose one
+        # waypoint in our waypoint list. The loss of these few centimeters of information at the start is no problem.
+        if len(path.route[0].route_portion) <= 1:
+            # delete first lanelet from message
+            del path.route[0]
+            # search nearest point in second lanelet, which is now at the index 0
+            real_start_index = PathProviderCommonRoads.find_nearest_path_index(path.route[0].route_portion,
+                                                                               start,
+                                                                               prematured_stop=False,
+                                                                               use_xcenterline=True)
+            path.route[0].route_portion = path.route[0].route_portion[real_start_index:]
+
+        # adjust duration and distance of start lanelet to match the criteria of a cumulative sum, starting by zero
+        for waypoint in reversed(path.route[0].route_portion):
+            waypoint.duration = waypoint.duration - path.route[0].route_portion[0].duration
+            waypoint.distance = waypoint.distance - path.route[0].route_portion[0].distance
+
+        real_end_index = PathProviderCommonRoads.find_nearest_path_index(path.route[-1].route_portion,
+                                                                         target, prematured_stop=False,
+                                                                         use_xcenterline=True)
+        path.route[-1].route_portion = path.route[-1].route_portion[:real_end_index]
+
+        return path
 
     def _callback_goal(self, data):
         """
