@@ -172,6 +172,7 @@ namespace psaf_local_planner
 
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
+
         ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
         global_route = msg.route;
         goal_reached = false;
@@ -192,6 +193,9 @@ namespace psaf_local_planner
                 points.push_back(pose);
             }
         }
+
+        // Reset state machine
+        this->state_machine->reset();
 
         global_plan = points;
         planner_util.setPlan(global_plan);

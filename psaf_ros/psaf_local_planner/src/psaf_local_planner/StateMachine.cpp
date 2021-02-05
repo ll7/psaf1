@@ -10,6 +10,10 @@ namespace psaf_local_planner {
         this->state = LocalPlannerState::DRIVING;
     }
 
+    void LocalPlannerStateMachine::reset() {
+        this->state = LocalPlannerState::DRIVING;
+    }
+
     LocalPlannerState LocalPlannerStateMachine::getState() {
         return this->state;
     }

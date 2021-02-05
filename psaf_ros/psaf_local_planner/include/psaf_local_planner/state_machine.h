@@ -44,6 +44,19 @@ namespace psaf_local_planner
          */
         void setState(LocalPlannerState state);
 
+        /**
+         * Reset the state machine when a new plan is received
+         */
+        void reset();
+
+        /**
+         * Updates the state regarding the given parameters
+         * @param trafficLightDetected
+         * @param trafficLightKnowledge
+         * @param stoppingDistance
+         * @param current_speed
+         * @param distanceToStopLine
+         */
         void updateState(bool trafficLightDetected,psaf_messages::TrafficLight trafficLightKnowledge,double stoppingDistance,
             double current_speed, double distanceToStopLine);
     private:
