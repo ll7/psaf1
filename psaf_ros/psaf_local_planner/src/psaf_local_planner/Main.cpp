@@ -10,7 +10,7 @@ namespace psaf_local_planner
                                             initialized(false), closest_point_local_plan(2),
                                             lookahead_factor(3.5), target_velocity(15), min_velocity(5),
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
-                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
+                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true)
     {
         std::cout << "Hi";
         this->state_machine = new LocalPlannerStateMachine();
@@ -53,6 +53,10 @@ namespace psaf_local_planner
             dyn_serv = new dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>(private_nh);
             dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
             dyn_serv->setCallback(f);
+
+            if (!ros::param::get("/path_provider/respect_traffic_rules",respect_traffic_rules)) {
+                respect_traffic_rules = true;
+            }
 
             this->state_machine->init();
 
@@ -178,6 +182,59 @@ namespace psaf_local_planner
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
         ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
+
+        // validate duration of routes only if a global route already exists
+        if (global_route.size() > 0 && !goal_reached && respect_traffic_rules) {
+            std::vector<psaf_messages::XLanelet> new_global_route = {};
+            new_global_route = msg.route;
+            float new_duration = 0;
+            float old_duration = 0;
+            // calculate duration of new route
+            for (auto lanelet : new_global_route) {
+                new_duration += lanelet.route_portion[lanelet.route_portion.size()-1].duration;
+            }
+            // duration of first lanelet of current route
+            old_duration += global_route[0].route_portion[global_route[0].route_portion.size()-1].duration;
+            // subtract already covered route fragment from duration of whole lanelet
+            old_duration -= global_route[0].route_portion[0].duration;
+            // calculate remaining duration of current route
+            for (int i = 1; i < global_route.size(); i++ ) {
+                old_duration += global_route[i].route_portion[global_route[i].route_portion.size()-1].duration;
+            }
+            // if new route is too slow, keep old one
+            if (new_duration > (duration_factor * old_duration)){
+                ROS_INFO("New Route is at least %f x slower than Current Route -> Current Route is kept", duration_factor);
+                return;
+            }
+
+        }
+        // validate length of routes only if a global route already exists, no traffic rules case
+        if (global_route.size() > 0 && !goal_reached && !respect_traffic_rules) {
+            std::vector<psaf_messages::XLanelet> new_global_route = {};
+            new_global_route = msg.route;
+            float new_distance = 0;
+            float old_distance = 0;
+            // calculate distance of new route
+            for (auto lanelet : new_global_route) {
+                new_distance += lanelet.route_portion[lanelet.route_portion.size()-1].distance;
+            }
+            // distance of first lanelet of current route
+            old_distance += global_route[0].route_portion[global_route[0].route_portion.size()-1].distance;
+            // subtract already covered route fragment from distance of whole lanelet
+            old_distance -= global_route[0].route_portion[0].distance;
+            // calculate remaining distance of current route
+            for (int i = 1; i < global_route.size(); i++ ) {
+                old_distance += global_route[i].route_portion[global_route[i].route_portion.size()-1].distance;
+            }
+            // if new route is too long, keep old one
+            if (new_distance > (duration_factor * old_distance)){
+                ROS_INFO("New Route is at least %f x slower than Current Route -> Current Route is kept", distance_factor);
+                return;
+            }
+
+        }
+
+
         global_route = msg.route;
         goal_reached = false;
 

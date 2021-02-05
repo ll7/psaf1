@@ -51,10 +51,11 @@ class PathProviderCommonRoads:
                  role_name: str = "ego_vehicle",
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
-                 cost_stop_sign: int = 5):
+                 cost_stop_sign: int = 5, respect_traffic_rules: bool = False):
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
+        self.respect_traffic_rules = respect_traffic_rules
         self.enable_debug = enable_debug
         self.role_name = role_name
         self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
@@ -216,12 +217,15 @@ class PathProviderCommonRoads:
             goal = to_b
 
         if u_turn:
-            x_route_u = self._compute_route(start, goal, u_turn=True)
-            x_route_no_u = self._compute_route(start, goal, u_turn=False)
-            # TODO: compare times or distance based on obey_traffic_rules param and save best
-            x_route = x_route_u
+            x_route_u, best_value_u = self._compute_route(start, goal, u_turn=True)
+            x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
+            # compare distance based on obey_traffic_rules param and save best
+            if best_value_u < best_value_no_u:
+                x_route = x_route_u
+            else:
+                x_route = x_route_no_u
         else:
-            x_route = self._compute_route(start, goal, u_turn=False)
+            x_route, _ = self._compute_route(start, goal, u_turn=False)
 
         # if the path is valid
         if x_route.id > 0:
@@ -306,24 +310,28 @@ class PathProviderCommonRoads:
         min_value = float("inf")
         best_path = None
         for route in routes_list:
-            extended_path, time_spent = self._generate_extended_route_path(route)
+            extended_path, distance, time_spent = self._generate_extended_route_path(route)
             if self.enable_debug:
                 for xlane in extended_path.route:
                     for portion in xlane.route_portion:
                         route.reference_path.append([portion.x, portion.y])
                 route.reference_path = np.array(route.reference_path)
-            if time_spent < min_value:
-                min_value = time_spent
-                best_path = extended_path
-
+            if self.respect_traffic_rules:
+                if time_spent < min_value:
+                    min_value = time_spent
+                    best_path = extended_path
+            else:
+                if distance < min_value:
+                    min_value = distance
+                    best_path = extended_path
         self.route_id += 1
         best_path.id = self.route_id
-        return best_path
+        return best_path, min_value
 
     def _generate_extended_route_path(self, route: Route):
         """
         Generate the extended_route_path and provide a heuristic evaluation of the time,
-        passed while traveling on that route
+        passed while traveling on that route. Additional the covered distance is calculated.
         :param route: Route
         :return: extended route and its corresponding time duration heuristic
         """
@@ -331,12 +339,16 @@ class PathProviderCommonRoads:
         extended_route = XRoute(id=self.route_id, route=[])
         do_lane_change = False
         time = 0
+        dist = 0
         for i, lane_id in enumerate(route.list_ids_lanelets):
             message = deepcopy(self.manager.message_by_lanelet[lane_id])
             if lane_change_instructions[i] == 0:
+                # no lane change -> isLaneChange is False by default
+
                 if not do_lane_change:
                     extended_route.route.append(deepcopy(message))
                     time += message.route_portion[-1].duration
+                    dist += message.route_portion[-1].distance
 
                     # heuristic adds defined amount of seconds for each traffic light
                     time += int(message.hasLight) * self.cost_traffic_light
@@ -344,12 +356,19 @@ class PathProviderCommonRoads:
                 else:
                     tmp_message = deepcopy(message)
                     tmp_message.route_portion = message.route_portion[len(message.route_portion) // 2:]
+                    # make sure to correct entries in route_portion
                     for waypoint in tmp_message.route_portion:
                         waypoint.duration = waypoint.duration - \
                                             message.route_portion[len(message.route_portion) // 2].duration
+                        waypoint.distance = waypoint.distance - \
+                                            message.route_portion[len(message.route_portion) // 2].distance
+
                     extended_route.route.append(deepcopy(tmp_message))
+
                     time += message.route_portion[-1].duration - message.route_portion[
                         len(message.route_portion) // 2].duration
+                    dist += message.route_portion[-1].distance - message.route_portion[
+                        len(message.route_portion) // 2].distance
 
                     # heuristic adds defined amount of seconds for each traffic light and stop signs on the lanelet
                     time += int(message.hasLight) * self.cost_traffic_light
@@ -357,18 +376,21 @@ class PathProviderCommonRoads:
 
                     do_lane_change = False
             else:
+                # lane change -> set isLaneChange True
+                message.isLaneChange = True
                 if not do_lane_change:
                     tmp_message = deepcopy(message)
                     tmp_message.route_portion = message.route_portion[:len(message.route_portion) // 2]
                     extended_route.route.append(deepcopy(tmp_message))
-                    time += message.route_portion[len(message.route_portion) // 2].duration
+                    time += message.route_portion[(len(message.route_portion) // 2) - 1].duration
+                    dist += message.route_portion[(len(message.route_portion) // 2) - 1].distance
                 else:
                     # lane changing over at least two lanes at once -> do not count the skipped middle lane
                     pass
 
                 do_lane_change = True
 
-        return extended_route, time
+        return extended_route, dist, time
 
     def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, u_turn: bool = False):
         """
@@ -426,17 +448,23 @@ class PathProviderCommonRoads:
         all_routes, num_routes = candidate_holder.retrieve_all_routes()
 
         x_route = XRoute()
+        best_value = float("inf")
         if num_routes >= 1:
             # Path was found!
-            x_route = self._get_shortest_route(all_routes)
+            x_route, best_value = self._get_shortest_route(all_routes)
 
-            # TODO: Adjust duration entry after pruning
             # Prune path to get exact start and end points
             real_start_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[0].route_portion,
                                                                                start_point,
                                                                                prematured_stop=True,
                                                                                use_xcenterline=True)
             x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
+
+            # adjust duration and distance of start lanelet to match the criteria of a cumulative sum, starting by zero
+            for waypoint in reversed(x_route.route[0].route_portion):
+                waypoint.duration = waypoint.duration - x_route.route[0].route_portion[0].duration
+                waypoint.distance = waypoint.distance - x_route.route[0].route_portion[0].distance
+
             real_end_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[-1].route_portion,
                                                                              target_point, prematured_stop=False,
                                                                              use_xcenterline=True)
@@ -454,13 +482,12 @@ class PathProviderCommonRoads:
 
         else:
             rospy.logerr("PathProvider: No possible path was found")
-            return
 
         if self.enable_debug:
             # TODO: serialize message for optimizer
             pass
 
-        return x_route
+        return x_route, best_value
 
     def _callback_goal(self, data):
         """

@@ -41,14 +41,13 @@ class CommonRoadManager:
             self._generate_xlanelet(lanelet)
         rospy.loginfo("CommonRoadManager: Message calculation done!")
 
-    def _calculate_duration_entry(self, previous: list, current: list, prev_speed: float):
-        # calculate the duration between two waypoints
-
+    def _calculate_distance_and_duration(self, previous: list, current: list, prev_speed: float):
+        # calculate the distance between two waypoints
         distance = np.linalg.norm(np.array(current) - np.array(previous))
         # calculate time by distance [m] and speed [km/h] -> transform to [m/s]
         time_spent = distance / (prev_speed / 3.6)
 
-        return time_spent
+        return distance, time_spent
 
     def _generate_xlanelet(self, lanelet: Lanelet):
         stop = False
@@ -61,9 +60,9 @@ class CommonRoadManager:
         intersection = self._check_in_lanelet_for_intersection(lanelet)
         center_line = self._generate_extended_centerline_by_lanelet(lanelet)
 
-        # create message
+        # create message, isLaneChange is False by default
         message = XLanelet(id=lanelet.lanelet_id, hasLight=light, isAtIntersection=intersection, hasStop=stop,
-                           route_portion=center_line)
+                           isLaneChange=False, route_portion=center_line)
 
         self.message_by_lanelet[lanelet.lanelet_id] = message
 
@@ -92,10 +91,15 @@ class CommonRoadManager:
         center_line_extended = []
         speed = self.default_speed
         time = 0.0
+        dist = 0.0
         prev_point = None
         for i, point in enumerate(lanelet.center_vertices):
             if i > 0:
-                time += self._calculate_duration_entry(previous=prev_point, current=point, prev_speed=speed)
+                tmp_dist, tmp_time = self._calculate_distance_and_duration(previous=prev_point, current=point,
+                                                                           prev_speed=speed)
+                dist += tmp_dist
+                time += tmp_time
+
             # check for speed signs
             for speed_sign in speed_signs:
                 if i >= speed_sign[0]:
@@ -105,7 +109,8 @@ class CommonRoadManager:
 
             prev_point = point
             # fill center_line_extended
-            center_line_extended.append(CenterLineExtended(x=point[0], y=point[1], z=0, speed=speed, duration=time))
+            center_line_extended.append(
+                CenterLineExtended(x=point[0], y=point[1], z=0, speed=speed, duration=time, distance=dist))
 
         return center_line_extended
 

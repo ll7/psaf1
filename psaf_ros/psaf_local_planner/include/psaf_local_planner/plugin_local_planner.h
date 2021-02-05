@@ -162,7 +162,6 @@ namespace psaf_local_planner {
              * Should be called in any case no matter the state; sets the base velocity
              *
              * @param current_location: current pose of the car
-             * @returns target_vel: target velocity for driving mode
              */
             double estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location);
 
@@ -233,6 +232,13 @@ namespace psaf_local_planner {
              * @param msg: The message getting received
              */
             void globalPlanExtendedCallback(const psaf_messages::XRoute &msg);
+
+            /**
+             * Calculates the max distance to the next intersection
+             */
+            double getDistanceToIntersection();
+
+            /** 
 
             /**
              * Calculates suitable target speed according to current traffic light state
@@ -366,6 +372,16 @@ namespace psaf_local_planner {
 
             /** Counter for the obstacle message to be always incrementing */
             unsigned int obstacle_msg_id_counter;
+
+            /** Factor by which the new route can be slower as the old route and still be accepted as new route */
+            double duration_factor;
+
+            /** Factor by which the new route can be longer as the old route and still be accepted as new route */
+            double distance_factor;
+
+            /** sets a flag if traffic rules have to be obeyed or not */
+            bool respect_traffic_rules;
+
 
             /** Detected traffic light state -> null means that there is no Traffic light state*/
             psaf_messages::TrafficLight traffic_light_state;
