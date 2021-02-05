@@ -448,7 +448,7 @@ class PathProviderCommonRoads:
             # Prune path to get exact start and end points
             real_start_index = PathProviderCommonRoads.find_nearest_path_index(x_route.route[0].route_portion,
                                                                                start_point,
-                                                                               prematured_stop=True,
+                                                                               prematured_stop=False,
                                                                                use_xcenterline=True)
             x_route.route[0].route_portion = x_route.route[0].route_portion[real_start_index:]
 
