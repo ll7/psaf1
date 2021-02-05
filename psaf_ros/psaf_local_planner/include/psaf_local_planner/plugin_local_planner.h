@@ -50,6 +50,8 @@
 #include <psaf_messages/TrafficLight.h>
 #include <psaf_messages/TrafficSituation.h>
 #include <psaf_local_planner/PsafLocalPlannerParameterConfig.h>
+#include <base_local_planner/goal_functions.h>
+#include <base_local_planner/costmap_model.h>
 #include <psaf_local_planner/state_machine.h>
 #include "psaf_local_planner/costmap_raytracer.h"
 
@@ -331,7 +333,10 @@ namespace psaf_local_planner {
             /** The Route part of the xtenden route */
             std::vector<psaf_messages::XLanelet> global_route;
 
-            /** is set to true after the node is inited via ROS */
+            /** How many points have been deleted from the global path*/
+            unsigned int deleted_points;
+
+            /** is set to true after the node is inited via ROS */ 
             bool initialized;
 
             /** Actual Max velocity that is allowed to be driven */
@@ -364,9 +369,17 @@ namespace psaf_local_planner {
             /** sets a flag when the slow car and obstacles have been published */ 
             bool slow_car_ahead_published;
 
-            /** Last time the obstacle message was published, allows repeated pubshling */
+            /** Last time a slow car message was published, allows repeated pubshling */
             ros::Time slow_car_last_published;
 
+            /** Last time the obstacle message was published, prevents sending too often */
+            ros::Time obstacle_last_published;
+
+            /** */
+            unsigned int slow_car_last_published_deleted_points;
+
+            /** ~~ planned ~~ current state of the car */
+            LocalPlannerState state;
             /** The state machine */
             LocalPlannerStateMachine* state_machine;
 
