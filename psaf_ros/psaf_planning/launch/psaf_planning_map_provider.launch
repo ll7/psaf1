@@ -1,5 +1,0 @@
-<!-- -->
-<launch>
-  <node pkg="psaf_planning" type="map_provider.py" name="map_provider" output="screen">
-  </node>
-</launch>

@@ -6,7 +6,8 @@
 bool hasLight
 bool isAtIntersection
 bool hasStop
-uint8 id
+bool isLaneChange
+uint32 id
 
 # The list of obstacles relative to the car position
 CenterLineExtended[] route_portion

@@ -106,11 +106,15 @@ catkin_python_setup()
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
 generate_dynamic_reconfigure_options(config/PsafLocalPlannerParameter.cfg)
+
+
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+)
 
 
 
@@ -134,21 +138,39 @@ catkin_package(
 ## Build ##
 ###########
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-)
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
 
 ## Declare a C++ library
-add_library(psaf_local_planner src/psaf_local_planner/plugin_local_planner.cpp)
+add_library(psaf_local_planner
+        src/psaf_local_planner/Main.cpp
+        src/psaf_local_planner/Driving.cpp
+        src/psaf_local_planner/Util.cpp
+        src/psaf_local_planner/Intersection.cpp
+        src/psaf_local_planner/LocalPerception.cpp
+        src/psaf_local_planner/StateMachine.cpp
+        src/psaf_local_planner/costmap_raytracer.cpp
+)
+
+add_dependencies(psaf_local_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(psaf_local_planner ${catkin_LIBRARIES})
+
+install(TARGETS psaf_local_planner
+       ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+       LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+       RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+)
+
+install(FILES blp_plugin.xml
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  PATTERN ".svn" EXCLUDE
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context

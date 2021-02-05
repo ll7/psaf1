@@ -3,7 +3,7 @@
 #######################################################################################################################
 
 # id planning msg
-uint8 id
+uint32 id
 
 # List of all lanlets, that are located on the route
 XLanelet[] route

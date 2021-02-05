@@ -12,7 +12,7 @@ from opendrive2lanelet.osm.lanelet2osm import L2OSMConverter
 from commonroad.common.file_writer import CommonRoadFileWriter, OverwriteExistingFile
 from commonroad.planning.planning_problem import PlanningProblemSet
 from commonroad.scenario.scenario import Tag
-from commonroad.scenario.scenario import Scenario
+from commonroad.scenario.scenario import Scenario, ScenarioID
 
 import tempfile
 
@@ -27,7 +27,6 @@ class MapProvider:
         self.map_name: str = None
         # boolean that represents the availability of the opendrive map -> true if the map was received by the subscriber
         self.map_ready: bool = False
-
         # starts the logging node , normally only needed if the module is used independently
         if init_rospy:
             rospy.init_node('mapProvider', anonymous=True)
@@ -85,7 +84,8 @@ class MapProvider:
             opendrive = parse_opendrive(etree.parse(BytesIO(self.map.encode('utf-8'))).getroot())
             roadNetwork = Network()
             roadNetwork.load_opendrive(opendrive)
-            lanelet = roadNetwork.export_commonroad_scenario()
+            scenario_id = ScenarioID(country_id="DEU", map_name="psaf")
+            lanelet = roadNetwork.export_commonroad_scenario(benchmark_id=scenario_id)
             rospy.loginfo("MapProvider: Conversion done!")
         return lanelet
 
@@ -129,12 +129,9 @@ class MapProvider:
 
 def main():
     provider = MapProvider(True)
-    if not provider.convert_to_osm():
-        rospy.loginfo("Check")
     while not provider.map_ready:
         rospy.loginfo("Waiting")
-    provider.generate_osm_file()
-    provider.generate_com_road_file()
+    provider.convert_od_to_lanelet()
 
 
 if __name__ == "__main__":

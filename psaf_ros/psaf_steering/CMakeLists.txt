@@ -89,6 +89,8 @@ find_package(catkin REQUIRED COMPONENTS
 #   std_msgs
 # )
 
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
+
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
 ################################################
@@ -137,9 +139,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a C++ library
-# add_library(psaf_local_planner src/psaf_local_planner/plugin_local_planner.cpp)
-# target_link_libraries(psaf_local_planner ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
