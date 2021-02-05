@@ -146,9 +146,9 @@ class PathProviderCommonRoads:
             start_point = start_lanelet.center_vertices[0]
             end_point = start_lanelet.center_vertices[-1]
             length = np.linalg.norm(np.array(end_point) - np.array(start_point))
-
-            start_orientation = self.map_provider._get_lanelet_orientation_to_light(start_lanelet, use_end=False)
-            end_orientation = self.map_provider._get_lanelet_orientation_to_light(start_lanelet, use_end=True)
+            temp_index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start,
+                                                                         prematured_stop=False, use_xcenterline=False)
+            start_orientation = self.map_provider._get_lanelet_orientation_to_sign(start_lanelet, temp_index)
 
             # get all lanelets nearby
             nearest = self.manager.map.lanelet_network.lanelets_in_proximity(np.array(center_point),
@@ -161,17 +161,13 @@ class PathProviderCommonRoads:
                 # neighbouring distance - should be less than half the intersection
                 neigh_dist = np.linalg.norm(np.array(curr_end_point) - np.array(start_point))
 
-                curr_start_orientation = self.map_provider._get_lanelet_orientation_to_light(near_lanelet,
-                                                                                             use_end=False)
-                curr_end_orientation = self.map_provider._get_lanelet_orientation_to_light(near_lanelet, use_end=True)
+                curr_orientation = self.map_provider._get_lanelet_orientation_to_sign(near_lanelet, temp_index)
 
                 # calculate angle_diff but consider that the two orientations should be opposite to each other
-                start_angle_diff = abs(abs(start_orientation - curr_end_orientation) - 180)
-                end_angle_diff = abs(abs(end_orientation - curr_start_orientation) - 180)
+                start_angle_diff = abs(abs(start_orientation - curr_orientation) - 180)
 
                 # do these two lanelets fulfill the neighbouring criteria (defined in init)
                 if start_angle_diff < self.map_provider.max_neighbour_angle_diff and \
-                        end_angle_diff < self.map_provider.max_neighbour_angle_diff and \
                         math.isclose(length, curr_length, rel_tol=self.map_provider.max_length_diff) and \
                         neigh_dist < self.map_provider.inter_width:
                     temp_lanelet = near_lanelet
