@@ -1,0 +1,6 @@
+<!-- -->
+<launch>
+  <node pkg="psaf_planning" type="path_supervisor_common_roads.py" name="path_provider" output="screen">
+      <param name="respect_traffic_rules" type="bool" value="False" />
+  </node>
+</launch>

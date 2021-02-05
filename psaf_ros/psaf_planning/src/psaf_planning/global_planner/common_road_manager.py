@@ -41,14 +41,13 @@ class CommonRoadManager:
             self._generate_xlanelet(lanelet)
         rospy.loginfo("CommonRoadManager: Message calculation done!")
 
-    def _calculate_duration_entry(self, previous: list, current: list, prev_speed: float):
-        # calculate the duration between two waypoints
-
+    def _calculate_distance_and_duration(self, previous: list, current: list, prev_speed: float):
+        # calculate the distance between two waypoints
         distance = np.linalg.norm(np.array(current) - np.array(previous))
         # calculate time by distance [m] and speed [km/h] -> transform to [m/s]
         time_spent = distance / (prev_speed / 3.6)
 
-        return time_spent
+        return distance, time_spent
 
     def _generate_xlanelet(self, lanelet: Lanelet):
         stop = False
@@ -61,9 +60,9 @@ class CommonRoadManager:
         intersection = self._check_in_lanelet_for_intersection(lanelet)
         center_line = self._generate_extended_centerline_by_lanelet(lanelet)
 
-        # create message
+        # create message, isLaneChange is False by default
         message = XLanelet(id=lanelet.lanelet_id, hasLight=light, isAtIntersection=intersection, hasStop=stop,
-                           route_portion=center_line)
+                           isLaneChange=False, route_portion=center_line)
 
         self.message_by_lanelet[lanelet.lanelet_id] = message
 
@@ -82,7 +81,7 @@ class CommonRoadManager:
             if sign.traffic_sign_elements[0].traffic_sign_element_id == TrafficSignIDGermany.MAX_SPEED:
                 speed = int(sign.traffic_sign_elements[0].additional_values[0])
                 pos = Point(sign.position[0], sign.position[1], 0)
-                index = pp.find_nearest_path_index(lanelet.center_vertices, pos, use_posestamped=False)
+                index = pp.find_nearest_path_index(lanelet.center_vertices, pos, use_xcenterline=False)
                 speed_signs.append([index, speed])
 
         # sort speed signs to ease location based access
@@ -92,10 +91,15 @@ class CommonRoadManager:
         center_line_extended = []
         speed = self.default_speed
         time = 0.0
+        dist = 0.0
         prev_point = None
         for i, point in enumerate(lanelet.center_vertices):
             if i > 0:
-                time += self._calculate_duration_entry(previous=prev_point, current=point, prev_speed=speed)
+                tmp_dist, tmp_time = self._calculate_distance_and_duration(previous=prev_point, current=point,
+                                                                           prev_speed=speed)
+                dist += tmp_dist
+                time += tmp_time
+
             # check for speed signs
             for speed_sign in speed_signs:
                 if i >= speed_sign[0]:
@@ -105,7 +109,8 @@ class CommonRoadManager:
 
             prev_point = point
             # fill center_line_extended
-            center_line_extended.append(CenterLineExtended(x=point[0], y=point[1], z=0, speed=speed, duration=time))
+            center_line_extended.append(
+                CenterLineExtended(x=point[0], y=point[1], z=0, speed=speed, duration=time, distance=dist))
 
         return center_line_extended
 
@@ -141,8 +146,8 @@ class CommonRoadManager:
         # bounds lanelet1
         sep_index = 0
         lanelet_center_list = lanelet_copy.center_vertices.tolist()
-        end_index = pp.find_nearest_path_index(lanelet_center_list, modify_point, use_posestamped=False)
-        start_index = pp.find_nearest_path_index(lanelet_center_list, start_point, use_posestamped=False)
+        end_index = pp.find_nearest_path_index(lanelet_center_list, modify_point, use_xcenterline=False)
+        start_index = pp.find_nearest_path_index(lanelet_center_list, start_point, use_xcenterline=False)
         if end_index > start_index:
             sep_index = end_index - (abs(end_index - start_index) // 2)
         else:
@@ -163,7 +168,7 @@ class CommonRoadManager:
             for sign_id in lanelet_copy.traffic_signs:
                 sign = self.map.lanelet_network.find_traffic_sign_by_id(sign_id)
                 pos = Point(sign.position[0], sign.position[1], 0)
-                index = pp.find_nearest_path_index(lanelet_copy.center_vertices, pos, use_posestamped=False)
+                index = pp.find_nearest_path_index(lanelet_copy.center_vertices, pos, use_xcenterline=False)
                 # remove old reference
                 sign._first_occurrence.remove(lanelet_copy.lanelet_id)
                 # determine whether the sign should be put on lane 1 or 2
