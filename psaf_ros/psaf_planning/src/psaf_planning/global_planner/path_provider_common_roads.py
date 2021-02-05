@@ -286,14 +286,12 @@ class PathProviderCommonRoads:
 
         if u_turn:
             x_route_u, best_value_u = self._compute_route(start, goal, u_turn=True)
-            # x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
-            # x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
+            x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
             # compare distance based on obey_traffic_rules param and save best
-            best_value_no_u = float("inf")
             if best_value_u < best_value_no_u:
                 x_route = x_route_u
             else:
-                x_route = x_route_u
+                x_route = x_route_no_u
         else:
             x_route, _ = self._compute_route(start, goal, u_turn=False)
 
