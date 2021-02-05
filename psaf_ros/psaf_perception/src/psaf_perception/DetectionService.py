@@ -43,7 +43,7 @@ class DetectionService:
         self.traffic_sign_publisher = rospy.Publisher(ROOT_TOPIC + "traffic_signs", TrafficSignInfo, queue_size=1)
         self.stop_line_publisher = rospy.Publisher(ROOT_TOPIC + "stop_lines", StopLineInfo, queue_size=1)
         # Helpers
-        self.publish_timer = rospy.Timer(rospy.Duration(0.1), self.periodic_update)
+        self.publish_timer = rospy.Timer(rospy.Duration(0.05), self.periodic_update)
 
         # mapping between the traffic light states
         self.traffic_light_state_mapper = {

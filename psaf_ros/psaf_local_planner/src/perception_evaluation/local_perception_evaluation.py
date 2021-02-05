@@ -26,7 +26,7 @@ class LocalPerceptionEvaluation:
         rospy.Subscriber("/psaf/perception/traffic_signs", TrafficSignInfo, self.callback_traffic_signs)
         rospy.Subscriber("/psaf/perception/stop_lines", StopLineInfo, self.callback_stop_lines)
 
-        self.publish_timer = rospy.Timer(rospy.Duration(0.1), self.periodic_planner_input_update)
+        self.publish_timer = rospy.Timer(rospy.Duration(0.05), self.periodic_planner_input_update)
 
         self.current_traffic_light = None
         self.distance_to_stop_line = float('inf')

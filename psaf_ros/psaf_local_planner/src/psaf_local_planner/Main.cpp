@@ -10,15 +10,17 @@ namespace psaf_local_planner
                                             initialized(false), closest_point_local_plan(2),
                                             lookahead_factor(3.5), target_velocity(15), min_velocity(5),
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
-                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0)
+                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true)
     {
         std::cout << "Hi";
+        this->state_machine = new LocalPlannerStateMachine();
     }
 
     PsafLocalPlanner::~PsafLocalPlanner()
     {
         g_plan_pub.shutdown();
-        vel_sub.shutdown();
+        traffic_situation_sub.shutdown();
+        vehicle_status_sub.shutdown();
         delete dyn_serv;
     }
 
@@ -44,9 +46,21 @@ namespace psaf_local_planner
             planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
             this->costmap_ros = costmap_ros;
 
+            traffic_situation_sub = private_nh.subscribe("/psaf/local_planner/traffic_situation", 10, &PsafLocalPlanner::trafficSituationCallback, this);
+            // Subscribe for vehicle status updates
+            this->vehicle_status_sub = private_nh.subscribe("/carla/ego_vehicle/vehicle_status", 10, &PsafLocalPlanner::odometryCallback, this);
+
             dyn_serv = new dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>(private_nh);
             dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
             dyn_serv->setCallback(f);
+
+            if (!ros::param::get("/path_provider/respect_traffic_rules",respect_traffic_rules)) {
+                respect_traffic_rules = true;
+            }
+
+            this->state_machine->init();
+
+            costmap_raytracer = CostmapRaytracer(costmap_ros, &current_pose, &debug_pub);
 
             initialized = true;
         }
@@ -78,30 +92,14 @@ namespace psaf_local_planner
             {
                 estimateCurvatureAndSetTargetVelocity(current_pose.pose);
                 auto target_point = findLookaheadTarget();
-
                 double angle = computeSteeringAngle(target_point.pose, current_pose.pose);
-                double distance, relX, relY;
 
-                double velocity_distance_diff;
+                updateStateMachine();
 
-                if (target_velocity > 0 && !checkDistanceForward(distance, relX, relY)) {
-                    if (distance < 5) {
-                        ROS_INFO("attempting to stop");
-                        velocity_distance_diff = target_velocity;
-                    } else {
-                        // TODO: validate if working
-                        // slow formula, working okay ish
-                        velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
-                        // faster formula, requires faster controller
-                        //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
-                    }
+                target_velocity = getTargetVelDriving();
+                target_velocity = getTargetVelIntersection();
 
-                    ROS_INFO("distance forward: %f, max velocity: %f", distance, target_velocity);
-                }
-
-                checkForSlowCar(velocity_distance_diff);
-
-                cmd_vel.linear.x = target_velocity - velocity_distance_diff;
+                cmd_vel.linear.x = target_velocity;
                 cmd_vel.angular.z = angle;
             }
         }
@@ -153,6 +151,9 @@ namespace psaf_local_planner
             it++;
         }
 
+        // TODO: convert to meter once distance has been added to distance
+        deleted_points += to_delete;
+
         // actually delete the points now
         if (to_delete > 0) {
             global_plan.erase(global_plan.begin(), global_plan.begin() + to_delete);
@@ -184,6 +185,59 @@ namespace psaf_local_planner
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
         ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
+
+        // validate duration of routes only if a global route already exists
+        if (global_route.size() > 0 && !goal_reached && respect_traffic_rules) {
+            std::vector<psaf_messages::XLanelet> new_global_route = {};
+            new_global_route = msg.route;
+            float new_duration = 0;
+            float old_duration = 0;
+            // calculate duration of new route
+            for (auto lanelet : new_global_route) {
+                new_duration += lanelet.route_portion[lanelet.route_portion.size()-1].duration;
+            }
+            // duration of first lanelet of current route
+            old_duration += global_route[0].route_portion[global_route[0].route_portion.size()-1].duration;
+            // subtract already covered route fragment from duration of whole lanelet
+            old_duration -= global_route[0].route_portion[0].duration;
+            // calculate remaining duration of current route
+            for (int i = 1; i < global_route.size(); i++ ) {
+                old_duration += global_route[i].route_portion[global_route[i].route_portion.size()-1].duration;
+            }
+            // if new route is too slow, keep old one
+            if (new_duration > (duration_factor * old_duration)){
+                ROS_INFO("New Route is at least %f x slower than Current Route -> Current Route is kept", duration_factor);
+                return;
+            }
+
+        }
+        // validate length of routes only if a global route already exists, no traffic rules case
+        if (global_route.size() > 0 && !goal_reached && !respect_traffic_rules) {
+            std::vector<psaf_messages::XLanelet> new_global_route = {};
+            new_global_route = msg.route;
+            float new_distance = 0;
+            float old_distance = 0;
+            // calculate distance of new route
+            for (auto lanelet : new_global_route) {
+                new_distance += lanelet.route_portion[lanelet.route_portion.size()-1].distance;
+            }
+            // distance of first lanelet of current route
+            old_distance += global_route[0].route_portion[global_route[0].route_portion.size()-1].distance;
+            // subtract already covered route fragment from distance of whole lanelet
+            old_distance -= global_route[0].route_portion[0].distance;
+            // calculate remaining distance of current route
+            for (int i = 1; i < global_route.size(); i++ ) {
+                old_distance += global_route[i].route_portion[global_route[i].route_portion.size()-1].distance;
+            }
+            // if new route is too long, keep old one
+            if (new_distance > (duration_factor * old_distance)){
+                ROS_INFO("New Route is at least %f x slower than Current Route -> Current Route is kept", distance_factor);
+                return;
+            }
+
+        }
+
+
         global_route = msg.route;
         goal_reached = false;
 
@@ -203,6 +257,9 @@ namespace psaf_local_planner
                 points.push_back(pose);
             }
         }
+
+        // Reset state machine
+        this->state_machine->reset();
 
         global_plan = points;
         planner_util.setPlan(global_plan);

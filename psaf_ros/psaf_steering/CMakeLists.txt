@@ -89,6 +89,8 @@ find_package(catkin REQUIRED COMPONENTS
 #   std_msgs
 # )
 
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
+
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
 ################################################
