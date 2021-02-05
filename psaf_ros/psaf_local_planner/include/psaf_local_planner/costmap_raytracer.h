@@ -50,6 +50,8 @@ namespace psaf_local_planner {
             void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
 
 
+            void raytraceSemiCircle(double angle_from, double angle_to, double distance, std::vector<RaytraceCollisionData> &collisions);
+
             /**
              * Checks for no movement; has to be called multiple times to be expressive
              * 

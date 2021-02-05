@@ -98,6 +98,7 @@ namespace psaf_local_planner
 
                 target_velocity = getTargetVelDriving();
                 target_velocity = getTargetVelIntersection();
+                target_velocity = checkLaneChangeFree();
 
                 cmd_vel.linear.x = target_velocity;
                 cmd_vel.angular.z = angle;

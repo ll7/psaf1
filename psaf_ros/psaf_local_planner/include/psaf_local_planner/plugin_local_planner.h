@@ -307,6 +307,17 @@ namespace psaf_local_planner {
              */
             geometry_msgs::PoseStamped& findLookaheadTarget();
 
+            /**
+             * Cacluclates the distance to the next upcoming lanechange
+             * 
+             * @param direction[out]: +1 for right side; -1 for left side
+             * @return distance to the direction
+             */
+            double getDistanceToLaneChange(double compute_direction_threshold, int &direction);
+
+            double checkLaneChangeFree();
+
+
             /** Helper object for raytracing */
             psaf_local_planner::CostmapRaytracer costmap_raytracer;
 

@@ -16,7 +16,12 @@ namespace psaf_local_planner
                     : costmap_ros(costmap_ros), current_pose(current_pose), debug_pub(debug_pub)
     {}
 
+
     void CostmapRaytracer::raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions) {
+        raytraceSemiCircle(-angle / 2, angle / 2, distance, collisions);
+    }
+
+    void CostmapRaytracer::raytraceSemiCircle(double angle_from, double angle_to, double distance, std::vector<RaytraceCollisionData> &collisions) {
         tf2::Transform current_transform;
         tf2::convert(current_pose->pose, current_transform);
 
@@ -26,14 +31,14 @@ namespace psaf_local_planner
         // Rotation around z axis of the car
         double orientation = tf2::getYaw(current_transform.getRotation());
 
-        for (double actual_angle = -angle / 2; actual_angle <= angle / 2; actual_angle += (M_PI / 180) * 5) {
+        for (double actual_angle = angle_from; actual_angle <= angle_to; actual_angle += (M_PI / 180) * 5) {
             double x = std::cos(actual_angle + orientation) * distance;
             double y = std::sin(actual_angle + orientation) * distance;
             double coll_x, coll_y;
 
             double dist = raytrace(x + m_self_x , y + m_self_y, coll_x, coll_y);
             if (dist < INFINITY) {
-                collisions.push_back(RaytraceCollisionData(coll_x, coll_y, angle, distance));
+                collisions.push_back(RaytraceCollisionData(coll_x, coll_y, actual_angle, distance));
             }
         }
 

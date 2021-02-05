@@ -284,6 +284,7 @@ namespace psaf_local_planner
                         // slow formula, working okay ish
                         // uses formula for Anhalteweg (solved for velocity instead of distance)
                         // https://www.bussgeldkatalog.org/anhalteweg/
+                        // TODO: MOVE TO OWN FUNCTION
                         velocity_distance_diff = target_velocity - std::min(target_vel, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
                         // faster formula, requires faster controller
                         //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
@@ -310,4 +311,82 @@ namespace psaf_local_planner
         return distance;
     }
 
+    double PsafLocalPlanner::checkLaneChangeFree() {
+        int direction = 0;
+        double distance_begin_check_lane_change = 10;
+        double check_distance_lanechange = 7;
+
+        double distance = getDistanceToLaneChange(distance_begin_check_lane_change * 2, direction);
+
+        if (distance < distance_begin_check_lane_change) {
+            if (direction == 0) {
+                ROS_WARN("Direction is 0, but we should check for collsion! Driving normally");
+                return target_velocity;
+            }
+
+            std::vector<RaytraceCollisionData> collisions = {};
+
+            double angle_from, angle_to;
+            if (direction > 0) {
+                angle_from = M_PI / 4.0;
+                angle_to = M_PI * (3.0/4.0);
+            } else {
+                angle_to = -M_PI / 4.0;
+                angle_from = -M_PI * (3.0/4.0);
+            }
+
+            costmap_raytracer.raytraceSemiCircle(angle_from, angle_to, check_distance_lanechange, collisions);
+
+            if (collisions.size() > 0) {
+                // TODO: MOVE TO OWN FUNCTION
+                return std::min(target_velocity, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
+            }
+        }
+
+        return target_velocity;
+    }
+
+    double PsafLocalPlanner::getDistanceToLaneChange(double compute_direction_threshold, int &direction) {
+        double distance = 0;
+
+        for (int i = 0; i < global_route.size(); i++) {
+            auto &lanelet = global_route[i];
+            distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
+
+            if (lanelet.isLaneChange) {
+                if (i + 1 < global_route.size() && compute_direction_threshold <= distance) {
+                    auto &next_lanelet = global_route[i + 1];
+                    if (lanelet.route_portion.size() < 2) {
+                        auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
+                        auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
+                        auto &next = next_lanelet.route_portion[0];
+
+                        auto v_last = tf2::Vector3(last.x, last.y, last.z);
+                        auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
+                        auto v_next = tf2::Vector3(next.x, next.y, next.z);
+
+                        auto v1 = v_last - v_second_last;
+                        auto v2 = v_next - v_last;
+
+                        double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
+
+                        if (angle > 0) {
+                            direction = +1;
+                        } else {
+                            direction = -1;
+                        }
+
+                    } else {
+                        ROS_WARN("Not enough points to use three point method");
+                    }
+                } else {
+                    ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
+                }
+
+                return distance;
+            }
+        }
+
+        return distance;
+    }
 }
