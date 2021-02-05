@@ -10,7 +10,7 @@ namespace psaf_local_planner
                                             initialized(false), closest_point_local_plan(2),
                                             lookahead_factor(3.5), target_velocity(15), min_velocity(5),
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
-                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true)
+                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true),max_points_smoothing(10)
     {
         std::cout << "Hi";
         this->state_machine = new LocalPlannerStateMachine();
@@ -182,6 +182,8 @@ namespace psaf_local_planner
         assert(route_len == global_plan.size());
     }
 
+    // linear interpolation function returns point of fraction t between v0 and v1
+    // t=0 would be v0 and t=1 would be v1
     double lerp(double v0, double v1, double t) {
         return (1 - t) * v0 + t * v1;
     }
@@ -245,8 +247,8 @@ namespace psaf_local_planner
         global_route = msg.route;
         goal_reached = false;
 
-        // this block uses linear interpolation to ease the curves of lanechanges
-        // takes the last/first 10 points in both directions and distributes the points alonglinear line between them 
+        // this block uses linear interpolation to smooth the curves of lanechanges
+        // takes the last/first 10 points in both directions and distributes the points along linear line between them
         int size = global_route.size();
         for (int i = 0; i < size; i++) {
             auto &lanelet = global_route[i];
@@ -255,12 +257,11 @@ namespace psaf_local_planner
                 auto &next_lanelet = global_route[i + 1];
                 ROS_INFO("begenning to interpolate %i <-> %i", lanelet.id, next_lanelet.id);
                 int lanelet_route_size = lanelet.route_portion.size();
-                unsigned long max_points = 10; // todo: move to global param
-                unsigned long num_points = std::min(std::min(next_lanelet.route_portion.size(), lanelet.route_portion.size()), max_points);
-
+                unsigned long num_points = std::min(std::min(next_lanelet.route_portion.size(), lanelet.route_portion.size()), max_points_smoothing);
+                // first point of smoothing
                 double x1 = lanelet.route_portion[lanelet_route_size - num_points].x;
                 double y1 = lanelet.route_portion[lanelet_route_size - num_points].y;
-
+                // last point of smoothing
                 double x2 = next_lanelet.route_portion[num_points - 1].x;
                 double y2 = next_lanelet.route_portion[num_points - 1].y;
 
@@ -270,6 +271,7 @@ namespace psaf_local_planner
                 for (int j = 0; j < num_points; j++) {
                     // half the lerp, between points of the last lanelet
                     // indexing example: 20 - 10 + 9
+                    // num points * 2.0 -> num_points at end of current lanelet + num_points at beginning of next lanelet
                     lanelet.route_portion[lanelet_route_size - num_points + j].x = lerp(x1, x2, (j + 1) / (num_points * 2.0));
                     lanelet.route_portion[lanelet_route_size - num_points + j].y = lerp(y1, y2, (j + 1) / (num_points * 2.0));
 

@@ -106,6 +106,21 @@ namespace psaf_local_planner {
              * Overrides the nav_core::BaseLocalPlanner method; Called when the global planner publishes a global plan
              */
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
+
+            // circle fraction area around car in which possible obstacles are published
+            static constexpr double OBSTACLE_AREA = (M_PI * 3/2);
+            // radius of the circle fraction area around car in which possible obstacles are published
+            static constexpr double OBSTACLE_AREA_RADIUS =  30.0;
+            // threshold of velocity difference when a car in front is counted as too slow
+            static constexpr double VEL_DIFF_THRESHOLD = 5.0;
+            // number of times a obstacle is counted as too slow until it gets published as obstacle
+            static constexpr int NUM_SLOW_CAR_PUB = 30;
+            // number at which obstacle counts as lost when decreasing obstacle count
+            static constexpr int NUM_SLOW_CAR_DEL = 10;
+            // distance in front of intersection in which obstacles should not be published
+            static constexpr double MIN_DISTANCE_INTERSECTION = 30.0;
+            // threshold for min costmap value
+            static constexpr unsigned char COSTMAP_THRESHOLD = 128;
         private:
             /**
              * Publishes the global plan to be displayed in RVIZ
@@ -406,6 +421,9 @@ namespace psaf_local_planner {
              * The current speed of the car
              */
             double current_speed;
+
+            /** max number of points used at beginning and end of lanelet when smoothing lanechanges */
+            unsigned long max_points_smoothing;
 
     };
 };
