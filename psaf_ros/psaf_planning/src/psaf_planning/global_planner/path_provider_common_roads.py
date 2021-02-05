@@ -148,11 +148,11 @@ class PathProviderCommonRoads:
             length = np.linalg.norm(np.array(end_point) - np.array(start_point))
             temp_index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start,
                                                                          prematured_stop=False, use_xcenterline=False)
-            start_orientation = self.map_provider._get_lanelet_orientation_to_sign(start_lanelet, temp_index)
+            start_orientation = self.map_provider.get_lanelet_orientation_at_index(start_lanelet, temp_index)
 
             # get all lanelets nearby
             nearest = self.manager.map.lanelet_network.lanelets_in_proximity(np.array(center_point),
-                                                                             self.map_provider.inter_width*5)
+                                                                             self.u_turn_distances[0])
             for near_lanelet in nearest:
                 curr_start_point = near_lanelet.center_vertices[0]
                 curr_end_point = near_lanelet.center_vertices[-1]
@@ -161,7 +161,7 @@ class PathProviderCommonRoads:
                 # neighbouring distance - should be less than half the intersection
                 neigh_dist = np.linalg.norm(np.array(curr_end_point) - np.array(start_point))
 
-                curr_orientation = self.map_provider._get_lanelet_orientation_to_sign(near_lanelet, temp_index)
+                curr_orientation = self.map_provider.get_lanelet_orientation_at_index(near_lanelet, temp_index)
 
                 # calculate angle_diff but consider that the two orientations should be opposite to each other
                 start_angle_diff = abs(abs(start_orientation - curr_orientation) - 180)
@@ -222,7 +222,6 @@ class PathProviderCommonRoads:
             return ProblemStatus.BadTarget
 
         if u_turn:
-            print("turn to the u")
             u_turn_succes, start_lanelet = self._find_nearest_u_turn_lanelet(start, start_lanelet)
             if not u_turn_succes:
                 return ProblemStatus.BadUTurn
