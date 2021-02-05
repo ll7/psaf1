@@ -322,5 +322,12 @@ namespace psaf_local_planner {
             /** Factor by which the new route can be slower as the old route and still be accepted as new route */
             double duration_factor;
 
+            /** Factor by which the new route can be longer as the old route and still be accepted as new route */
+            double distance_factor;
+
+            /** sets a flag if traffic rules have to be obeyed or not */
+            bool respect_traffic_rules;
+
+
     };
 };
