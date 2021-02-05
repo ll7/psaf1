@@ -404,7 +404,7 @@ class PathProviderCommonRoads:
         :return: extended route and its corresponding time duration heuristic
         """
         lane_change_instructions = route._compute_lane_change_instructions()
-        extended_route = XRoute(id=self.route_id, route=[])
+        extended_route = XRoute()
         do_lane_change = False
         time = 0
         dist = 0
@@ -467,7 +467,7 @@ class PathProviderCommonRoads:
         :param to_b: End point   -- GPS Coord in float: latitude, longitude, altitude
         :param u_turn: if True plan route with a initial u_turn
         """""
-        x_route = XRoute()
+        x_route = XRoute(isUTurn=u_turn)
         best_value = float("inf")
 
         if u_turn:
@@ -525,6 +525,7 @@ class PathProviderCommonRoads:
         if num_routes >= 1:
             # Path was found!
             x_route, best_value = self._get_shortest_route(all_routes)
+            x_route.isUTurn = u_turn
 
             # Prune path to get exact start and end points
             x_route = self._prune_path(x_route, start_point, target_point)
