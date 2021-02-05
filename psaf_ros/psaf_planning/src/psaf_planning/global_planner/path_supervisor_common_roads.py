@@ -21,7 +21,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             rospy.init_node('PathSupervisorCommonRoads', anonymous=True)
         super(PathSupervisorCommonRoads, self).__init__(init_rospy=not init_rospy, enable_debug=enable_debug, respect_traffic_rules=respect_traffic_rules)
         self.busy: bool = False
-        rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle)
+        rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle, queue_size=1)
         self.obstacles = {}
         self.last_id = -1
         self.status_pub.publish("Init Done")
@@ -84,24 +84,21 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         # add all neighbours and their successors, that are heading in the same direction
         # go through all right neighbours
         neighbour_lanelet = lanelet
-        while neighbour_lanelet.adj_right_same_direction and neighbour_lanelet.adj_right is not None:
-            if not self.manager.message_by_lanelet[neighbour_lanelet.lanelet_id].isAtIntersection:
-                relevant.add(neighbour_lanelet.lanelet_id)
-            # add the successor, if it's not an intersection
-            if len(neighbour_lanelet.successor) == 1:
-                if not self.manager.message_by_lanelet[neighbour_lanelet.successor[0]].isAtIntersection:
-                    relevant.add(neighbour_lanelet.successor[0])
-            neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.adj_right)
-
-        # go through all left neighbours
-        while neighbour_lanelet.adj_left_same_direction and neighbour_lanelet.adj_left is not None:
-            if not self.manager.message_by_lanelet[neighbour_lanelet.lanelet_id].isAtIntersection:
-                relevant.add(neighbour_lanelet.lanelet_id)
-            # add the successor, if it's not an intersection
-            if len(neighbour_lanelet.successor) == 1:
-                if not self.manager.message_by_lanelet[neighbour_lanelet.successor[0]].isAtIntersection:
-                    relevant.add(neighbour_lanelet.successor[0])
-            neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.adj_left)
+        while True:
+            tmp = neighbour_lanelet
+            while neighbour_lanelet.adj_right_same_direction and neighbour_lanelet.adj_right is not None:
+                if not self.manager.message_by_lanelet[neighbour_lanelet.lanelet_id].isAtIntersection:
+                    relevant.add(neighbour_lanelet.lanelet_id)
+                neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.adj_right)
+            # go through all left neighbours
+            neighbour_lanelet = tmp
+            while neighbour_lanelet.adj_left_same_direction and neighbour_lanelet.adj_left is not None:
+                if not self.manager.message_by_lanelet[neighbour_lanelet.lanelet_id].isAtIntersection:
+                    relevant.add(neighbour_lanelet.lanelet_id)
+                neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.adj_left)
+            if len(neighbour_lanelet.successor) > 1:
+                break
+            neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.successor[0])
 
         return list(relevant)
 
@@ -138,48 +135,37 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
             self.status_pub.publish("Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering")
             return False, car_lanelet
-        if self.manager.message_by_lanelet[matching_lanelet].isAtIntersection:
-            rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle on a intersection !!")
-            self.status_pub.publish("Ignoring obstacle, obstacle on a intersection")
-            return False, car_lanelet
-        lanelet: Lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(car_lanelet)
-        # case single road in current direction
-        if lanelet.adj_left_same_direction is False and lanelet.adj_right_same_direction is False:
-            rospy.logerr("PathSupervisor: Ignoring obstacle, single road in current direction !!")
-            self.status_pub.publish("Ignoring obstacle, single road in current direction")
-            return False, car_lanelet
-        # case at least one neighbouring lane and no solid line
-        elif lanelet.adj_right_same_direction is not None or lanelet.adj_left_same_direction is not None:
-            static_obstacle_id = self.manager.map.generate_object_id()
-            static_obstacle_type = ObstacleType.PARKED_VEHICLE
-            static_obstacle_shape = Rectangle(width=2, length=4.5)
-            orientation = self.vehicle_status.get_status().get_orientation_as_euler()[2]
-            static_obstacle_initial_state = State(position=np.array([obs_pos_x, obs_pos_y]),
-                                                  orientation=orientation, time_step=0)
 
-            # feed in the required components to construct a static obstacle
-            static_obstacle = StaticObstacle(static_obstacle_id, static_obstacle_type, static_obstacle_shape,
-                                             static_obstacle_initial_state)
+        static_obstacle_id = self.manager.map.generate_object_id()
+        static_obstacle_type = ObstacleType.PARKED_VEHICLE
+        static_obstacle_shape = Rectangle(width=2, length=4.5)
+        orientation = self.vehicle_status.get_status().get_orientation_as_euler()[2]
+        static_obstacle_initial_state = State(position=np.array([obs_pos_x, obs_pos_y]),
+                                              orientation=orientation, time_step=0)
 
-            if car_lanelet == matching_lanelet:
-                # add the static obstacle to the scenario
-                split_ids = self.manager.update_network(matching_lanelet, Point(obs_pos_x, obs_pos_y, 0),
-                                                        curr_pos,
-                                                        static_obstacle)
+        # feed in the required components to construct a static obstacle
+        static_obstacle = StaticObstacle(static_obstacle_id, static_obstacle_type, static_obstacle_shape,
+                                         static_obstacle_initial_state)
+
+        if car_lanelet == matching_lanelet:
+            # add the static obstacle to the scenario
+            split_ids = self.manager.update_network(matching_lanelet, Point(obs_pos_x, obs_pos_y, 0),
+                                                    curr_pos,
+                                                    static_obstacle)
+            if split_ids[0] is not None:
+                car_lanelet = split_ids[0]
+                split_point = Point(
+                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
+                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
+                split_ids = self.manager.update_network(split_ids[0], curr_pos, split_point, None)
                 if split_ids[0] is not None:
                     car_lanelet = split_ids[0]
-                    split_point = Point(
-                        self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
-                        self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
-                    split_ids = self.manager.update_network(split_ids[0], curr_pos, split_point, None)
-                    if split_ids[0] is not None:
-                        car_lanelet = split_ids[0]
-            else:
-                if static_obstacle is not None:
-                    self.manager.map.lanelet_network.find_lanelet_by_id(
-                        matching_lanelet).add_static_obstacle_to_lanelet(
-                        static_obstacle.obstacle_id)
-                    self.manager.map.add_objects(static_obstacle)
+        else:
+            if static_obstacle is not None:
+                self.manager.map.lanelet_network.find_lanelet_by_id(
+                    matching_lanelet).add_static_obstacle_to_lanelet(
+                    static_obstacle.obstacle_id)
+                self.manager.map.add_objects(static_obstacle)
 
         return True, car_lanelet
 
