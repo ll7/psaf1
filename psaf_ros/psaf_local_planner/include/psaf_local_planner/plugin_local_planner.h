@@ -60,14 +60,6 @@
 
 namespace psaf_local_planner {
 
-
-    class RaytraceCollisionData {
-        public:
-            RaytraceCollisionData(double x, double y, double angle, double distance);
-            double x, y, angle, distance;
-    };
-
-
     class PsafLocalPlanner : public nav_core::BaseLocalPlanner {
         public:
             /**
