@@ -3,18 +3,82 @@
 
 namespace psaf_local_planner {
 
-    void PsafLocalPlanner::updateStateMachine() {
-        bool traffic_light_detected = false;
+    double PsafLocalPlanner::computeDistanceToUpcomingTrafficLight() {
 
         if (global_route.size() > 0) {
-            if (global_route[0].route_portion.size() > 0) {
-                traffic_light_detected = global_route[0].hasLight;
+            if (global_route[0].route_portion.size() > 1) {
+                double remaining_way_on_lanelet =
+                        this->distanceBetweenCenterLines(global_route[0].route_portion.front(),
+                                                         global_route[0].route_portion.back());
+                // if the lanelet is too short we look on the next lanelet
+                if (remaining_way_on_lanelet > getCurrentStoppingDistance()
+                    && (remaining_way_on_lanelet < 1.5 * getCurrentStoppingDistance())) {
+                    // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
+                    if(global_route[0].hasLight){
+                        return remaining_way_on_lanelet;
+                    }
+                    return std::numeric_limits<double>::infinity();
+                }
+                // Check next lanelet if there is one
+                if (global_route.size() > 1 && global_route[1].route_portion.size() > 1) {
+                    double remaining_way_to_next_lanelet_end = remaining_way_on_lanelet +
+                            this->distanceBetweenCenterLines(global_route[1].route_portion.front(),
+                                                             global_route[1].route_portion.back());
+                    if (remaining_way_to_next_lanelet_end > getCurrentStoppingDistance()
+                        && (remaining_way_on_lanelet < 1.5 * getCurrentStoppingDistance())) {
+                        // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
+                        if(global_route[0].hasLight){
+                            return remaining_way_to_next_lanelet_end;
+                        }
+                        return std::numeric_limits<double>::infinity();
+                    }
+                }
             }
-            // TODO check next lanelet if current is too short
         }
+        return false;
+    }
+
+    double PsafLocalPlanner::computeDistanceToUpcomingStop() {
+
+        if (global_route.size() > 0) {
+            if (global_route[0].route_portion.size() > 1) {
+                double remaining_way_on_lanelet =
+                        this->distanceBetweenCenterLines(global_route[0].route_portion.front(),
+                                                         global_route[0].route_portion.back());
+                // if the lanelet is too short we look on the next lanelet
+                if (remaining_way_on_lanelet > getCurrentStoppingDistance()
+                    && (remaining_way_on_lanelet < 1.5 * getCurrentStoppingDistance())) {
+                    // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
+                    if(global_route[0].hasStop){
+                        return remaining_way_on_lanelet;
+                    }
+                    return std::numeric_limits<double>::infinity();
+                }
+                // Check next lanelet if there is one
+                if (global_route.size() > 1 && global_route[1].route_portion.size() > 1) {
+                    double remaining_way_to_next_lanelet_end = remaining_way_on_lanelet +
+                                                               this->distanceBetweenCenterLines(global_route[1].route_portion.front(),
+                                                                                                global_route[1].route_portion.back());
+                    if (remaining_way_to_next_lanelet_end > getCurrentStoppingDistance()
+                        && (remaining_way_on_lanelet < 1.5 * getCurrentStoppingDistance())) {
+                        // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
+                        if(global_route[0].hasStop){
+                            return remaining_way_to_next_lanelet_end;
+                        }
+                        return std::numeric_limits<double>::infinity();
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    void PsafLocalPlanner::updateStateMachine() {
+        bool traffic_light_detected = this->computeDistanceToUpcomingTrafficLight()<1e6;
 
         this->state_machine->updateState(traffic_light_detected, this->traffic_light_state,
-                                         this->getCurrentStoppingDistance(), this->current_speed, this->stop_distance_at_intersection);
+                                         this->getCurrentStoppingDistance(), this->current_speed,
+                                         this->stop_distance_at_intersection);
     }
 
     double PsafLocalPlanner::getTargetVelIntersection() {

@@ -45,6 +45,31 @@ namespace psaf_local_planner
             this->traffic_light_state = new_light;
 
         }
-        this->stop_distance_at_intersection = msg->distanceToStopLine;
+        // Distance to stop can be determined in two the distance to the end of the lanelet,
+        // the distance to the traffic light on the right hand side or the distance to the stop line
+        if(msg->distanceToStopLine<1e6){ // abstraction for infinity
+            // Use the stop line distance
+            this->stop_distance_at_intersection = msg->distanceToStopLine;
+        }else{
+            // Use the traffic light distance if the perception already knows something
+            if(this->traffic_light_state.state!=psaf_messages::TrafficLight::STATE_UNKNOWN){
+                // if the traffic_light is on the right hand side we want to stop 2 meters in front of it
+                if(this->traffic_light_state.x>0.6){
+                    this->stop_distance_at_intersection = this->traffic_light_state.distance-2;
+                }else{ // else the traffic light is on the other side of the intersection (american style)
+                    // we keep 20 meters as distance
+                    this->stop_distance_at_intersection = this->traffic_light_state.distance-20;
+                }
+            } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
+                this->stop_distance_at_intersection = this->computeDistanceToUpcomingTrafficLight()-10;
+                // TODO check for distance to a possible top sign
+            }
+        }
     }
+
+    double PsafLocalPlanner::distanceBetweenCenterLines(psaf_messages::CenterLineExtended first, psaf_messages::CenterLineExtended second){
+        return hypot(second.x-first.x,second.y-first.y);
+    }
+
+
 }

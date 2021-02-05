@@ -261,6 +261,30 @@ namespace psaf_local_planner {
             void updateStateMachine();
 
             /**
+             * Computes the distance to traffic light on lanelet if the lanelet before the upcoming intersection
+             * has a traffic light that affects the car.
+             * Checks the current lanelet and the next lanelet if the current one is too short
+             * @return the distance to the traffic light. Infinity if the is none.
+             */
+            double computeDistanceToUpcomingTrafficLight();
+
+            /**
+            * Computes the distance to stop mark/sign on lanelet if the lanelet before the upcoming intersection
+             * has a stop sign or a stop mark that affects the car.
+            * Checks the current lanelet and the next lanelet if the current one is too short
+            * @return the distance to the stop. Infinity if the is none.
+            */
+            double computeDistanceToUpcomingStop();
+
+            /**
+             * Computes the euclidean 2d distance between two center lines.
+             * @param first the first center line
+             * @param second the second center line
+             * @return the euclidean distance in 2d space
+             */
+            double distanceBetweenCenterLines(psaf_messages::CenterLineExtended first, psaf_messages::CenterLineExtended second);
+
+            /**
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
              *
              * @return pointer to the target point
