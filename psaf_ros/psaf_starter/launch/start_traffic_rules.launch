@@ -51,22 +51,9 @@
         <arg name='fixed_delta_seconds' value='$(arg fixed_delta_seconds)'/>
     </include>
 
-    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-        <rosparam file="$(find psaf_steering)/config/costmap_common_params.yaml" command="load" ns="global_costmap"/>
-        <rosparam file="$(find psaf_steering)/config/costmap_common_params.yaml" command="load" ns="local_costmap"/>
-        <rosparam file="$(find psaf_steering)/config/local_costmap_params.yaml" command="load"/>
-        <rosparam file="$(find psaf_steering)/config/global_costmap_params.yaml" command="load"/>
-        <rosparam file="$(find psaf_steering)/config/base_local_planner_params.yaml" command="load"/>
-
-        <param name="base_local_planner" value="psaf_local_planner/PsafLocalPlanner"/>
-
-        <param name="base_global_planner" value="psaf_planning/GlobalPlanner"/>
-        <param name="controller_frequency" value="20.0"/>
-    </node>
+    <include file="$(find psaf_steering)/launch/move_base.launch"/>
 
     <include file="$(find psaf_planning)/launch/psaf_planning_path_common_roads.launch"/>
-
-    <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch"/>
 
     <include file="$(find psaf_local_planner)/launch/psaf_local_perception_evaluation_service.launch"/>
 
