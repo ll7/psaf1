@@ -72,7 +72,7 @@ class PathProviderCommonRoads:
         self.path_message = XRoute()
         self.planning_problem = None
         self.manager = None
-        self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter))
+        self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter), intersections=self.map_provider.intersection)
         self.route_id = 1  # 1 is the first valid id, 0 is reserved as invalid
         rospy.Subscriber("/psaf/goal/set_instruction", PlanningInstruction, self._callback_goal)
         self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
@@ -168,7 +168,6 @@ class PathProviderCommonRoads:
 
                 # calculate angle_diff but consider that the two orientations should be opposite to each other
                 start_angle_diff = abs(abs(start_orientation - curr_orientation) - 180)
-                print(str(start_angle_diff))
                 # do these two lanelets fulfill the orientation criteria
                 if start_angle_diff < self.map_provider.max_neighbour_angle_diff:
                     temp_lanelet = near_lanelet
