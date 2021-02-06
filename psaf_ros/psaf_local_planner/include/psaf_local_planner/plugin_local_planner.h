@@ -317,7 +317,7 @@ namespace psaf_local_planner {
              * @param direction[out]: +1 for right side; -1 for left side
              * @return distance to the direction
              */
-            double getDistanceToLaneChange(double compute_direction_threshold, int &direction);
+            double getDistanceToLaneChange(double compute_direction_threshold);
 
             double checkLaneChangeFree();
 
@@ -439,6 +439,11 @@ namespace psaf_local_planner {
 
             /** max number of points used at beginning and end of lanelet when smoothing lanechanges */
             unsigned long max_points_smoothing;
+
+            /**variable to determine whether the next lanechange is to the right(1) or to the left(-1)  */
+            int lane_change_direction;
+            /**variable to determine whether the direction of the lext lane change was already calcualted  */
+            bool lane_change_direction_calculated;
 
     };
 };

@@ -10,7 +10,7 @@ namespace psaf_local_planner
                                             initialized(false), closest_point_local_plan(2),
                                             lookahead_factor(3.5), target_velocity(15), min_velocity(5),
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
-                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true),max_points_smoothing(10)
+                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true),max_points_smoothing(10), lane_change_direction(0), lane_change_direction_calculated(false)
     {
         std::cout << "Hi";
         this->state_machine = new LocalPlannerStateMachine();
