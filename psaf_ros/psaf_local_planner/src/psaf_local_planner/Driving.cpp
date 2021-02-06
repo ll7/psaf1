@@ -232,7 +232,7 @@ namespace psaf_local_planner
 
         double vel_x = std::ceil(std::abs(vel.pose.position.x));
 
-        double desired_distance = std::pow(vel_x / lookahead_factor, 1.1) + 5;
+        double desired_distance = std::pow(vel_x / lookahead_factor, 1.1) + lookahead_factor_const_additive;
         double sum_distance = 0;
 
         for (auto &lanelet : global_route) {

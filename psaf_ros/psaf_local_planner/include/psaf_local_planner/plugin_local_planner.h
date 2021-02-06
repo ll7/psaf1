@@ -383,6 +383,9 @@ namespace psaf_local_planner {
             
             /** floor (target_velocity / lookahead_factor) == index of the point to the use in the local planner list; lower is more points */
             double lookahead_factor;
+            
+            /** Additive lookahead factor not depending on the speed*/
+            double lookahead_factor_const_additive;
 
             /** set to true when the goal is reached*/
             bool goal_reached;

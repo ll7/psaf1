@@ -88,11 +88,8 @@ namespace psaf_local_planner
 
         auto costmap = costmap_ros->getCostmap();
         auto model = base_local_planner::CostmapModel(*costmap);
-        auto footprint = costmap_ros->getRobotFootprint();
         auto bound_x = costmap->getSizeInCellsX();
         auto bound_y = costmap->getSizeInCellsY();
-
-        ROS_INFO("footprint: %f %f", footprint[0].x, footprint[0].y);
 
         for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
         {
@@ -106,10 +103,6 @@ namespace psaf_local_planner
             unsigned int cx, cy;
             if (costmap_ros->getCostmap()->worldToMap(current_point.getX(), current_point.getY(), cx, cy))
             {
-                // TODO!!! DOES NOT WORK YET!!! 
-                // current_point instead of current pose !!!!!!
-                // int cost = model.footprintCost(w.pose.position, footprint, 2.0, 3.0);
-
                 bool has_coll = false;
 
                 for (int ix = -1; ix <= 1 && !has_coll; ix++) {

@@ -10,7 +10,9 @@ namespace psaf_local_planner
                                             initialized(false), closest_point_local_plan(2),
                                             lookahead_factor(3.5), target_velocity(15), min_velocity(5),
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
-                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true),max_points_smoothing(10), lane_change_direction(0), lane_change_direction_calculated(false)
+                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), 
+                                            duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true), max_points_smoothing(10), 
+                                            lane_change_direction(0), lane_change_direction_calculated(false), lookahead_factor_const_additive(1)
     {
         std::cout << "Hi";
         this->state_machine = new LocalPlannerStateMachine();
@@ -97,7 +99,11 @@ namespace psaf_local_planner
                 auto target_point = findLookaheadTarget(lanelet_out, center_point_out);
                 
                 if (!lanelet_out.isAtIntersection || max_velocity == 0) {
-                    max_velocity = std::min(global_route[0].route_portion[0].speed / 3.6, center_point_out.speed / 3.6);
+                    if (center_point_out.speed == 0) {
+                        max_velocity = global_route[0].route_portion[0].speed / 3.6;
+                    } else {
+                        max_velocity = std::min(global_route[0].route_portion[0].speed / 3.6, center_point_out.speed / 3.6);
+                    }
                 }
 
                 double angle = computeSteeringAngle(target_point, current_pose.pose);
