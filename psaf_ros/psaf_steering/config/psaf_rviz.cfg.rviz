@@ -152,7 +152,7 @@ Visualization Manager:
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: Intensity
-      Decay Time: 0.5
+      Decay Time: 0
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -182,7 +182,7 @@ Visualization Manager:
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: Intensity
-      Decay Time: 0.5
+      Decay Time: 0
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -204,15 +204,15 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 1.3068913221359253
-        Min Value: 0.07374858856201172
+        Max Value: 1.5398553609848022
+        Min Value: 0.14139509201049805
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: AxisColor
-      Decay Time: 0.5
+      Decay Time: 0
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -234,7 +234,7 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.5586950778961182
+        Max Value: 1.0056350231170654
         Min Value: 0
         Value: true
       Axis: Z
@@ -242,7 +242,7 @@ Visualization Manager:
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: AxisColor
-      Decay Time: 0.5
+      Decay Time: 0
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -436,7 +436,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 46.62751770019531
+      Distance: 85.79463195800781
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1

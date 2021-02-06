@@ -84,14 +84,23 @@ namespace psaf_local_planner
             if (global_plan.size() <= 1)
             {
                 ROS_INFO("Goal reached");
+                max_velocity = 0;
                 cmd_vel.linear.x = 0;
                 cmd_vel.angular.z = 0;
                 goal_reached = true;
             }
             else
             {
-                auto target_point = findLookaheadTarget();
-                double angle = computeSteeringAngle(target_point.pose, current_pose.pose);
+
+                psaf_messages::XLanelet lanelet_out;
+                psaf_messages::CenterLineExtended center_point_out;
+                auto target_point = findLookaheadTarget(lanelet_out, center_point_out);
+                if (!lanelet_out.isAtIntersection) {
+                    max_velocity = center_point_out.speed / 3.6;
+                }
+                
+
+                double angle = computeSteeringAngle(target_point, current_pose.pose);
 
                 updateStateMachine();
 
