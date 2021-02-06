@@ -307,9 +307,9 @@ namespace psaf_local_planner {
             /**
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
              *
-             * @return pointer to the target point
+             * @return pose of the target point
              */
-            geometry_msgs::PoseStamped& findLookaheadTarget();
+            geometry_msgs::Pose findLookaheadTarget(psaf_messages::XLanelet &lanelet_out, psaf_messages::CenterLineExtended &center_point_out);
 
             /**
              * Cacluclates the distance to the next upcoming lanechange
@@ -410,6 +410,7 @@ namespace psaf_local_planner {
 
             /** ~~ planned ~~ current state of the car */
             LocalPlannerState state;
+            
             /** The state machine */
             LocalPlannerStateMachine* state_machine;
 

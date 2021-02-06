@@ -221,11 +221,12 @@ namespace psaf_local_planner
         return target_vel;
     }
 
-    geometry_msgs::PoseStamped& PsafLocalPlanner::findLookaheadTarget() {
+    geometry_msgs::Pose PsafLocalPlanner::findLookaheadTarget(psaf_messages::XLanelet &lanelet_out, psaf_messages::CenterLineExtended &center_point_out) {
         tf2::Vector3 last_point, current_point, acutal_point;
         tf2::convert(current_pose.pose.position, last_point);
         last_point.setZ(0);
         acutal_point = last_point;
+        ROS_INFO("Beginn");
 
         geometry_msgs::PoseStamped vel;
         odom_helper.getRobotVel(vel);
@@ -235,7 +236,26 @@ namespace psaf_local_planner
         double desired_distance = std::pow(vel_x / lookahead_factor, 1.1) + 5;
         double sum_distance = 0;
 
-        for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
+        for (auto &lanelet : global_route) {
+            double base_dist = lanelet.route_portion[0].distance;
+            for (auto &point : lanelet.route_portion) {
+                double dist = sum_distance + point.distance - base_dist;
+                if (dist > desired_distance) {
+                    geometry_msgs::Pose pose;
+                    pose.position.x = point.x;
+                    pose.position.y = point.y;
+
+                    lanelet_out = lanelet;
+                    center_point_out = point;
+
+                    return pose;
+                }
+            }
+
+            sum_distance += (*lanelet.route_portion.end()).distance - base_dist;
+        }
+
+        /*for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
         {
             geometry_msgs::PoseStamped &w = *it;
             tf2::convert(w.pose.position, current_point);
@@ -246,19 +266,26 @@ namespace psaf_local_planner
             }
 
             last_point = current_point;
+        }*/
+
+        ROS_INFO("Before");
+        geometry_msgs::Pose last_stamp; 
+        if (global_route.size() > 0 && global_plan.size() > 0) {
+            lanelet_out = *global_route.end();
+            if (lanelet_out.route_portion.size() > 0) {
+                center_point_out = *lanelet_out.route_portion.end();
+            }
+            last_stamp = (*global_plan.end()).pose;
         }
 
-        auto &last_stamp = *global_plan.end();
+        
+        ROS_INFO("After");
+
         return last_stamp;
     }
 
     double PsafLocalPlanner::getMaxVelocity() {
-        if (global_route.size() > 0) {
-            if (global_route[0].route_portion.size() > 0)
-                return global_route[0].route_portion[0].speed / 3.6;
-        }
-
-        return 0.0;
+        return max_velocity;
     }
 
     double PsafLocalPlanner::getCurrentStoppingDistance(){
