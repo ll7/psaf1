@@ -90,7 +90,6 @@ namespace psaf_local_planner
             }
             else
             {
-                estimateCurvatureAndSetTargetVelocity(current_pose.pose);
                 auto target_point = findLookaheadTarget();
                 double angle = computeSteeringAngle(target_point.pose, current_pose.pose);
 

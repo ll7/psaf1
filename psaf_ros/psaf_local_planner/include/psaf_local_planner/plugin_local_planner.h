@@ -180,7 +180,7 @@ namespace psaf_local_planner {
              *
              * @param current_location: current pose of the car
              */
-            double estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location);
+            double estimateCurvatureAndSetTargetVelocity();
 
             /**
              * Retruns target speed with check for obstacles in the way

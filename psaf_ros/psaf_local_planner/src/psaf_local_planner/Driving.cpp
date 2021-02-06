@@ -136,7 +136,7 @@ namespace psaf_local_planner
         return r_m;
     }
 
-    double PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location)
+    double PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity()
     {
         if (global_plan.size() < 3)
             return target_velocity;
@@ -267,10 +267,8 @@ namespace psaf_local_planner
 
     double PsafLocalPlanner::getTargetVelDriving()
     {
-                double target_vel = estimateCurvatureAndSetTargetVelocity(current_pose.pose);
-
+                double target_vel = estimateCurvatureAndSetTargetVelocity();
                 double distance, relX, relY;
-
                 double velocity_distance_diff;
 
                 if (target_vel > 0 && !checkDistanceForward(distance, relX, relY))
@@ -285,9 +283,9 @@ namespace psaf_local_planner
                         // uses formula for Anhalteweg (solved for velocity instead of distance)
                         // https://www.bussgeldkatalog.org/anhalteweg/
                         // TODO: MOVE TO OWN FUNCTION
-                        velocity_distance_diff = target_velocity - std::min(target_vel, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
+                        velocity_distance_diff = target_vel - std::min(target_vel, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
                         // faster formula, requires faster controller
-                        //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
+                        //velocity_distance_diff = target_vel - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
                     }
 
                     ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
