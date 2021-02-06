@@ -226,7 +226,6 @@ namespace psaf_local_planner
         tf2::convert(current_pose.pose.position, last_point);
         last_point.setZ(0);
         acutal_point = last_point;
-        ROS_INFO("Beginn");
 
         geometry_msgs::PoseStamped vel;
         odom_helper.getRobotVel(vel);
@@ -248,6 +247,8 @@ namespace psaf_local_planner
                     lanelet_out = lanelet;
                     center_point_out = point;
 
+                    // ROS_INFO("out: %i; id: %i", point.speed, lanelet_out.id);
+
                     return pose;
                 }
             }
@@ -268,7 +269,6 @@ namespace psaf_local_planner
             last_point = current_point;
         }*/
 
-        ROS_INFO("Before");
         geometry_msgs::Pose last_stamp; 
         if (global_route.size() > 0 && global_plan.size() > 0) {
             lanelet_out = *global_route.end();
@@ -277,9 +277,6 @@ namespace psaf_local_planner
             }
             last_stamp = (*global_plan.end()).pose;
         }
-
-        
-        ROS_INFO("After");
 
         return last_stamp;
     }

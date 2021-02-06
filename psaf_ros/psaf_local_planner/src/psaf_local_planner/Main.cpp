@@ -95,10 +95,10 @@ namespace psaf_local_planner
                 psaf_messages::XLanelet lanelet_out;
                 psaf_messages::CenterLineExtended center_point_out;
                 auto target_point = findLookaheadTarget(lanelet_out, center_point_out);
-                if (!lanelet_out.isAtIntersection) {
-                    max_velocity = center_point_out.speed / 3.6;
-                }
                 
+                if (!lanelet_out.isAtIntersection || max_velocity == 0) {
+                    max_velocity = std::min(global_route[0].route_portion[0].speed / 3.6, center_point_out.speed / 3.6);
+                }
 
                 double angle = computeSteeringAngle(target_point, current_pose.pose);
 
@@ -266,7 +266,6 @@ namespace psaf_local_planner
             
             if (lanelet.isLaneChange && i + 1 < size) {
                 auto &next_lanelet = global_route[i + 1];
-                ROS_INFO("begenning to interpolate %i <-> %i", lanelet.id, next_lanelet.id);
                 int lanelet_route_size = lanelet.route_portion.size();
                 unsigned long num_points = std::min(std::min(next_lanelet.route_portion.size(), lanelet.route_portion.size()), max_points_smoothing);
                 // first point of smoothing
@@ -276,8 +275,6 @@ namespace psaf_local_planner
                 double x2 = next_lanelet.route_portion[num_points - 1].x;
                 double y2 = next_lanelet.route_portion[num_points - 1].y;
 
-                ROS_INFO("num: %i", num_points);
-
                 // whole lerp is between 0 to 1.0 where 1.0 is at num_points * 2.0
                 for (int j = 0; j < num_points; j++) {
                     // half the lerp, between points of the last lanelet
@@ -285,14 +282,11 @@ namespace psaf_local_planner
                     // num points * 2.0 -> num_points at end of current lanelet + num_points at beginning of next lanelet
                     lanelet.route_portion[lanelet_route_size - num_points + j].x = lerp(x1, x2, (j + 1) / (num_points * 2.0));
                     lanelet.route_portion[lanelet_route_size - num_points + j].y = lerp(y1, y2, (j + 1) / (num_points * 2.0));
-
-                    ROS_INFO("x: %f y: %f", lanelet.route_portion[lanelet_route_size - num_points + j].x, lanelet.route_portion[lanelet_route_size - num_points + j].y);
                 }
 
                 for (int j = 0; j < num_points; j++) {
                     // half the lerp, between points of the last lanelet
                     // indexing example: 20 - 10 + 9
-                    ROS_INFO("t: %f lerp: %f", (num_points + j + 1) / (num_points * 2.0), lerp(x1, x2, (num_points + j + 1) / (num_points * 2.0)));
                     next_lanelet.route_portion[j].x = lerp(x1, x2, (num_points + j + 1) / (num_points * 2.0));
                     next_lanelet.route_portion[j].y = lerp(y1, y2, (num_points + j + 1) / (num_points * 2.0));
                 }
