@@ -168,11 +168,9 @@ class PathProviderCommonRoads:
 
                 # calculate angle_diff but consider that the two orientations should be opposite to each other
                 start_angle_diff = abs(abs(start_orientation - curr_orientation) - 180)
-
-                # do these two lanelets fulfill the neighbouring criteria (defined in init)
-                if start_angle_diff < self.map_provider.max_neighbour_angle_diff and \
-                        math.isclose(length, curr_length, rel_tol=self.map_provider.max_length_diff) and \
-                        neigh_dist < self.map_provider.inter_width:
+                print(str(start_angle_diff))
+                # do these two lanelets fulfill the orientation criteria
+                if start_angle_diff < self.map_provider.max_neighbour_angle_diff:
                     temp_lanelet = near_lanelet
                     neighbour_found = True
                     break
