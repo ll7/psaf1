@@ -161,6 +161,9 @@ class PathProviderCommonRoads:
                 # neighbouring distance - should be less than half the intersection
                 neigh_dist = np.linalg.norm(np.array(curr_end_point) - np.array(start_point))
 
+                temp_index = PathProviderCommonRoads.find_nearest_path_index(near_lanelet.center_vertices, start,
+                                                                             prematured_stop=False,
+                                                                             use_xcenterline=False)
                 curr_orientation = self.map_provider.get_lanelet_orientation_at_index(near_lanelet, temp_index)
 
                 # calculate angle_diff but consider that the two orientations should be opposite to each other
