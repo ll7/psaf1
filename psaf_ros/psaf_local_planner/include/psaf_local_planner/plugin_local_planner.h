@@ -121,6 +121,10 @@ namespace psaf_local_planner {
             static constexpr double MIN_DISTANCE_INTERSECTION = 30.0;
             // threshold for min costmap value
             static constexpr unsigned char COSTMAP_THRESHOLD = 128;
+
+            // How many points the delete old points function should look ahead to find the closest point
+            static constexpr int MAX_DELETE_OLD_POINTS_LOOKAHEAD = 100;
+            
         private:
             /**
              * Publishes the global plan to be displayed in RVIZ

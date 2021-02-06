@@ -124,7 +124,7 @@ namespace psaf_local_planner
         std::vector<geometry_msgs::PoseStamped>::iterator closest_it = it;
 
         int to_delete = -1;
-
+        int break_counter = 0;
         while (it != global_plan.end())
         {
             const geometry_msgs::PoseStamped &w = *it;
@@ -144,7 +144,9 @@ namespace psaf_local_planner
                     closest_it = it;
                     to_delete++;
                 } else {
-                    break;
+                    break_counter++;
+                    if (break_counter > MAX_DELETE_OLD_POINTS_LOOKAHEAD) 
+                        break;
                 }
             }
 
