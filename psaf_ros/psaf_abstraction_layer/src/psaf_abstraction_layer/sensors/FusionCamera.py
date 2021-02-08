@@ -1,53 +1,69 @@
 import math
 from threading import Lock
-from typing import Set, Tuple, List, Callable, Dict
+from typing import Callable, Set
+from typing import Tuple, List, Dict
 
 import cv2
+import numpy
 import numpy as np
 import rospy
+from cv_bridge import CvBridge
 from genpy import Time
+from psaf_messages.msg import CombinedCameraImage
+from sensor_msgs.msg import Image
+from std_msgs.msg import Time
+from psaf_abstraction_layer.sensors.SegmentationCamera import Tag as SegmentationTag, SegmentationCamera
 
-from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
-from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
-from psaf_abstraction_layer.sensors.SegmentationCamera import SegmentationCamera, Tag as SegmentationTag
+
+def get_topic(role_name: str = "ego_vehicle") -> str:
+    return f"/psaf/sensors/{role_name}/fusionCamera"
 
 
-class CameraDataFusion:
 
-    def __init__(self, role_name: str = "ego_vehicle", time_threshold=0.1, visible_tags: Set[SegmentationTag] = None):
+class FusionCameraService:
+
+    def __init__(self, role_name: str = "ego_vehicle", time_threshold=0.1):
         super().__init__()
-
-        self.visible_tags = visible_tags
 
         # Threshold between two image in seconds -> smaller is better but makes it harder to find partners
         self.time_threshold = time_threshold
 
-        # Init camera
-        self.depth_camera = DepthCamera(role_name, "front")
-        self.depth_camera.set_on_image_listener(self.__on_depth_image)
-        self.depth_images: Dict[Time, np.ndarray] = {}
+        self.__topic = get_topic(role_name)
+        self.publisher = rospy.Publisher(self.topic, CombinedCameraImage, queue_size=4)
+        # Init cameras
+        id = "front"
+        self.__depth_subscriber = rospy.Subscriber(f"/carla/{role_name}/camera/depth/{id}/image_depth", Image,
+                                                   self.__on_depth_image, queue_size=10)
+        self.depth_images: Dict[Time, Image] = {}
 
-        self.rgb_camera = RGBCamera(role_name, "front")
-        self.rgb_camera.set_on_image_listener(self.__on_rgb_image_update)
-        self.rgb_images: Dict[Time, np.ndarray] = {}
+        self.__rgb__subscriber = rospy.Subscriber(f"/carla/{role_name}/camera/rgb/{id}/image_color", Image,
+                                                  self.__on_rgb_image_update, queue_size=10)
+        self.rgb_images: Dict[Time, Image] = {}
 
-        self.segmentation_camera = SegmentationCamera(role_name, "front")
-        self.segmentation_camera.set_on_image_listener(self.__on_segment_image_update)
-        self.segmentation_images: Dict[Time, np.ndarray] = {}
-
-        self.__listener = None
+        self.__segmentation_subscriber = rospy.Subscriber(
+            f"/carla/{role_name}/camera/semantic_segmentation/{id}/image_segmentation", Image,
+            self.__on_segment_image_update, queue_size=10)
+        self.segmentation_images: Dict[Time, Image] = {}
 
         # Lock to prevent data races while processing the image data
         self.processing_lock = Lock()
 
-    def __on_depth_image(self, image, time):
-        self.depth_images[time] = image
+    @property
+    def topic(self):
+        return self.__topic
 
-    def __on_rgb_image_update(self, image, time):
-        self.rgb_images[time] = image
+    def __on_depth_image(self, image_msg: Image):
+        self.depth_images[image_msg.header.stamp] = image_msg
+        self.__match_images(self.segmentation_images, self.rgb_images,
+                            self.depth_images)
 
-    def __on_segment_image_update(self, image, time):
-        self.segmentation_images[time] = image
+    def __on_rgb_image_update(self, image_msg: Image):
+        self.rgb_images[image_msg.header.stamp] = image_msg
+        self.__match_images(self.segmentation_images, self.rgb_images,
+                            self.depth_images)
+
+    def __on_segment_image_update(self, image_msg: Image):
+        self.segmentation_images[image_msg.header.stamp] = image_msg
         self.__match_images(self.segmentation_images, self.rgb_images,
                             self.depth_images)
 
@@ -116,8 +132,8 @@ class CameraDataFusion:
         else:
             return dict(map(lambda x: (x[1], x[0]), match(list_b, list_a).items()))
 
-    def __match_images(self, segmentation_images: Dict[Time, np.ndarray], rgb_images: Dict[Time, np.ndarray],
-                       depth_images: Dict[Time, np.ndarray]):
+    def __match_images(self, segmentation_images: Dict[Time, Image], rgb_images: Dict[Time, Image],
+                       depth_images: Dict[Time, Image]):
 
         # Get the time list and use a copy of them to capture only the current situation that might change during
         # the execution
@@ -174,82 +190,69 @@ class CameraDataFusion:
 
             for time, (segmentation_image, rgb_image, depth_image) in result.items():
                 # Filter segmentation camera image for the given tags
-                if self.visible_tags is not None:
-                    segmentation_image = SegmentationCamera.filter_for_tags(segmentation_image, self.visible_tags)
-
-                # Call listener method
-                if self.__listener is not None:
-                    self.__listener(segmentation_image, rgb_image, depth_image, time)
+                self.__publish(segmentation_image, rgb_image, depth_image)
 
             # Tidy up
             del segmentation_times, rgb_times, depth_times, filtered_rgb_matches, filtered_depth_matches
 
-    def set_on_image_data_listener(self, func: Callable[[np.ndarray, np.ndarray, np.ndarray, Time], None]):
-        """
-        Set function to be called with image data
-        :param func: the function ( segmentation_image, rgb_image, depth_image, time) -> None
-        :return: None
-        """
-        self.__listener = func
+    def __publish(self, seg: Image, rgb: Image, depth: Image):
+        msg = CombinedCameraImage()
+        msg.segmentation = seg
+        msg.rgb = rgb
+        msg.depth = depth
+        self.publisher.publish(msg)
 
 
-class CameraDataFusionWrapper:
-    # TODO Bug listener of second wrapper with same instance seems not to be called
+class FusionCamera:
     """
-    Wrapper for CameraDataFusion to reduce the computation time for identical camera data fusions by
-    applying a singleton wrapper patter
+    Abstraction layer for a fusion camera
     """
 
-    instances = {}
-    wrapper_listeners = {}
+    def __init__(self, role_name: str = "ego_vehicle",visible_tags: Set[SegmentationTag] = None):
+        # 2d image with distance in meters max 1000
 
-    def __init__(self, role_name: str = "ego_vehicle", time_threshold=0.1, visible_tags: Set[SegmentationTag] = None):
-        self.instance = CameraDataFusionWrapper.__get_instance(role_name, time_threshold)
+        self.segmentation_image = None
+        self.rgb_image = None
+        self.depth_image = None
+
         self.visible_tags = visible_tags
 
+        self.__subscriber = rospy.Subscriber(get_topic(role_name), CombinedCameraImage,
+                                             self.__update_image)
+
         self.__listener = None
+        self.bridge = CvBridge()
 
-        CameraDataFusionWrapper.wrapper_listeners[self.instance].append(self.__on_new_data)
-
-    @classmethod
-    def __get_instance(cls, role_name: str = "ego_vehicle", time_threshold=0.1):
+    def __update_image(self, image_msg: CombinedCameraImage):
         """
-        Internal helper method to crate the instances if necessary
-        :param role_name:
-        :param time_threshold:
-        :return:
+        Internal method to update the distance data
+        :param image_msg: the message
+        :return: None
         """
-        parameters = (role_name, time_threshold)
-        if parameters in cls.instances.keys():
-            return cls.instances[parameters]
-        else:
-            instance = CameraDataFusion(role_name=role_name, time_threshold=time_threshold, visible_tags=None)
-            instance.set_on_image_data_listener(
-                lambda segmentation_image, rgb_image, depth_image, time:
-                cls.__listener_wrapper(instance, segmentation_image, rgb_image, depth_image, time))
-            cls.wrapper_listeners[instance] = []
-            cls.instances[parameters] = instance
-            return instance
+        self.segmentation_image = self.bridge.imgmsg_to_cv2(image_msg.segmentation, desired_encoding='rgb8')
 
-    @classmethod
-    def __listener_wrapper(cls, instance, segmentation_image, rgb_image, depth_image, time):
-        for each in cls.wrapper_listeners[instance]:
-            # Process(target=each,args = [ segmentation_image,rgb_image, depth_image, time]).start()
-            each(segmentation_image, rgb_image, depth_image, time)
-
-    def __on_new_data(self, segmentation_image, rgb_image, depth_image, time):
-        # Filter segmentation camera image for the given tags
         if self.visible_tags is not None:
-            segmentation_image = SegmentationCamera.filter_for_tags(segmentation_image, self.visible_tags)
+            self.segmentation_image = SegmentationCamera.filter_for_tags(self.segmentation_image, self.visible_tags)
 
-        # Call listener method
-        if self.__listener is not None:
-            self.__listener(segmentation_image, rgb_image, depth_image, time)
+        self.rgb_image = cv2.cvtColor(self.bridge.imgmsg_to_cv2(image_msg.rgb, desired_encoding='bgr8'),
+                                      cv2.COLOR_BGR2RGB)
+        self.depth_image = self.bridge.imgmsg_to_cv2(image_msg.depth, desired_encoding='passthrough')
 
-    def set_on_image_data_listener(self, func: Callable[[np.ndarray, np.ndarray, np.ndarray, Time], None]):
+        if self.__listener != None:
+            self.__listener(image_msg.segmentation.header.stamp, self.segmentation_image, self.rgb_image,
+                            self.depth_image)
+
+    def get_image(self):
         """
-        Set function to be called with image data
-        :param func: the function ( segmentation_image, rgb_image, depth_image, time) -> None
+        Return the current depth image
+        :return:the current image
+        """
+        return self.position
+
+    def set_on_image_listener(self, func: Callable[[Time, numpy.ndarray, numpy.ndarray, numpy.ndarray], None]):
+        """
+        Set function to be called with the time, segmentation, rgb and depth image as parameter
+        :param func: the function
         :return: None
         """
         self.__listener = func
@@ -272,10 +275,11 @@ def show_image(title, image):
 
 
 if __name__ == "__main__":
-    rospy.init_node("DetectionTest")
+    rospy.init_node("FusionCameraService")
 
 
-    def store_image(seg_image, rgb_image, depth_image, _):
+    def store_image(time, seg_image, rgb_image, depth_image):
+        from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
         # Create one big image
         image = np.vstack((seg_image,
                            rgb_image,
@@ -284,6 +288,7 @@ if __name__ == "__main__":
         show_image("Fusion", image)
 
 
-    s = CameraDataFusionWrapper()
-    s.set_on_image_data_listener(store_image)
+    s = FusionCameraService()
+    sensor = FusionCamera()
+    sensor.set_on_image_listener(store_image)
     rospy.spin()

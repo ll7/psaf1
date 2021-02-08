@@ -86,7 +86,7 @@ class SegmentationCamera:
         Return the current segmentation image
         :return:the current image
         """
-        return self.position
+        return self.image
 
     def set_on_image_listener(self, func:Callable[[numpy.ndarray,Time],None]):
         """

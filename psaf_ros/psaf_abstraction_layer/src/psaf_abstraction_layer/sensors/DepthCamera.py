@@ -43,15 +43,14 @@ class DepthCamera:
         Return the current depth image
         :return:the current image
         """
-        return self.position
+        return self.image
 
     def set_on_image_listener(self, func:Callable[[numpy.ndarray,Time],None]):
         """
         Set function to be called with the depth image as parameter
         :param func: the function
         :return: None
-        """        # if self.__listener != None:
-        #     self.__listener(self.image)
+        """
         self.__listener = func
 
 

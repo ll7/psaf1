@@ -4,6 +4,7 @@ from typing import List
 import rospy
 from psaf_messages.msg import TrafficSignInfo, SpeedSign, StopMark, StopSign, TrafficLight, StopLineInfo, StopLine
 
+from psaf_abstraction_layer.sensors.FusionCamera import FusionCameraService
 from psaf_perception.detectors.AbstractDetector import DetectedObject, Labels, LabelGroups
 from psaf_perception.detectors.TrafficSignDetector import TrafficSignDetector
 from psaf_perception.detectors.StopLineDetector import StopLineDetector
@@ -21,6 +22,8 @@ class DetectionService:
         rospy.init_node("DetectionService")
         role_name = rospy.get_param("role_name", "ego_vehicle")
         use_gpu = rospy.get_param("use_gpu",True)
+        # Start the camera fusion Service
+        fusionService = FusionCameraService(role_name)
         # Add detectors here
         # self.detectors.update({"trafficSign": TrafficSignDetector(role_name=role_name, use_gpu=use_gpu)})
         # self.detectors.update({"stopMarking": StopMarkDetector(role_name=role_name, use_gpu=use_gpu)})
@@ -148,5 +151,6 @@ class DetectionService:
 
 
 if __name__ == "__main__":
+    # Start the detection service
     service = DetectionService()
     rospy.spin()

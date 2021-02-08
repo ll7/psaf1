@@ -11,8 +11,8 @@ import torch
 from torch.autograd import Variable
 from torchvision.transforms import transforms
 
-from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
-from psaf_perception.CameraDataFusion import SegmentationTag, CameraDataFusion
+from psaf_abstraction_layer.sensors.FusionCamera import FusionCamera
+from psaf_abstraction_layer.sensors.SegmentationCamera import Tag as SegmentationTag
 from psaf_perception.detectors.AbstractDetector import Labels, AbstractDetector, DetectedObject
 
 
@@ -67,9 +67,8 @@ class TrafficSignDetector(AbstractDetector):
         torch.no_grad()  # reduce memory consumption and improve speed
 
         # init image source = combination of segmentation, rgb and depth camera
-        self.combinedCamera = CameraDataFusion(role_name=role_name, time_threshold=0.08,
-                                               visible_tags=set([SegmentationTag.TrafficSign]))
-        self.combinedCamera.set_on_image_data_listener(self.__on_new_image_data)
+        self.combinedCamera = FusionCamera(role_name=role_name,visible_tags={SegmentationTag.TrafficSign})
+        self.combinedCamera.set_on_image_listener(self.__on_new_image_data)
 
     def __classify(self, image) -> Tuple[Labels, float]:
         """
@@ -87,7 +86,7 @@ class TrafficSignDetector(AbstractDetector):
 
         return label, float(pred[hit])
 
-    def __on_new_image_data(self, segmentation_image, rgb_image, depth_image, time):
+    def __on_new_image_data(self, time,segmentation_image, rgb_image, depth_image):
         """
         Handles the new image data from the cameras
         :param segmentation_image: the segmentation image
@@ -115,7 +114,7 @@ class TrafficSignDetector(AbstractDetector):
             x2 = x1 + w
             y2 = y1 + h
 
-            mask = segmentation_image[y1:y2, x1:x2] == SegmentationTag.TrafficSign.color
+            mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
             # get cropped rgb image
             crop_rgb = rgb_image[y1:y2, x1:x2, :]
             # use inverted mask to clear the background
@@ -138,7 +137,7 @@ class TrafficSignDetector(AbstractDetector):
                     y2 = int((boxes[i][1] + boxes[i][3]) * H)
 
                     # Use segmentation data to create a mask to delete the background
-                    mask = segmentation_image[y1:y2, x1:x2] == SegmentationTag.TrafficSign.color
+                    mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
 
                     # get cropped depth image
                     crop_depth = depth_image[y1:y2, x1:x2]
@@ -185,6 +184,8 @@ def show_image(title, image):
 
 
 if __name__ == "__main__":
+    from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+
     rospy.init_node("DetectionTest")
 
     detected_r = None

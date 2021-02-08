@@ -34,7 +34,7 @@ class RGBCamera:
         Return the current rgb image
         :return:the current image
         """
-        return self.position
+        return self.image
 
     def set_on_image_listener(self, func:Callable[[numpy.ndarray,Time],None]):
         """
