@@ -8,24 +8,23 @@
 #include "boost/range/algorithm/copy.hpp"
 #include <unordered_set>
 namespace psaf_abstraction_layer {
-   SensorFusionService::SensorFusionService(std::string role_name, double time_threshold) {
+   SensorFusionService::SensorFusionService(std::string role_name, std::string camer_group_name , double time_threshold) {
 
         // Init vars
         this->time_threshold_ns = time_threshold * 1e9;
 
-        ros::NodeHandle private_nh("~/" + role_name + "/" + "front");
+        ros::NodeHandle private_nh("~/" + role_name + "/" + camer_group_name);
         // Publisher
         this->publisher = private_nh.advertise<psaf_messages::CombinedCameraImage>(
-                "/psaf/sensors/" + role_name + "/fusionCamera", 1);
+                "/psaf/sensors/" + role_name + "/fusionCamera/" + camer_group_name + "/fusion_image", 1);
 
         // Subscribers
-        const std::string id = "front";
         this->segmentation_subscriber = private_nh.subscribe(
-                "/carla/" + role_name + "/camera/semantic_segmentation/" + id + "/image_segmentation", 10,
+                "/carla/" + role_name + "/camera/semantic_segmentation/" + camer_group_name + "/image_segmentation", 10,
                 &SensorFusionService::onSegmentationImageCallback, this);
-        this->rgb_subscriber = private_nh.subscribe("/carla/" + role_name + "/camera/rgb/" + id + "/image_color", 10,
+        this->rgb_subscriber = private_nh.subscribe("/carla/" + role_name + "/camera/rgb/" + camer_group_name + "/image_color", 10,
                                                     &SensorFusionService::onRGBImageCallback, this);
-        this->depth_subscriber = private_nh.subscribe("/carla/" + role_name + "/camera/depth/" + id + "/image_depth",
+        this->depth_subscriber = private_nh.subscribe("/carla/" + role_name + "/camera/depth/" + camer_group_name + "/image_depth",
                                                       10,
                                                       &SensorFusionService::onDepthImageCallback, this);
 
@@ -254,10 +253,19 @@ int main(int argc, char **argv) {
       * You must call one of the versions of ros::init() before using any other
       * part of the ROS system.
       */
-    ros::init(argc, argv, "listener");
+    ros::init(argc, argv, "sensor_fusion_service");
+    ros::NodeHandle nh("~");
+    std::string role_name;
+    nh.getParam("role_name",role_name);
+    std::string camera_group;
+    nh.getParam("camera_group",camera_group);
+
+    double time_threshold;
+    nh.getParam("threshold_diff",time_threshold);
+
 
     using namespace psaf_abstraction_layer;
-    SensorFusionService *service = new SensorFusionService("ego_vehicle",0.1);
+    SensorFusionService *service = new SensorFusionService(role_name,camera_group,time_threshold);
     service->start();
     /**
        * ros::spin() will enter a loop, pumping callbacks.  With this version, all

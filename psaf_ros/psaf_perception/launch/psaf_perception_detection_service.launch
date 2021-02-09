@@ -2,10 +2,15 @@
 <launch>
     <!--  Arguments begin-->
     <arg name='use_gpu' default='True'/>
+    <arg name='role_name' default='ego_vehicle'/>
     <!-- Arguments end-->
 
     <!--  Start the camera fusion service for the detector-->
-    <include file="$(find psaf_abstraction_layer)/launch/psaf_fusion_camera_service.launch"/>
+    <include file="$(find psaf_abstraction_layer)/launch/psaf_fusion_camera_service.launch">
+        <arg name='role_name' value="$(arg role_name)"/>
+        <arg name='camera_group' value="front"/>
+        <arg name='threshold_diff' value="0.1"/>
+    </include>
 
 
     <param name="use_gpu" type="bool" value="$(arg use_gpu)"/>

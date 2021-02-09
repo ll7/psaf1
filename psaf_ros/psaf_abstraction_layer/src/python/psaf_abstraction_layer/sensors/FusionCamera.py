@@ -15,15 +15,12 @@ from std_msgs.msg import Time
 from psaf_abstraction_layer.sensors.SegmentationCamera import Tag as SegmentationTag, SegmentationCamera
 
 
-def get_topic(role_name: str = "ego_vehicle") -> str:
-    return f"/psaf/sensors/{role_name}/fusionCamera"
-
 class FusionCamera:
     """
     Abstraction layer for a fusion camera
     """
 
-    def __init__(self, role_name: str = "ego_vehicle", visible_tags: Set[SegmentationTag] = None,queue_size = 1 ):
+    def __init__(self, role_name: str = "ego_vehicle",camera_name: str = "front", visible_tags: Set[SegmentationTag] = None,queue_size = 1 ):
         # 2d image with distance in meters max 1000
 
         self.segmentation_image = None
@@ -32,7 +29,7 @@ class FusionCamera:
 
         self.visible_tags = visible_tags
 
-        self.__subscriber = rospy.Subscriber(get_topic(role_name), CombinedCameraImage,
+        self.__subscriber = rospy.Subscriber(f"/psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image", CombinedCameraImage,
                                              self.__update_image,queue_size=queue_size)
 
         self.__listener = None

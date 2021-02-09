@@ -23,7 +23,7 @@ namespace psaf_abstraction_layer {
     class SensorFusionService {
 
     public:
-        SensorFusionService(std::string role_name,double time_threshold=.1);
+        SensorFusionService(std::string role_name, std::string camer_group_name, double time_threshold=.1);
 
         ~SensorFusionService();
 
