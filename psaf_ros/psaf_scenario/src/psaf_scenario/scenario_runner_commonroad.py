@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance, Pose, PoseStamped, PoseWithCovarianceStamped
-from python.psaf_abstraction_layer import AckermannControl
-from python.psaf_abstraction_layer import VehicleStatusProvider
+from psaf_abstraction_layer.CarlaCar import AckermannControl, Car
+from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from actionlib import GoalID
 
 import rosbag
