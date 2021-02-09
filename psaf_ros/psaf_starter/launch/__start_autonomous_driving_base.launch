@@ -26,6 +26,8 @@
 
     <!-- Whether to respect the traffic rules -->
     <arg name='respect_traffic_rules' default='True'/>
+    <!-- If true, always try to do a uTurn -->
+    <arg name='always_u_turn' default='False'/>
 
 
     <!-- Arguments end-->
@@ -34,6 +36,7 @@
 
     <!--Parameters-->
     <param name="respect_traffic_rules" type="bool" value="$(arg respect_traffic_rules)" />
+    <param name="always_u_turn" type="bool" value="$(arg always_u_turn)" />
 
     <!--Remaps-->
     <remap from="/cmd_vel" to="/carla/ego_vehicle/twist_pid"/>
