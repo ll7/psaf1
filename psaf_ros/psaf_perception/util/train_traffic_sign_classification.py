@@ -26,7 +26,7 @@ store_path = os.path.abspath(f"../models/traffic_sign-classifier-{now}")
 exisisting_model_path = '../models/traffic_sign-classifier-2021-01-18-17:58:35.pt'
 
 # classes in the dataset
-classes = ['back', 'speed_limit_30', 'speed_limit_40', 'speed_limit_60', 'speed_30', 'speed_60', 'speed_90','stop']
+classes = ['back', 'speed_limit_30', 'speed_limit_40', 'speed_limit_60', 'speed_30', 'speed_60', 'speed_90', 'stop']
 
 # Batch size for training (change depending on how much memory you have)
 batch_size = 512
@@ -37,6 +37,9 @@ num_epochs = 1000
 # Flag for feature extracting. When False, we finetune the whole model,
 #   when True we only update the reshaped layer params
 feature_extract = True
+
+# Use cudnn for speed up
+use_cudnn = True
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
@@ -182,6 +185,10 @@ if __name__ == "__main__":
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    if device.type == 'cuda':
+        print("Enable cudnn")
+        torch.backends.cudnn.enabled = True
+        torch.backends.cudnn.benchmark = True
     # Send the model to GPU
     model_ft = model_ft.to(device)
 
@@ -223,6 +230,7 @@ if __name__ == "__main__":
         'epochs': num_epochs,
         'batch size': batch_size,
         'freeze feature extraction layers': feature_extract,
+        'Used cudnn': use_cudnn,
         'validation_accuracy': float(max(hist).cpu()),
         'number of training images': len(image_datasets['train']),
         'number of validation images': len(image_datasets['val']),
