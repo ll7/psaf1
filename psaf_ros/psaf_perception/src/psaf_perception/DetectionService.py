@@ -19,8 +19,6 @@ class DetectionService:
         rospy.init_node("DetectionService")
         role_name = rospy.get_param("role_name", "ego_vehicle")
         use_gpu = rospy.get_param("use_gpu",True)
-        # Start the camera fusion Service
-        fusionService = FusionCameraService(role_name)
         # Add detectors here
         # self.detectors.update({"trafficSign": TrafficSignDetector(role_name=role_name, use_gpu=use_gpu)})
         # self.detectors.update({"stopMarking": StopMarkDetector(role_name=role_name, use_gpu=use_gpu)})

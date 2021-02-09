@@ -1,0 +1,8 @@
+<!-- -->
+<launch>
+<!--  Arguments begin-->
+<!-- Arguments end-->
+
+  <node pkg="psaf_abstraction_layer" type="sensor_fusion_service" name="sensor_fusion_service" output="screen">
+  </node>
+</launch>
