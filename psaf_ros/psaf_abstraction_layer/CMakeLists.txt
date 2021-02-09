@@ -61,11 +61,15 @@ set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
 #   src/${PROJECT_NAME}/psaf_abstraction_layer.cpp
 # )
 
+add_library(sensor_fusion_service_lib
+        src/cpp/psaf_abstraction_layer/HelperAlgorithms.cpp
+        )
+add_dependencies(sensor_fusion_service_lib  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(sensor_fusion_service src/cpp/psaf_abstraction_layer/SensorFusionService.cpp)
+add_executable(sensor_fusion_service src/cpp/psaf_abstraction_layer/CameraFusionService.cpp)
 
-add_dependencies(sensor_fusion_service  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(sensor_fusion_service  ${catkin_LIBRARIES})
+add_dependencies(sensor_fusion_service  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} sensor_fusion_service_lib)
+target_link_libraries(sensor_fusion_service  ${catkin_LIBRARIES} sensor_fusion_service_lib)
 
 #############
 ## Install ##
