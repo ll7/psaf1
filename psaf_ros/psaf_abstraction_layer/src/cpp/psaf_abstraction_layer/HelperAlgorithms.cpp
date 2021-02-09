@@ -3,7 +3,6 @@
 //
 
 #include "HelperAlgorithms.h"
-#include <unordered_set>
 
 #include "boost/range/adaptors.hpp"
 
@@ -92,29 +91,8 @@ namespace psaf_abstraction_layer {
 
         }
 
+    
 
     }
-    /**
-     * Creates an intersection of two sets
-     * @tparam T the generic type of the set
-     * @param a first set
-     * @param b second set
-     * @return the intersection set
-     */
-    template<typename T>
-    std::set <T> intersection_of(const std::set <T> &a, const std::set <T> &b) {
-        std::set <T> rtn;
-        std::unordered_multiset <T> st;
-        std::for_each(a.begin(), a.end(), [&st](const T &k) { st.insert(k); });
-        std::for_each(b.begin(), b.end(),
-                      [&st, &rtn](const T &k) {
-                          auto iter = st.find(k);
-                          if (iter != st.end()) {
-                              rtn.insert(k);
-                              st.erase(iter);
-                          }
-                      }
-        );
-        return rtn;
-    }
+
 }
