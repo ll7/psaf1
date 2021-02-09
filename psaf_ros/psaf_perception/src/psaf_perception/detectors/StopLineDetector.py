@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import rospy
 
-from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
-from psaf_abstraction_layer.sensors.SegmentationCamera import SegmentationCamera,Tag
+from python.psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+from python.psaf_abstraction_layer import SegmentationCamera,Tag
 from psaf_perception.detectors.AbstractDetector import AbstractDetector, DetectedObject, Labels
 
 

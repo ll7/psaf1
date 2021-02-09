@@ -2,7 +2,7 @@
 
 import rospy
 from math import pi
-from psaf_abstraction_layer.CarlaCar import Car
+from python.psaf_abstraction_layer import Car
 
 def print_orientation(status):
     euler = status.get_orientation_as_euler()

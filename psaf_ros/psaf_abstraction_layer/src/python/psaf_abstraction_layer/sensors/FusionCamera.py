@@ -12,12 +12,11 @@ from genpy import Time
 from psaf_messages.msg import CombinedCameraImage
 from sensor_msgs.msg import Image
 from std_msgs.msg import Time
-from psaf_abstraction_layer.sensors.SegmentationCamera import Tag as SegmentationTag, SegmentationCamera
+from python.psaf_abstraction_layer.sensors.SegmentationCamera import Tag as SegmentationTag, SegmentationCamera
 
 
 def get_topic(role_name: str = "ego_vehicle") -> str:
     return f"/psaf/sensors/{role_name}/fusionCamera"
-
 
 
 class FusionCameraService:
@@ -45,6 +44,7 @@ class FusionCameraService:
             self.__on_segment_image_update, queue_size=10)
         self.segmentation_images: Dict[Time, Image] = {}
 
+        rospy.Timer(rospy.Duration(0.2),self.__timer_callback)
         # Lock to prevent data races while processing the image data
         self.processing_lock = Lock()
 
@@ -54,18 +54,12 @@ class FusionCameraService:
 
     def __on_depth_image(self, image_msg: Image):
         self.depth_images[image_msg.header.stamp] = image_msg
-        self.__match_images(self.segmentation_images, self.rgb_images,
-                            self.depth_images)
 
     def __on_rgb_image_update(self, image_msg: Image):
         self.rgb_images[image_msg.header.stamp] = image_msg
-        self.__match_images(self.segmentation_images, self.rgb_images,
-                            self.depth_images)
 
     def __on_segment_image_update(self, image_msg: Image):
         self.segmentation_images[image_msg.header.stamp] = image_msg
-        self.__match_images(self.segmentation_images, self.rgb_images,
-                            self.depth_images)
 
     @classmethod
     def __time_difference(cls, time_a, time_b) -> float:
@@ -83,8 +77,8 @@ class FusionCameraService:
     def __find_best_matches(cls, list_a: List[Time], list_b: List[Time]) -> Dict[Time, Time]:
         def match(bigger_list: List[Time], smaller_list: List[Time]) -> Dict[Time, Time]:
 
-            bigger_sorted_list = sorted(bigger_list, key=lambda x: x.nsecs * 10 ** -9 + x.secs)
-            smaller_sorted_list = sorted(smaller_list, key=lambda x: x.nsecs * 10 ** -9 + x.secs)
+            bigger_sorted_list = bigger_list #sorted(bigger_list, key=lambda x: x.nsecs * 10 ** -9 + x.secs)
+            smaller_sorted_list = smaller_list #sorted(smaller_list, key=lambda x: x.nsecs * 10 ** -9 + x.secs)
 
             lower_bound = 0
             upper_bound = len(bigger_sorted_list)
@@ -132,16 +126,19 @@ class FusionCameraService:
         else:
             return dict(map(lambda x: (x[1], x[0]), match(list_b, list_a).items()))
 
-    def __match_images(self, segmentation_images: Dict[Time, Image], rgb_images: Dict[Time, Image],
-                       depth_images: Dict[Time, Image]):
+    def __timer_callback(self,event):
+        self.__match_images()
 
-        # Get the time list and use a copy of them to capture only the current situation that might change during
-        # the execution
-        segmentation_times = list(segmentation_images.keys())
-        rgb_times = list(rgb_images.keys())
-        depth_times = list(depth_images.keys())
+    def __match_images(self):
+
 
         with self.processing_lock:
+            # Get the time list and use a copy of them to capture only the current situation that might change during
+            # the execution
+            segmentation_times = list(self.segmentation_images.keys())
+            rgb_times = list(self.rgb_images.keys())
+            depth_times = list(self.depth_images.keys())
+
             # Find the matches for both sensors
             rgb_matches = self.__find_best_matches(segmentation_times, rgb_times)
             depth_matches = self.__find_best_matches(segmentation_times, depth_times)
@@ -171,22 +168,22 @@ class FusionCameraService:
             for key in key_intersection:
                 try:
                     result[key] = (
-                        segmentation_images[key], rgb_images[filtered_rgb_matches[key]],
-                        depth_images[filtered_depth_matches[key]])
+                        self.segmentation_images[key], self.rgb_images[filtered_rgb_matches[key]],
+                        self.depth_images[filtered_depth_matches[key]])
                 except KeyError:
                     pass
             # step 3: remove all images that are older than the newest key
             time_border = key_intersection[-1]  # get the time stamp that is matched to the newest segmentation image
             for e in filter(lambda x: x <= time_border, segmentation_times):
-                del segmentation_images[e]
+                del self.segmentation_images[e]
             # get the time stamp that is matched to the newest segmentation image
             time_border = filtered_rgb_matches[key_intersection[-1]]
             for e in filter(lambda x: x <= time_border, rgb_times):
-                del rgb_images[e]
+                del self.rgb_images[e]
             # get the time stamp that is matched to the newest segmentation image
             time_border = filtered_depth_matches[key_intersection[-1]]
             for e in filter(lambda x: x <= time_border, depth_times):
-                del depth_images[e]
+                del self.depth_images[e]
 
             for time, (segmentation_image, rgb_image, depth_image) in result.items():
                 # Filter segmentation camera image for the given tags
@@ -208,7 +205,7 @@ class FusionCamera:
     Abstraction layer for a fusion camera
     """
 
-    def __init__(self, role_name: str = "ego_vehicle",visible_tags: Set[SegmentationTag] = None):
+    def __init__(self, role_name: str = "ego_vehicle", visible_tags: Set[SegmentationTag] = None,queue_size = 1 ):
         # 2d image with distance in meters max 1000
 
         self.segmentation_image = None
@@ -218,7 +215,7 @@ class FusionCamera:
         self.visible_tags = visible_tags
 
         self.__subscriber = rospy.Subscriber(get_topic(role_name), CombinedCameraImage,
-                                             self.__update_image)
+                                             self.__update_image,queue_size=queue_size)
 
         self.__listener = None
         self.bridge = CvBridge()
@@ -229,6 +226,9 @@ class FusionCamera:
         :param image_msg: the message
         :return: None
         """
+
+        age = rospy.Time.now() - image_msg.segmentation.header.stamp
+        print(f"Camera Age {age.to_sec()}s")
         self.segmentation_image = self.bridge.imgmsg_to_cv2(image_msg.segmentation, desired_encoding='rgb8')
 
         if self.visible_tags is not None:
@@ -278,17 +278,21 @@ if __name__ == "__main__":
     rospy.init_node("FusionCameraService")
 
 
-    def store_image(time, seg_image, rgb_image, depth_image):
-        from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
+    def store_image(time_stamp, seg_image, rgb_image, depth_image):
+        from python.psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
+
+        age = rospy.Time.now() - time_stamp
+        print(f"Age {age.to_sec()}s")
         # Create one big image
         image = np.vstack((seg_image,
                            rgb_image,
                            cv2.cvtColor((depth_image / DepthCamera.MAX_METERS * 255).astype('uint8'),
                                         cv2.COLOR_GRAY2BGR)))
         show_image("Fusion", image)
+        import time
+        time.sleep(0.2)
 
-
-    s = FusionCameraService()
-    sensor = FusionCamera()
+    # s = FusionCameraService(time_threshold=0.2)
+    sensor = FusionCamera(queue_size=1)
     sensor.set_on_image_listener(store_image)
     rospy.spin()

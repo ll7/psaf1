@@ -6,7 +6,7 @@ from psaf_messages.msg import TrafficSignInfo
 from std_msgs.msg import Float64
 import cv2
 import numpy as np
-from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+from python.psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 
 from tf.transformations import euler_from_quaternion
 
