@@ -50,6 +50,7 @@ catkin_python_setup()
 ## Generate messages in the 'msg' folder
 add_message_files(
    FILES
+   CombinedCameraImage.msg
    TrafficSignInfo.msg
    SpeedSign.msg
    StopMark.msg
@@ -62,7 +63,7 @@ add_message_files(
    CenterLineExtended.msg
    XRoute.msg
    XLanelet.msg
-   CombinedCameraImage.msg
+   PlanningInstruction.msg
 )
 
 ## Generate services in the 'srv' folder
