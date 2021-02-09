@@ -4,7 +4,6 @@ from typing import List
 import rospy
 from psaf_messages.msg import TrafficSignInfo, SpeedSign, StopMark, StopSign, TrafficLight, StopLineInfo, StopLine
 
-from python.psaf_abstraction_layer.sensors.FusionCamera import FusionCameraService
 from psaf_perception.detectors.AbstractDetector import DetectedObject, Labels, LabelGroups
 from psaf_perception.detectors.StopLineDetector import StopLineDetector
 from psaf_perception.detectors.TrafficLightDetector import TrafficLightDetector

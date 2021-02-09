@@ -2,8 +2,7 @@ import cv2
 import numpy as np
 import rospy
 
-from python.psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
-from python.psaf_abstraction_layer import SegmentationCamera,Tag
+from psaf_abstraction_layer.sensors.SegmentationCamera import SegmentationCamera,Tag
 from psaf_perception.detectors.AbstractDetector import AbstractDetector, DetectedObject, Labels
 
 
@@ -67,6 +66,8 @@ class StopLineDetector(AbstractDetector):
 
 
 if __name__ == "__main__":
+    from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+
     # Show case code
     def show_image(title, image):
         max_width, max_height = 1200, 800

@@ -12,7 +12,7 @@ from genpy import Time
 from psaf_messages.msg import CombinedCameraImage
 from sensor_msgs.msg import Image
 from std_msgs.msg import Time
-from python.psaf_abstraction_layer.sensors.SegmentationCamera import Tag as SegmentationTag, SegmentationCamera
+from psaf_abstraction_layer.sensors.SegmentationCamera import Tag as SegmentationTag, SegmentationCamera
 
 
 def get_topic(role_name: str = "ego_vehicle") -> str:
@@ -279,7 +279,7 @@ if __name__ == "__main__":
 
 
     def store_image(time_stamp, seg_image, rgb_image, depth_image):
-        from python.psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
+        from psaf_abstraction_layer.sensors.DepthCamera import DepthCamera
 
         age = rospy.Time.now() - time_stamp
         print(f"Age {age.to_sec()}s")

@@ -4,7 +4,7 @@ import math
 from lanelet2.core import GPSPoint
 from tf.transformations import quaternion_from_euler
 
-from python.psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
+from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from commonroad.scenario.trajectory import State
 from commonroad.planning.goal import GoalRegion
@@ -28,7 +28,7 @@ from copy import deepcopy
 import rospy
 from sensor_msgs.msg import NavSatFix
 from psaf_planning.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
-from python.psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
+from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
 from enum import Enum
 from psaf_messages.msg import XRoute
 from lanelet2.projection import UtmProjector

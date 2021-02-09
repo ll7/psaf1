@@ -13,7 +13,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
-from python.psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 from psaf_perception.detectors.AbstractDetector import AbstractDetector, DetectedObject, Labels
 
 

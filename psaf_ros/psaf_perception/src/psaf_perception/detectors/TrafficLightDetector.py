@@ -11,8 +11,7 @@ import torch
 from torch.autograd import Variable
 from torchvision.transforms import transforms
 
-from python.psaf_abstraction_layer.sensors.FusionCamera import FusionCamera
-from python.psaf_abstraction_layer import Tag as SegmentationTag
+from psaf_abstraction_layer.sensors.FusionCamera import FusionCamera, SegmentationTag
 from psaf_perception.detectors.AbstractDetector import DetectedObject, AbstractDetector, Labels
 
 
@@ -190,7 +189,7 @@ def show_image(title, image):
 
 
 if __name__ == "__main__":
-    from python.psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+    from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
 
     rospy.init_node("DetectionTest")
 
