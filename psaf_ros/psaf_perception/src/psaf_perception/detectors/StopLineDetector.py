@@ -62,7 +62,7 @@ class StopLineDetector(AbstractDetector):
                 if int(h/w*1000) in self.ratio_range_per_mille and w> 0.3:
                     detected.append(DetectedObject(x1, y1, w, h, distance=self.__heuristic_calc_distance_by_y(y1), label=Labels.StopLine))
 
-        self.inform_listener(detected)
+        self.inform_listener(time,detected)
 
 
 if __name__ == "__main__":
@@ -108,7 +108,7 @@ if __name__ == "__main__":
         show_image("Stop line detection", image)
 
 
-    def on_detected(detected_list):
+    def on_detected(_,detected_list):
         global detected_r
         detected_r = detected_list
 

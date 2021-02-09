@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Set, List, Callable
+from rospy import Time
 
 
 class LabelGroups(Enum):
@@ -99,16 +100,17 @@ class AbstractDetector:
     def __init__(self):
         self.__listener = None
 
-    def inform_listener(self, detected_list):
+    def inform_listener(self,time_stamp, detected_list):
         """
         Informs all listeners about the new list of detected objects
         :param detected_list: the list of detected objects
+        :param time_stamp: time stamp of the detection
         :return: None
         """
         if self.__listener is not None:
-            self.__listener(detected_list)
+            self.__listener(time_stamp,detected_list)
 
-    def set_on_detection_listener(self, func: Callable[[List[DetectedObject]], None]):
+    def set_on_detection_listener(self, func: Callable[[List[DetectedObject],Time], None]):
         """
         Set function to be called with detected objects
         :param func: the function

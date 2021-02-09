@@ -42,7 +42,8 @@ namespace psaf_local_planner
             ros::NodeHandle private_nh("~/" + name);
             g_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_global_plan", 1);
             obstacle_pub = private_nh.advertise<psaf_messages::Obstacle>("/psaf/planning/obstacle", 1);
-            debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
+            debug_marker_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
+            debug_state_pub = private_nh.advertise<std_msgs::String>("/psaf/debug/local_planner/state", 1);
 
             global_plan_extended_sub = private_nh.subscribe("/psaf/xroute", 10, &PsafLocalPlanner::globalPlanExtendedCallback, this);
             planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
@@ -62,7 +63,7 @@ namespace psaf_local_planner
 
             this->state_machine->init();
 
-            costmap_raytracer = CostmapRaytracer(costmap_ros, &current_pose, &debug_pub);
+            costmap_raytracer = CostmapRaytracer(costmap_ros, &current_pose, &debug_marker_pub);
 
             initialized = true;
         }
@@ -111,6 +112,7 @@ namespace psaf_local_planner
                 updateStateMachine();
 
                 target_velocity = getTargetVelDriving();
+                // Update target velocity regarding the right of way situation
                 target_velocity = getTargetVelIntersection();
                 target_velocity = checkLaneChangeFree();
 

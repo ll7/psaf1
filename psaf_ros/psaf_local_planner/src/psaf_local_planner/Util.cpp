@@ -37,9 +37,10 @@ namespace psaf_local_planner
 
 
     void PsafLocalPlanner::trafficSituationCallback(const psaf_messages::TrafficSituation::ConstPtr &msg) {
+
         if (msg->trafficLight.size() > 0) {
             this->traffic_light_state = msg->trafficLight.front();
-        } else {
+        } else { // If no traffic light is detected set state to unknown
             psaf_messages::TrafficLight new_light;
             new_light.state = psaf_messages::TrafficLight::STATE_UNKNOWN;
             this->traffic_light_state = new_light;
@@ -51,24 +52,51 @@ namespace psaf_local_planner
             // Use the stop line distance
             this->stop_distance_at_intersection = msg->distanceToStopLine;
         }else{
-            // Use the traffic light distance if the perception already knows something
-            if(this->traffic_light_state.state!=psaf_messages::TrafficLight::STATE_UNKNOWN){
-                // if the traffic_light is on the right hand side we want to stop 2 meters in front of it
-                if(this->traffic_light_state.x>0.6){
-                    this->stop_distance_at_intersection = this->traffic_light_state.distance-2;
-                }else{ // else the traffic light is on the other side of the intersection (american style)
-                    // we keep 20 meters as distance
-                    this->stop_distance_at_intersection = this->traffic_light_state.distance-20;
-                }
-            } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
-                this->stop_distance_at_intersection = this->computeDistanceToUpcomingTrafficLight()-10;
-                // TODO check for distance to a possible top sign
-            }
+            this->stop_distance_at_intersection = this->computeDistanceToStoppingPointWithoutStopLine();
         }
     }
 
+    double PsafLocalPlanner::computeDistanceToStoppingPointWithoutStopLine() {
+        if (state_machine->isInTrafficLightStates()){ // Use traffic light data only when in correct state
+            // Use the traffic light distance if the perception already knows something
+            if(this->traffic_light_state.state!=psaf_messages::TrafficLight::STATE_UNKNOWN){
+                // if the traffic_light is on the right hand side we want to stop 4 meters in front of it
+                if(this->traffic_light_state.x>0.5 && this->traffic_light_state.y>0.32){
+                    return this->traffic_light_state.distance-4;
+                }else{ // else the traffic light is on the other side of the intersection (american style)
+                    // we keep 20 meters as distance
+                    return this->traffic_light_state.distance-20;
+                }
+            } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
+                    double distance_to_traffic_light = this->computeDistanceToUpcomingTrafficLight();
+                    if( distance_to_traffic_light <1e6){
+                        return std::max((distance_to_traffic_light-10),0.0);
+                    }
+                    // No success go to fallback return
+                }
+        }else if (state_machine->isInStopStates()) {
+            // because we don't have any other information we use the map data minus 10 meters as safety distance guess
+            double distance_to_stop = this->computeDistanceToUpcomingStop();
+            if(distance_to_stop < 1e6){
+                return std::max((distance_to_stop),0.0);
+            }
+            // No success go to fallback return
+
+        }
+        // if we didn't find a way to guess the distance let's return infinity because the stopping point must be far away
+        return std::numeric_limits<double>::infinity(); // "to infinity and beyond" ~ buzz lightyear
+    }
+
     double PsafLocalPlanner::distanceBetweenCenterLines(psaf_messages::CenterLineExtended first, psaf_messages::CenterLineExtended second){
-        return hypot(second.x-first.x,second.y-first.y);
+        return second.distance-first.distance;
+    }
+
+
+    void PsafLocalPlanner::publishCurrentStateForDebug() {
+        std_msgs::String msg;
+        msg.data = this->state_machine->getTextRepresentation();
+
+        this->debug_state_pub.publish(msg);
     }
 
 

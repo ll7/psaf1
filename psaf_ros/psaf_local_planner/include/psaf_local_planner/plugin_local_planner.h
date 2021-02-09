@@ -16,6 +16,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/String.h>
 
 // Geometry messages
 #include <geometry_msgs/Quaternion.h>
@@ -187,7 +188,7 @@ namespace psaf_local_planner {
             double estimateCurvatureAndSetTargetVelocity();
 
             /**
-             * Retruns target speed with check for obstacles in the way
+             * Returns target speed with check for obstacles in the way
              *
              * @returns target_vel: target velocity for driving with vehicles
              */
@@ -259,8 +260,6 @@ namespace psaf_local_planner {
              */
             double getDistanceToIntersection();
 
-            /** 
-
             /**
              * Calculates suitable target speed according to current traffic light state
              *
@@ -297,12 +296,26 @@ namespace psaf_local_planner {
             double computeDistanceToUpcomingStop();
 
             /**
+             * Helper function to compute the distance to a stop line if no stop line is detected
+             * If the state tells us that a traffic light is near we use the detected traffic light as indicator or
+             * the lanelet data about the remaining lane length
+             * If the state tells us that a stop sign/marking is near we use the the lanelet data about the remaining lane length to the stop sign / mark
+             * @return the computed distance as described above
+             */
+            double computeDistanceToStoppingPointWithoutStopLine();
+
+            /**
              * Computes the euclidean 2d distance between two center lines.
              * @param first the first center line
              * @param second the second center line
              * @return the euclidean distance in 2d space
              */
             double distanceBetweenCenterLines(psaf_messages::CenterLineExtended first, psaf_messages::CenterLineExtended second);
+
+            /**
+             * Publishes the current state as a string for debugging
+             */
+            void publishCurrentStateForDebug();
 
             /**
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
@@ -341,7 +354,10 @@ namespace psaf_local_planner {
             ros::Publisher g_plan_pub;
 
             /** Publisher for debug messages; e.g. arrows along path, obstacle bobbels */
-            ros::Publisher debug_pub;
+            ros::Publisher debug_marker_pub;
+
+            /** Publisher for debug messages about the state machine */
+            ros::Publisher debug_state_pub;
 
             /** Publisher for the obstacles; publishing causes a replanning */
             ros::Publisher obstacle_pub;

@@ -16,11 +16,11 @@ class DepthCamera:
 
     MAX_METERS = 1000  # maximum view distance
 
-    def __init__(self, role_name: str = "ego_vehicle", id: str = "front"):
+    def __init__(self, role_name: str = "ego_vehicle", id: str = "front",queue_size=None):
         # 2d image with distance in meters max 1000
         self.image = None
         self.__subscriber = rospy.Subscriber(f"/carla/{role_name}/camera/depth/{id}/image_depth", Image,
-                                             self.__update_image)
+                                             self.__update_image,queue_size=queue_size)
 
         self.__listener = None
         self.bridge = CvBridge()

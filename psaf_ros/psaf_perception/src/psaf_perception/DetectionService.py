@@ -18,7 +18,7 @@ class DetectionService:
         self.detectors = {}
         rospy.init_node("DetectionService")
         role_name = rospy.get_param("role_name", "ego_vehicle")
-        use_gpu = rospy.get_param("use_gpu",True)
+        use_gpu = rospy.get_param("use_gpu", True)
         # Add detectors here
         # self.detectors.update({"trafficSign": TrafficSignDetector(role_name=role_name, use_gpu=use_gpu)})
         # self.detectors.update({"stopMarking": StopMarkDetector(role_name=role_name, use_gpu=use_gpu)})
@@ -52,12 +52,12 @@ class DetectionService:
         }
 
         # Collect detection
-        # self.detectors["trafficSign"].set_on_detection_listener(self.__on_new_speed_sign)
+        # self.detectors["trafficSign"].set_on_detection_listener(self.__on_new_traffic_sign)
         # self.detectors["stopMarking"].set_on_detection_listener(self.__on_new_stop)
         self.detectors["trafficLight"].set_on_detection_listener(self.__on_new_traffic_light)
         self.detectors["stopLines"].set_on_detection_listener(self.__on_new_stop_lines)
 
-    def __on_new_speed_sign(self, detected: List[DetectedObject]):
+    def __on_new_traffic_sign(self, _, detected: List[DetectedObject]):
         self.speed_signs.clear()
         self.stop_signs.clear()
         for each in detected:
@@ -90,7 +90,7 @@ class DetectionService:
                 msg.distance = each.distance
                 self.stop_signs.append(msg)
 
-    def __on_new_stop(self, detected: List[DetectedObject]):
+    def __on_new_stop(self, _, detected: List[DetectedObject]):
         self.stop_marks.clear()
         for each in detected:
             if each.label == Labels.StopSurfaceMarking:
@@ -99,7 +99,7 @@ class DetectionService:
                 msg.y = each.y + each.h / 2
                 self.stop_marks.append(msg)
 
-    def __on_new_traffic_light(self, detected: List[DetectedObject]):
+    def __on_new_traffic_light(self, _, detected: List[DetectedObject]):
         self.trafficLights.clear()
         for each in detected:
             if LabelGroups.TrafficLight in each.label.groups:
@@ -111,7 +111,7 @@ class DetectionService:
                 # Add to list
                 self.trafficLights.append(msg)
 
-    def __on_new_stop_lines(self, detected: List[DetectedObject]):
+    def __on_new_stop_lines(self, _, detected: List[DetectedObject]):
         self.stop_lines.clear()
         for each in detected:
             if each.label == Labels.StopLine:

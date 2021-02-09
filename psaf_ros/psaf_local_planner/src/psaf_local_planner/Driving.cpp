@@ -79,7 +79,7 @@ namespace psaf_local_planner
         marker3.scale.z = 0.2;
 
         markers.markers = {marker1, marker2, marker3};
-        debug_pub.publish(markers);
+        debug_marker_pub.publish(markers);
 
         return d_angle;
     }
@@ -286,7 +286,7 @@ namespace psaf_local_planner
     }
 
     double PsafLocalPlanner::getCurrentStoppingDistance(){
-        return pow(this->current_speed,2)*0.1296+current_speed;
+        return (pow(this->current_speed,2)*0.1296+1.2 * current_speed); // Standard formula with extra reaction time
     }
 
     double PsafLocalPlanner::getTargetVelDriving()
