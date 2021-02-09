@@ -1,6 +1,3 @@
-//
-// Created by psaf1 on 09.02.21.
-//
 
 #include "HelperAlgorithms.h"
 
