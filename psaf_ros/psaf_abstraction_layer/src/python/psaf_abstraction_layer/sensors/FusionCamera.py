@@ -46,7 +46,6 @@ class FusionCamera:
         """
 
         age = rospy.Time.now() - image_msg.segmentation.header.stamp
-        print(f"Camera Age {age.to_sec()}s")
         self.segmentation_image = self.bridge.imgmsg_to_cv2(image_msg.segmentation, desired_encoding='rgb8')
 
         if self.visible_tags is not None:
