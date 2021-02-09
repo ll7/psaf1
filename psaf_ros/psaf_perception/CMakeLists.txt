@@ -10,6 +10,7 @@ project(psaf_perception)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  roscpp
   rosbuild
   std_msgs
   psaf_abstraction_layer
@@ -108,7 +109,7 @@ catkin_python_setup()
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES psaf_perception
-  CATKIN_DEPENDS rospy std_msgs
+  CATKIN_DEPENDS rospy std_msgs psaf_abstraction_layer
 #  DEPENDS system_lib
 )
 
