@@ -24,15 +24,18 @@
     <!-- Run at 50 fps-->
     <arg name='fixed_delta_seconds' default='0.05'/>
 
+    <!-- Whether to respect the traffic rules -->
+    <arg name='respect_traffic_rules' default='True'/>
+
+
     <!-- Arguments end-->
 
     <master auto="start"/>
-    <!-- Run the map server -->
-    <!--<node name="map_server" pkg="map_server" type="map_server" args="$(find my_map_package)/my_map.pgm my_map_resolution"/>-->
 
-    <!--- Run AMCL -->
-    <!--<include file="$(find amcl)/examples/amcl_omni.launch" />-->
+    <!--Parameters-->
+    <param name="respect_traffic_rules" type="bool" value="$(arg respect_traffic_rules)" />
 
+    <!--Remaps-->
     <remap from="/cmd_vel" to="/carla/ego_vehicle/twist_pid"/>
 
     <include file="$(find psaf_steering)/launch/psaf_steering_with_vehicle.launch">
