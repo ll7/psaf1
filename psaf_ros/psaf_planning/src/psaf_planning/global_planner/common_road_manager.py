@@ -14,7 +14,7 @@ import rospy
 
 class CommonRoadManager:
 
-    def __init__(self, hd_map: Scenario, default_speed: int = 50):
+    def __init__(self, hd_map: Scenario, default_speed: int = 50, intersections: Dict ={}):
         rospy.loginfo("CommonRoadManager: Started!")
         self.default_speed = default_speed
         self.map = hd_map
@@ -22,7 +22,7 @@ class CommonRoadManager:
         self.neighbourhood = self._analyze_neighbourhood(self.map)
         self.original_neighbourhood = deepcopy(self.neighbourhood)
         self.message_by_lanelet = {}
-
+        self.intersections = intersections
         self._fill_message_dict()
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
@@ -120,15 +120,12 @@ class CommonRoadManager:
         :param lanelet: lanelet to be checked
         :return: True if there is a upcoming intersection, False if not
         """
-        # get the successor of the successor of the given lanelet
-        lane = lanelet
-        if len(lane.successor) == 0:
-            return False
-        succ = lanelet.successor[0]
-        lane = self.map.lanelet_network.find_lanelet_by_id(succ)
 
         # check for the amount of predecessor
-        return len(lane.predecessor) > 1
+        if lanelet.lanelet_id in self.intersections:
+            return self.intersections[lanelet.lanelet_id]
+        else:
+            return False
 
     def _modify_lanelet(self, lanelet_id: int, modify_point: Point, start_point: Point) -> Tuple[int, int]:
         from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads as pp

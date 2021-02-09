@@ -10,10 +10,10 @@ import rospy
 import torch
 from torch.autograd import Variable
 from torchvision.transforms import transforms
+import torch.backends.cudnn as cudnn
 
-from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+from psaf_abstraction_layer.sensors.FusionCamera import FusionCamera, SegmentationTag
 from psaf_perception.detectors.AbstractDetector import DetectedObject, AbstractDetector, Labels
-from psaf_perception.CameraDataFusion import CameraDataFusion, SegmentationTag
 
 
 class TrafficLightDetector(AbstractDetector):
@@ -47,7 +47,7 @@ class TrafficLightDetector(AbstractDetector):
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
         rospy.loginfo("Device:" + str(self.device), logger_name=self.logger_name)
         # load our model
-        model_name = 'traffic-light-classifiers-2021-01-12-15:38:22'
+        model_name = 'traffic-light-classifiers-2021-02-09-18:29:47'
         rospy.loginfo("loading classifier model from disk...", logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
@@ -66,14 +66,17 @@ class TrafficLightDetector(AbstractDetector):
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
         model.to(self.device)
+        if self.device.type == 'cuda':
+            rospy.loginfo("Enable cudnn", logger_name=self.logger_name)
+            cudnn.enabled = True
+            cudnn.benchmark = True
         self.net = model
         self.net.eval()
         torch.no_grad()  # reduce memory consumption and improve speed
 
         # init image source = combination of segmentation, rgb and depth camera
-        self.combinedCamera = CameraDataFusion(role_name=role_name, time_threshold=0.08,
-                                               visible_tags=set([SegmentationTag.TrafficLight]))
-        self.combinedCamera.set_on_image_data_listener(self.__on_new_image_data)
+        self.combinedCamera = FusionCamera(role_name=role_name,visible_tags={SegmentationTag.TrafficLight})
+        self.combinedCamera.set_on_image_listener(self.__on_new_image_data)
 
     def __extract_label(self, image) -> Tuple[Labels, float]:
         """
@@ -90,7 +93,7 @@ class TrafficLightDetector(AbstractDetector):
 
         return label, float(pred[hit])
 
-    def __on_new_image_data(self, segmentation_image, rgb_image, depth_image, time):
+    def __on_new_image_data(self,time, segmentation_image, rgb_image, depth_image):
         """
         Handles the new image data from the cameras
         :param segmentation_image: the segmentation image
@@ -117,7 +120,7 @@ class TrafficLightDetector(AbstractDetector):
             x2 = x1 + w
             y2 = y1 + h
             # TODO idea apply mask at the beginning for the whole image
-            mask = segmentation_image[y1:y2, x1:x2] == SegmentationTag.TrafficLight.color
+            mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
             # get cropped rgb image
             crop_rgb = rgb_image[y1:y2, x1:x2, :]
             # use inverted mask to clear the background
@@ -140,7 +143,7 @@ class TrafficLightDetector(AbstractDetector):
                     y2 = int((boxes[i][1] + boxes[i][3]) * H)
 
                     # Use segmentation data to create a mask to delete the background
-                    mask = segmentation_image[y1:y2, x1:x2] == SegmentationTag.TrafficLight.color
+                    mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
 
                     # get cropped depth image
                     crop_depth = depth_image[y1:y2, x1:x2]
@@ -191,6 +194,8 @@ def show_image(title, image):
 
 
 if __name__ == "__main__":
+    from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+
     rospy.init_node("DetectionTest")
 
     detected_r = None

@@ -36,6 +36,9 @@ num_epochs = 500
 #   when True we only update the reshaped layer params
 feature_extract = False
 
+# Use cudnn for speed up
+use_cudnn = True
+
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
     since = time.time()
@@ -174,6 +177,10 @@ if __name__ == "__main__":
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    if device.type == 'cuda':
+        print("Enable cudnn")
+        torch.backends.cudnn.enabled = True
+        torch.backends.cudnn.benchmark = True
     # Send the model to GPU
     model_ft = model_ft.to(device)
 
@@ -215,6 +222,7 @@ if __name__ == "__main__":
         'epochs': num_epochs,
         'batch size': batch_size,
         'freeze feature extraction layers': feature_extract,
+        'Used cudnn': use_cudnn,
         'validation_accuracy': float(max(hist).cpu()),
         'number of training images': len(image_datasets['train']),
         'number of validation images': len(image_datasets['val']),

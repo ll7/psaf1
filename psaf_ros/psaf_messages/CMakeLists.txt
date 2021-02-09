@@ -10,6 +10,7 @@ project(psaf_messages)
 find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
+  sensor_msgs
   message_generation
 )
 
@@ -49,6 +50,7 @@ catkin_python_setup()
 ## Generate messages in the 'msg' folder
 add_message_files(
    FILES
+   CombinedCameraImage.msg
    TrafficSignInfo.msg
    SpeedSign.msg
    StopMark.msg
@@ -61,6 +63,7 @@ add_message_files(
    CenterLineExtended.msg
    XRoute.msg
    XLanelet.msg
+   PlanningInstruction.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -83,6 +86,7 @@ generate_messages(
   std_msgs
   psaf_messages
   geometry_msgs
+  sensor_msgs
 )
 
 ################################################

@@ -161,7 +161,7 @@ class CommonRoadMapProvider(MapProvider):
             if mapped_lanelets is not None:
                 for lanelet in mapped_lanelets:
                     sign_pos_index = self._find_vertex_index(lanelet, sign.pos_as_point())
-                    lane_orientation = self._get_lanelet_orientation_to_sign(lanelet, sign_pos_index)
+                    lane_orientation = self.get_lanelet_orientation_at_index(lanelet, sign_pos_index)
                     angle_diff = 180 - abs(abs(sign.orientation - lane_orientation) - 180)
                     # add speed sign if the angle_diff matches and
                     # discard all other matches in mapped_lanelets since the sign can't be on that lanes
@@ -394,8 +394,13 @@ class CommonRoadMapProvider(MapProvider):
         distance = (distance[:, 0] + distance[:, 1])
         return np.argmin(distance).item()
 
-    def _get_lanelet_orientation_to_sign(self, lanelet: Lanelet, index: int):
+    def get_lanelet_orientation_at_index(self, lanelet: Lanelet, index: int):
         angles = list()
+        # check for bounds
+        if index >= len(lanelet.center_vertices)-3:
+            index = index - 2
+        elif index < 2:
+            index = 2
         for i in range(-2, 2, 1):
             prev_pos = 0
             pos = 0
@@ -424,7 +429,6 @@ class CommonRoadMapProvider(MapProvider):
             angle_diff = 180 - abs(abs(angles[i] - angles[i + 1]) - 180)
             if angle_diff < 20:
                 return angles[i]
-        rospy.logerr("USE AVG, NOT GOOD")
         return np.sum(angles) / len(angles)
 
     def _generate_dummy_planning_problem(self) -> PlanningProblem:
