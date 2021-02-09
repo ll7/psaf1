@@ -108,14 +108,14 @@ class PlanningPreprocessor:
             rospy.init_node('planning_preprocessor')
 
             # rosparam determining if traffic riles should be obeyed, if false uTurn is always considered
-            obey_rules = rospy.get_param('/path_provider/respect_traffic_rules', False)
+            obey_rules = rospy.get_param('/planning_preprocessor/respect_traffic_rules', True)
             # rosparam determining if uTurn should be considered even when obeying traffic rules
-            always_turn = rospy.get_param('/path_provider/always_u_turn', False)
-            self.plan_u_turn = obey_rules or always_turn or True
+            always_turn = rospy.get_param('/planning_preprocessor/always_u_turn', False)
+            self.plan_u_turn = (not obey_rules) or always_turn
             print('plan turn: ', self.plan_u_turn)
 
             rospy.Subscriber('/psaf/goal/set', NavSatFix, self.goal_callback, queue_size=1)
-            self.instruction_pub = rospy.Publisher('/psaf/planning_preprocessor/planning_instruction', PlanningInstruction,
+            self.instruction_pub = rospy.Publisher('/psaf/goal/set_instruction', PlanningInstruction,
                                                    queue_size=1)
 
             rospy.spin()
