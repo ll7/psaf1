@@ -10,6 +10,7 @@ import rospy
 import torch
 from torch.autograd import Variable
 from torchvision.transforms import transforms
+import torch.backends.cudnn as cudnn
 
 from psaf_abstraction_layer.sensors.FusionCamera import FusionCamera, SegmentationTag
 from psaf_perception.detectors.AbstractDetector import DetectedObject, AbstractDetector, Labels
@@ -46,7 +47,7 @@ class TrafficLightDetector(AbstractDetector):
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
         rospy.loginfo("Device:" + str(self.device), logger_name=self.logger_name)
         # load our model
-        model_name = 'traffic-light-classifiers-2021-01-12-15:38:22'
+        model_name = 'traffic-light-classifiers-2021-02-09-18:29:47'
         rospy.loginfo("loading classifier model from disk...", logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
@@ -65,6 +66,10 @@ class TrafficLightDetector(AbstractDetector):
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
         model.to(self.device)
+        if self.device.type == 'cuda':
+            rospy.loginfo("Enable cudnn", logger_name=self.logger_name)
+            cudnn.enabled = True
+            cudnn.benchmark = True
         self.net = model
         self.net.eval()
         torch.no_grad()  # reduce memory consumption and improve speed
