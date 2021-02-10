@@ -1,4 +1,5 @@
 #include <psaf_local_planner/plugin_local_planner.h>
+#include <psaf_local_planner/state_machine.h>
 
 
 namespace psaf_local_planner {
@@ -129,6 +130,34 @@ namespace psaf_local_planner {
             default:
                 // If Current state is not part of the transitions stay in current state
                 break;
+        }
+    }
+
+    std::string LocalPlannerStateMachine::getTextRepresentation() {
+        {
+            switch (this->state) {
+                case LocalPlannerState::DRIVING:
+                    return "Driving";
+                case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
+                    return "Traffic light: near";
+                case LocalPlannerState::TRAFFIC_LIGHT_GO:
+                    return "Traffic light: go";
+                case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
+                    return "Traffic light: will stop";
+                case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
+                    return "Traffic light: slow down";
+                case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
+                    return "Traffic light: waiting";
+                case LocalPlannerState::STOP_NEAR:
+                    return "Stop: near";
+                case LocalPlannerState::STOP_WILL_STOP:
+                    return "Stop: will stop";
+                case LocalPlannerState::STOP_WAITING:
+                    return "Stop: waiting";
+                case LocalPlannerState::STOP_GO:
+                    return "Stop: go";
+            }
+            return "unknown state";
         }
     }
 

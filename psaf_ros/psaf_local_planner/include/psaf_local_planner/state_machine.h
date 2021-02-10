@@ -1,4 +1,6 @@
 #include <psaf_messages/TrafficLight.h>
+#ifndef PSAF_STATE_MACHINE_H
+#define PSAF_STATE_MACHINE_H
 
 namespace psaf_local_planner {
 
@@ -76,33 +78,11 @@ namespace psaf_local_planner {
          * Returns the current state as text for e.g. logging
          * @return the current state as string
          */
-        std::string getTextRepresentation(){
-            switch (this->state) {
-                case LocalPlannerState::DRIVING:
-                    return "Driving";
-                case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
-                    return "Traffic light: near";
-                case LocalPlannerState::TRAFFIC_LIGHT_GO:
-                    return "Traffic light: go";
-                case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
-                    return "Traffic light: will stop";
-                case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
-                    return "Traffic light: slow down";
-                case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
-                    return "Traffic light: waiting";
-                case LocalPlannerState::STOP_NEAR:
-                    return "Stop: near";
-                case LocalPlannerState::STOP_WILL_STOP:
-                    return "Stop: will stop";
-                case LocalPlannerState::STOP_WAITING:
-                    return "Stop: waiting";
-                case LocalPlannerState::STOP_GO:
-                    return "Stop: go";
-            }
-            return "unknown state";
-        }
+        std::string getTextRepresentation();
 
     private:
         LocalPlannerState state;
     };
 } // namespace psaf_local_planner
+
+#endif
