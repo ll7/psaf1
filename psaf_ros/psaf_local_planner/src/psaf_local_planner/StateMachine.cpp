@@ -161,4 +161,69 @@ namespace psaf_local_planner {
         }
     }
 
+
+    LocalPlannerStateMachineWithoutTrafficRules::LocalPlannerStateMachineWithoutTrafficRules() {
+    }
+
+    void LocalPlannerStateMachineWithoutTrafficRules::updateState(bool trafficLightDetected, bool stopDetected,
+                                                                  psaf_messages::TrafficLight trafficLightKnowledge,
+                                                                  double stoppingDistance, double currentSpeed,
+                                                                  double distanceToStopLine, bool isIntersectionClear) {
+        // Switch statement represents transitions -> if no transition for current input is found we stay in the current state
+        switch (this->state) {
+            case LocalPlannerState::UNKNOWN:
+                this->state = LocalPlannerState::UNKNOWN;
+                break;
+
+            case LocalPlannerState::DRIVING:
+                if (trafficLightDetected) {
+                    this->state = LocalPlannerState::STOP_NEAR;
+                } else if (stopDetected) {
+                    this->state = LocalPlannerState::STOP_NEAR;
+                }
+                break;
+                // Begin traffic light transitions
+            case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
+            case LocalPlannerState::TRAFFIC_LIGHT_GO:
+            case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
+            case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
+            case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
+                this->state = LocalPlannerState::DRIVING;
+                break;
+            // Begin Stop sign / mark transitions
+            case LocalPlannerState::STOP_NEAR:
+                if (distanceToStopLine <= stoppingDistance) {
+                    this->state = LocalPlannerState::STOP_WILL_STOP;
+                }else if(trafficLightDetected){ // Seems to be in the wrong state -> go back to driving
+                    this->state = LocalPlannerState::DRIVING;
+                }
+                break;
+            case LocalPlannerState::STOP_WILL_STOP:
+                if (distanceToStopLine <= 2 || currentSpeed < 0.01) {
+                    this->state = LocalPlannerState::STOP_WAITING;
+                }
+                break;
+            case LocalPlannerState::STOP_WAITING:
+                if (isIntersectionClear) {
+                    this->state = LocalPlannerState::STOP_GO;
+                }
+                break;
+            case LocalPlannerState::STOP_GO:
+                if (currentSpeed > 15 / 3.6) {
+                    this->state = LocalPlannerState::DRIVING;
+                }
+                break;
+            default:
+                // If Current state is not part of the transitions stay in current state
+                break;
+        }
+    }
+    bool LocalPlannerStateMachineWithoutTrafficRules::isInTrafficLightStates() {
+        return LocalPlannerStateMachineWithoutTrafficRules::isInStopStates();
+    }
+
+
+    LocalPlannerStateMachineWithoutTrafficRules::~LocalPlannerStateMachineWithoutTrafficRules() {
+
+    }
 }

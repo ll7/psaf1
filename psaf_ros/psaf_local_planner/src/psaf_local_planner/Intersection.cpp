@@ -73,8 +73,12 @@ namespace psaf_local_planner {
     void PsafLocalPlanner::updateStateMachine() {
         bool traffic_light_detected = this->computeDistanceToUpcomingTrafficLight()<1e6;
         bool stop_detected = this->computeDistanceToUpcomingStop()<1e6;
-        bool is_intersection_clear = this->costmap_raytracer.checkForNoMovement(M_PI, 25, 5);
-
+        bool is_intersection_clear = false;
+        if(this->respect_traffic_rules) {
+            is_intersection_clear = this->costmap_raytracer.checkForNoMovement(M_PI, 25, 5);
+        }else{
+            is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5*M_PI, 25, 5);
+        }
         this->state_machine->updateState(traffic_light_detected, stop_detected,
                                          this->traffic_light_state,
                                          this->getCurrentStoppingDistance(), this->current_speed,
@@ -83,7 +87,7 @@ namespace psaf_local_planner {
         this->publishCurrentStateForDebug();
     }
 
-    double PsafLocalPlanner::getTargetVelIntersection() {
+    double PsafLocalPlanner::getTargetVelIntersectionWithTrafficRules() {
         double target_vel = this->target_velocity;
         switch (this->state_machine->getState()) {
             case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
@@ -121,5 +125,48 @@ namespace psaf_local_planner {
         }
         return std::min(target_vel, target_velocity);
     }
+
+    double PsafLocalPlanner::getTargetVelIntersectionWithoutTrafficRules() {
+        double target_vel;
+        switch (this->state_machine->getState()) {
+            case LocalPlannerState::DRIVING:
+                target_vel=this->target_velocity;
+            case LocalPlannerState::STOP_GO:
+                target_vel = getMaxVelocity();
+                break;
+            case LocalPlannerState::STOP_WILL_STOP:
+                double velocity_distance_diff;
+                double stop_distance;
+                stop_distance = this->stop_distance_at_intersection;
+                if(stop_distance >1e6){
+                    stop_distance=0;
+                }
+                if (stop_distance < 3) {
+                    velocity_distance_diff = this->target_velocity; // Drive very slow to stop line
+                } else {
+                    velocity_distance_diff = this->target_velocity - std::min(this->target_velocity, 25.0 / 18.0 * (-1 + std::sqrt(
+                            1 + 4 * (stop_distance - 2))));
+                }
+                target_vel = this->target_velocity - velocity_distance_diff;
+                break;
+            case LocalPlannerState::STOP_NEAR:
+                target_vel = target_velocity;
+                break;
+            case LocalPlannerState::STOP_WAITING:
+                target_vel = 0.0;
+                break;
+            case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
+            case LocalPlannerState::TRAFFIC_LIGHT_GO:
+            case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
+            case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
+            case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
+            case LocalPlannerState::UNKNOWN:
+            default:
+                target_vel = this->target_velocity;
+
+        }
+        return std::min(target_vel, this->target_velocity);
+    }
+
 
 }
