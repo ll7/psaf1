@@ -163,7 +163,7 @@ class TrafficSignDetector(AbstractDetector):
                             os.mkdir(folder)
                         cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
 
-        self.inform_listener(detected)
+        self.inform_listener(time, detected)
 
 
 # Show case code
@@ -209,7 +209,7 @@ if __name__ == "__main__":
         show_image("Traffic_sign_detection", image)
 
 
-    def on_detected(detected_list):
+    def on_detected(_,detected_list):
         global detected_r
         detected_r = detected_list
 

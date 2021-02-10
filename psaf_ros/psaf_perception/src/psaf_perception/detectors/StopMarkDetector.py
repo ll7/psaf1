@@ -82,7 +82,7 @@ class StopMarkDetector(AbstractDetector):
         self.rgb_camera = RGBCamera(role_name, id="street")
         self.rgb_camera.set_on_image_listener(self.__on_image_update)
 
-    def __on_image_update(self, image, _):
+    def __on_image_update(self, image, time):
 
         (H, W) = image.shape[:2]
 
@@ -117,7 +117,7 @@ class StopMarkDetector(AbstractDetector):
                             DetectedObject(float(x1 / W), float(y1 / H), (x2 - x1) / W, (y2 - y1) / H, 0,
                                            Labels.StopSurfaceMarking, score))
 
-        self.inform_listener(detected)
+        self.inform_listener(time, detected)
 
 
 # Show case code
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         cv2.waitKey(1)
 
 
-    def on_detected(detected_list):
+    def on_detected(_,detected_list):
         global detected_r
         detected_r = detected_list
 

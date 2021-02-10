@@ -16,6 +16,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/String.h>
 
 // Geometry messages
 #include <geometry_msgs/Quaternion.h>
@@ -106,6 +107,25 @@ namespace psaf_local_planner {
              * Overrides the nav_core::BaseLocalPlanner method; Called when the global planner publishes a global plan
              */
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
+
+            // circle fraction area around car in which possible obstacles are published
+            static constexpr double OBSTACLE_AREA = (M_PI * 3/2);
+            // radius of the circle fraction area around car in which possible obstacles are published
+            static constexpr double OBSTACLE_AREA_RADIUS =  30.0;
+            // threshold of velocity difference when a car in front is counted as too slow
+            static constexpr double VEL_DIFF_THRESHOLD = 5.0;
+            // number of times a obstacle is counted as too slow until it gets published as obstacle
+            static constexpr int NUM_SLOW_CAR_PUB = 30;
+            // number at which obstacle counts as lost when decreasing obstacle count
+            static constexpr int NUM_SLOW_CAR_DEL = 10;
+            // distance in front of intersection in which obstacles should not be published
+            static constexpr double MIN_DISTANCE_INTERSECTION = 30.0;
+            // threshold for min costmap value
+            static constexpr unsigned char COSTMAP_THRESHOLD = 128;
+
+            // How many points the delete old points function should look ahead to find the closest point
+            static constexpr int MAX_DELETE_OLD_POINTS_LOOKAHEAD = 100;
+            
         private:
             /**
              * Publishes the global plan to be displayed in RVIZ
@@ -165,10 +185,10 @@ namespace psaf_local_planner {
              *
              * @param current_location: current pose of the car
              */
-            double estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location);
+            double estimateCurvatureAndSetTargetVelocity();
 
             /**
-             * Retruns target speed with check for obstacles in the way
+             * Returns target speed with check for obstacles in the way
              *
              * @returns target_vel: target velocity for driving with vehicles
              */
@@ -240,8 +260,6 @@ namespace psaf_local_planner {
              */
             double getDistanceToIntersection();
 
-            /** 
-
             /**
              * Calculates suitable target speed according to current traffic light state
              *
@@ -278,6 +296,15 @@ namespace psaf_local_planner {
             double computeDistanceToUpcomingStop();
 
             /**
+             * Helper function to compute the distance to a stop line if no stop line is detected
+             * If the state tells us that a traffic light is near we use the detected traffic light as indicator or
+             * the lanelet data about the remaining lane length
+             * If the state tells us that a stop sign/marking is near we use the the lanelet data about the remaining lane length to the stop sign / mark
+             * @return the computed distance as described above
+             */
+            double computeDistanceToStoppingPointWithoutStopLine();
+
+            /**
              * Computes the euclidean 2d distance between two center lines.
              * @param first the first center line
              * @param second the second center line
@@ -286,11 +313,27 @@ namespace psaf_local_planner {
             double distanceBetweenCenterLines(psaf_messages::CenterLineExtended first, psaf_messages::CenterLineExtended second);
 
             /**
+             * Publishes the current state as a string for debugging
+             */
+            void publishCurrentStateForDebug();
+
+            /**
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
              *
-             * @return pointer to the target point
+             * @return pose of the target point
              */
-            geometry_msgs::PoseStamped& findLookaheadTarget();
+            geometry_msgs::Pose findLookaheadTarget(psaf_messages::XLanelet &lanelet_out, psaf_messages::CenterLineExtended &center_point_out);
+
+            /**
+             * Cacluclates the distance to the next upcoming lanechange
+             * 
+             * @param direction[out]: +1 for right side; -1 for left side
+             * @return distance to the direction
+             */
+            double getDistanceToLaneChange(double compute_direction_threshold);
+
+            double checkLaneChangeFree();
+
 
             /** Helper object for raytracing */
             psaf_local_planner::CostmapRaytracer costmap_raytracer;
@@ -311,7 +354,10 @@ namespace psaf_local_planner {
             ros::Publisher g_plan_pub;
 
             /** Publisher for debug messages; e.g. arrows along path, obstacle bobbels */
-            ros::Publisher debug_pub;
+            ros::Publisher debug_marker_pub;
+
+            /** Publisher for debug messages about the state machine */
+            ros::Publisher debug_state_pub;
 
             /** Publisher for the obstacles; publishing causes a replanning */
             ros::Publisher obstacle_pub;
@@ -353,6 +399,9 @@ namespace psaf_local_planner {
             
             /** floor (target_velocity / lookahead_factor) == index of the point to the use in the local planner list; lower is more points */
             double lookahead_factor;
+            
+            /** Additive lookahead factor not depending on the speed*/
+            double lookahead_factor_const_additive;
 
             /** set to true when the goal is reached*/
             bool goal_reached;
@@ -380,6 +429,7 @@ namespace psaf_local_planner {
 
             /** ~~ planned ~~ current state of the car */
             LocalPlannerState state;
+            
             /** The state machine */
             LocalPlannerStateMachine* state_machine;
 
@@ -406,6 +456,14 @@ namespace psaf_local_planner {
              * The current speed of the car
              */
             double current_speed;
+
+            /** max number of points used at beginning and end of lanelet when smoothing lanechanges */
+            unsigned long max_points_smoothing;
+
+            /**variable to determine whether the next lanechange is to the right(1) or to the left(-1)  */
+            int lane_change_direction;
+            /**variable to determine whether the direction of the lext lane change was already calcualted  */
+            bool lane_change_direction_calculated;
 
     };
 };

@@ -60,13 +60,13 @@ class SegmentationCamera:
     The segmentation camera interface that allows us to  access the segmentation camera
     """
 
-    def __init__(self, role_name: str = "ego_vehicle", id: str = "front"):
+    def __init__(self, role_name: str = "ego_vehicle", id: str = "front",queue_size=None):
 
         self.image = None
         self.bridge = CvBridge()
         self.__subscriber = rospy.Subscriber(
             "/carla/{}/camera/semantic_segmentation/{}/image_segmentation".format(role_name, id), Image,
-            self.__update_image)
+            self.__update_image,queue_size=queue_size)
 
         self.__listener = None
 

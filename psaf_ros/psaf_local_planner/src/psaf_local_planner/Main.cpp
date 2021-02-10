@@ -10,7 +10,9 @@ namespace psaf_local_planner
                                             initialized(false), closest_point_local_plan(2),
                                             lookahead_factor(3.5), target_velocity(15), min_velocity(5),
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
-                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true)
+                                            slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), 
+                                            duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true), max_points_smoothing(10), 
+                                            lane_change_direction(0), lane_change_direction_calculated(false), lookahead_factor_const_additive(1)
     {
         std::cout << "Hi";
         this->state_machine = new LocalPlannerStateMachine();
@@ -40,7 +42,8 @@ namespace psaf_local_planner
             ros::NodeHandle private_nh("~/" + name);
             g_plan_pub = private_nh.advertise<nav_msgs::Path>("psaf_global_plan", 1);
             obstacle_pub = private_nh.advertise<psaf_messages::Obstacle>("/psaf/planning/obstacle", 1);
-            debug_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
+            debug_marker_pub = private_nh.advertise<visualization_msgs::MarkerArray>("debug", 1);
+            debug_state_pub = private_nh.advertise<std_msgs::String>("/psaf/debug/local_planner/state", 1);
 
             global_plan_extended_sub = private_nh.subscribe("/psaf/xroute", 10, &PsafLocalPlanner::globalPlanExtendedCallback, this);
             planner_util.initialize(tf, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
@@ -60,7 +63,7 @@ namespace psaf_local_planner
 
             this->state_machine->init();
 
-            costmap_raytracer = CostmapRaytracer(costmap_ros, &current_pose, &debug_pub);
+            costmap_raytracer = CostmapRaytracer(costmap_ros, &current_pose, &debug_marker_pub);
 
             initialized = true;
         }
@@ -84,20 +87,34 @@ namespace psaf_local_planner
             if (global_plan.size() <= 1)
             {
                 ROS_INFO("Goal reached");
+                max_velocity = 0;
                 cmd_vel.linear.x = 0;
                 cmd_vel.angular.z = 0;
                 goal_reached = true;
             }
             else
             {
-                estimateCurvatureAndSetTargetVelocity(current_pose.pose);
-                auto target_point = findLookaheadTarget();
-                double angle = computeSteeringAngle(target_point.pose, current_pose.pose);
+
+                psaf_messages::XLanelet lanelet_out;
+                psaf_messages::CenterLineExtended center_point_out;
+                auto target_point = findLookaheadTarget(lanelet_out, center_point_out);
+                
+                if (!lanelet_out.isAtIntersection || max_velocity == 0) {
+                    if (center_point_out.speed == 0) {
+                        max_velocity = global_route[0].route_portion[0].speed / 3.6;
+                    } else {
+                        max_velocity = std::min(global_route[0].route_portion[0].speed / 3.6, center_point_out.speed / 3.6);
+                    }
+                }
+
+                double angle = computeSteeringAngle(target_point, current_pose.pose);
 
                 updateStateMachine();
 
                 target_velocity = getTargetVelDriving();
+                // Update target velocity regarding the right of way situation
                 target_velocity = getTargetVelIntersection();
+                target_velocity = checkLaneChangeFree();
 
                 cmd_vel.linear.x = target_velocity;
                 cmd_vel.angular.z = angle;
@@ -124,7 +141,7 @@ namespace psaf_local_planner
         std::vector<geometry_msgs::PoseStamped>::iterator closest_it = it;
 
         int to_delete = -1;
-
+        int break_counter = 0;
         while (it != global_plan.end())
         {
             const geometry_msgs::PoseStamped &w = *it;
@@ -144,7 +161,9 @@ namespace psaf_local_planner
                     closest_it = it;
                     to_delete++;
                 } else {
-                    break;
+                    break_counter++;
+                    if (break_counter > MAX_DELETE_OLD_POINTS_LOOKAHEAD) 
+                        break;
                 }
             }
 
@@ -180,6 +199,12 @@ namespace psaf_local_planner
         }
         
         assert(route_len == global_plan.size());
+    }
+
+    // linear interpolation function returns point of fraction t between v0 and v1
+    // t=0 would be v0 and t=1 would be v1
+    double lerp(double v0, double v1, double t) {
+        return (1 - t) * v0 + t * v1;
     }
 
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
@@ -240,6 +265,42 @@ namespace psaf_local_planner
 
         global_route = msg.route;
         goal_reached = false;
+
+        // this block uses linear interpolation to smooth the curves of lanechanges
+        // takes the last/first 10 points in both directions and distributes the points along linear line between them
+        int size = global_route.size();
+        for (int i = 0; i < size; i++) {
+            auto &lanelet = global_route[i];
+            
+            if (lanelet.isLaneChange && i + 1 < size) {
+                auto &next_lanelet = global_route[i + 1];
+                int lanelet_route_size = lanelet.route_portion.size();
+                unsigned long num_points = std::min(std::min(next_lanelet.route_portion.size(), lanelet.route_portion.size()), max_points_smoothing);
+                // first point of smoothing
+                double x1 = lanelet.route_portion[lanelet_route_size - num_points].x;
+                double y1 = lanelet.route_portion[lanelet_route_size - num_points].y;
+                // last point of smoothing
+                double x2 = next_lanelet.route_portion[num_points - 1].x;
+                double y2 = next_lanelet.route_portion[num_points - 1].y;
+
+                // whole lerp is between 0 to 1.0 where 1.0 is at num_points * 2.0
+                for (int j = 0; j < num_points; j++) {
+                    // half the lerp, between points of the last lanelet
+                    // indexing example: 20 - 10 + 9
+                    // num points * 2.0 -> num_points at end of current lanelet + num_points at beginning of next lanelet
+                    lanelet.route_portion[lanelet_route_size - num_points + j].x = lerp(x1, x2, (j + 1) / (num_points * 2.0));
+                    lanelet.route_portion[lanelet_route_size - num_points + j].y = lerp(y1, y2, (j + 1) / (num_points * 2.0));
+                }
+
+                for (int j = 0; j < num_points; j++) {
+                    // half the lerp, between points of the last lanelet
+                    // indexing example: 20 - 10 + 9
+                    next_lanelet.route_portion[j].x = lerp(x1, x2, (num_points + j + 1) / (num_points * 2.0));
+                    next_lanelet.route_portion[j].y = lerp(y1, y2, (num_points + j + 1) / (num_points * 2.0));
+                }
+            }
+        }
+
 
         std::vector<geometry_msgs::PoseStamped> points = {};
 

@@ -79,7 +79,7 @@ namespace psaf_local_planner
         marker3.scale.z = 0.2;
 
         markers.markers = {marker1, marker2, marker3};
-        debug_pub.publish(markers);
+        debug_marker_pub.publish(markers);
 
         return d_angle;
     }
@@ -136,7 +136,7 @@ namespace psaf_local_planner
         return r_m;
     }
 
-    double PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity(geometry_msgs::Pose current_location)
+    double PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity()
     {
         if (global_plan.size() < 3)
             return target_velocity;
@@ -221,7 +221,7 @@ namespace psaf_local_planner
         return target_vel;
     }
 
-    geometry_msgs::PoseStamped& PsafLocalPlanner::findLookaheadTarget() {
+    geometry_msgs::Pose PsafLocalPlanner::findLookaheadTarget(psaf_messages::XLanelet &lanelet_out, psaf_messages::CenterLineExtended &center_point_out) {
         tf2::Vector3 last_point, current_point, acutal_point;
         tf2::convert(current_pose.pose.position, last_point);
         last_point.setZ(0);
@@ -232,10 +232,31 @@ namespace psaf_local_planner
 
         double vel_x = std::ceil(std::abs(vel.pose.position.x));
 
-        double desired_distance = std::pow(vel_x / lookahead_factor, 1.1) + 5;
+        double desired_distance = std::pow(vel_x / lookahead_factor, 1.1) + lookahead_factor_const_additive;
         double sum_distance = 0;
 
-        for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
+        for (auto &lanelet : global_route) {
+            double base_dist = lanelet.route_portion[0].distance;
+            for (auto &point : lanelet.route_portion) {
+                double dist = sum_distance + point.distance - base_dist;
+                if (dist > desired_distance) {
+                    geometry_msgs::Pose pose;
+                    pose.position.x = point.x;
+                    pose.position.y = point.y;
+
+                    lanelet_out = lanelet;
+                    center_point_out = point;
+
+                    // ROS_INFO("out: %i; id: %i", point.speed, lanelet_out.id);
+
+                    return pose;
+                }
+            }
+
+            sum_distance += (*lanelet.route_portion.end()).distance - base_dist;
+        }
+
+        /*for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
         {
             geometry_msgs::PoseStamped &w = *it;
             tf2::convert(w.pose.position, current_point);
@@ -246,31 +267,32 @@ namespace psaf_local_planner
             }
 
             last_point = current_point;
+        }*/
+
+        geometry_msgs::Pose last_stamp; 
+        if (global_route.size() > 0 && global_plan.size() > 0) {
+            lanelet_out = *global_route.end();
+            if (lanelet_out.route_portion.size() > 0) {
+                center_point_out = *lanelet_out.route_portion.end();
+            }
+            last_stamp = (*global_plan.end()).pose;
         }
 
-        auto &last_stamp = *global_plan.end();
         return last_stamp;
     }
 
     double PsafLocalPlanner::getMaxVelocity() {
-        if (global_route.size() > 0) {
-            if (global_route[0].route_portion.size() > 0)
-                return global_route[0].route_portion[0].speed / 3.6;
-        }
-
-        return 0.0;
+        return max_velocity;
     }
 
     double PsafLocalPlanner::getCurrentStoppingDistance(){
-        return pow(this->current_speed,2)*0.1296+current_speed;
+        return (pow(this->current_speed,2)*0.1296+1.2 * current_speed); // Standard formula with extra reaction time
     }
 
     double PsafLocalPlanner::getTargetVelDriving()
     {
-                double target_vel = estimateCurvatureAndSetTargetVelocity(current_pose.pose);
-
+                double target_vel = estimateCurvatureAndSetTargetVelocity();
                 double distance, relX, relY;
-
                 double velocity_distance_diff;
 
                 if (target_vel > 0 && !checkDistanceForward(distance, relX, relY))
@@ -282,9 +304,12 @@ namespace psaf_local_planner
                     } else {
                         // TODO: validate if working
                         // slow formula, working okay ish
-                        velocity_distance_diff = target_velocity - std::min(target_vel, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
+                        // uses formula for Anhalteweg (solved for velocity instead of distance)
+                        // https://www.bussgeldkatalog.org/anhalteweg/
+                        // TODO: MOVE TO OWN FUNCTION
+                        velocity_distance_diff = target_vel - std::min(target_vel, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
                         // faster formula, requires faster controller
-                        //velocity_distance_diff = target_velocity - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
+                        //velocity_distance_diff = target_vel - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
                     }
 
                     ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
@@ -308,4 +333,98 @@ namespace psaf_local_planner
         return distance;
     }
 
+    double PsafLocalPlanner::checkLaneChangeFree() {
+        double distance_begin_check_lane_change = 10;
+        double check_distance_lanechange = 7;
+
+        double distance = getDistanceToLaneChange(distance_begin_check_lane_change * 2);
+
+        if (distance < distance_begin_check_lane_change) {
+            if (lane_change_direction == 0) {
+                ROS_WARN("Direction is 0, but we should check for collsion! Driving normally");
+                return target_velocity;
+            }
+
+            std::vector<RaytraceCollisionData> collisions = {};
+
+            double angle_from, angle_to;
+            if (lane_change_direction > 0) {
+                angle_from = M_PI / 4.0;
+                angle_to = M_PI * (3.0/4.0);
+            } else {
+                angle_to = -M_PI / 4.0;
+                angle_from = -M_PI * (3.0/4.0);
+            }
+
+            costmap_raytracer.raytraceSemiCircle(angle_from, angle_to, check_distance_lanechange, collisions);
+
+            if (collisions.size() > 0) {
+                // TODO: MOVE TO OWN FUNCTION
+                return std::min(target_velocity, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
+            }
+        }
+
+        return target_velocity;
+    }
+
+    double PsafLocalPlanner::getDistanceToLaneChange(double compute_direction_threshold) {
+        double distance = 0;
+
+        for (int i = 0; i < global_route.size(); i++) {
+            auto &lanelet = global_route[i];
+            distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
+
+            // LaneChange in Lanelet is existant
+            if (lanelet.isLaneChange) {
+                //LanneChange is closer than threshold
+                if (compute_direction_threshold >= distance) {
+                    // calculate direction only if not already calculated
+                    if (!lane_change_direction_calculated) {
+                        // check if succeeding lanelet is existant
+                        if (i + 1 < global_route.size()) {
+                            auto &next_lanelet = global_route[i + 1];
+                            // calculate direction of lanechange right(1) or left(-1)
+                            if (lanelet.route_portion.size() >= 2) {
+                                auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
+                                auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
+                                auto &next = next_lanelet.route_portion[0];
+
+                                auto v_last = tf2::Vector3(last.x, last.y, last.z);
+                                auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
+                                auto v_next = tf2::Vector3(next.x, next.y, next.z);
+
+                                auto v1 = v_last - v_second_last;
+                                auto v2 = v_next - v_last;
+
+                                double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
+
+                                if (angle > 0) {
+                                    lane_change_direction = +1;
+                                } else {
+                                    lane_change_direction = -1;
+                                }
+                                lane_change_direction_calculated = true;
+
+                            } else {
+                                ROS_WARN("Not enough points to use three point method");
+
+                            }
+                        } else {
+                            ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
+                        }
+                    }
+                }
+                // recent LaneChang is terminated, reset flags
+                else{
+                    lane_change_direction_calculated = false;
+                    lane_change_direction = 0;
+                }
+                
+
+                return distance;
+            }
+        }
+
+        return distance;
+    }
 }

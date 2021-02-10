@@ -40,6 +40,7 @@ class TrafficLightDetector(AbstractDetector):
         rospack = rospkg.RosPack()
         root_path = rospack.get_path('psaf_perception')
 
+        # Deep learning config and inits
         self.confidence_min = 0.70
         self.threshold = 0.7
         rospy.loginfo(f"init device (use gpu={use_gpu})", logger_name=self.logger_name)
@@ -113,21 +114,24 @@ class TrafficLightDetector(AbstractDetector):
         boxes = []
         classes = []
         confidences = []
+
         for i, c in enumerate(contours):
             contours_poly = cv2.approxPolyDP(c, 3, True)
             x1, y1, w, h = cv2.boundingRect(contours_poly)
-            boxes.append(np.array([x1, y1, w, h]) / np.array([W, H, W, H]))
             x2 = x1 + w
             y2 = y1 + h
-            # TODO idea apply mask at the beginning for the whole image
-            mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
-            # get cropped rgb image
-            crop_rgb = rgb_image[y1:y2, x1:x2, :]
-            # use inverted mask to clear the background
-            crop_rgb[np.logical_not(mask)] = 0
-            label, confidence = self.__extract_label(crop_rgb)
-            classes.append(label)
-            confidences.append(confidence)
+            if w < h and w > 3 and h * H > 10:
+                # TODO idea apply mask at the beginning for the whole image
+                mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
+                # get cropped rgb image
+                crop_rgb = rgb_image[y1:y2, x1:x2, :]
+                # use inverted mask to clear the background
+                crop_rgb[np.logical_not(mask)] = 0
+                label, confidence = self.__extract_label(crop_rgb)
+                if label is not None:
+                    boxes.append(np.array([x1, y1, w, h]) / np.array([W, H, W, H]))
+                    classes.append(label)
+                    confidences.append(confidence)
 
         # apply non-maxima suppression to suppress weak, overlapping bounding boxes
         idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_min, self.threshold)
@@ -136,45 +140,44 @@ class TrafficLightDetector(AbstractDetector):
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                if boxes[i][2] < boxes[i][3] and boxes[i][2] * W > 3 and boxes[i][3] * H > 10:
-                    x1 = int(boxes[i][0] * W)
-                    x2 = int((boxes[i][0] + boxes[i][2]) * W)
-                    y1 = int(boxes[i][1] * H)
-                    y2 = int((boxes[i][1] + boxes[i][3]) * H)
+                x1 = int(boxes[i][0] * W)
+                x2 = int((boxes[i][0] + boxes[i][2]) * W)
+                y1 = int(boxes[i][1] * H)
+                y2 = int((boxes[i][1] + boxes[i][3]) * H)
 
-                    # Use segmentation data to create a mask to delete the background
-                    mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
+                # Use segmentation data to create a mask to delete the background
+                mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
 
-                    # get cropped depth image
-                    crop_depth = depth_image[y1:y2, x1:x2]
-                    # use mask to extract the traffic sign distances
-                    distance = np.average(crop_depth[mask[:, :, 1]])
-                    label = classes[i]
-                    confidence = confidences[i]
+                # get cropped depth image
+                crop_depth = depth_image[y1:y2, x1:x2]
+                # use mask to extract the traffic sign distances
+                distance = np.average(crop_depth[mask[:, :, 1]])
+                label = classes[i]
+                confidence = confidences[i]
 
-                    if not confidence >= self.confidence_min:
-                        label = Labels.TrafficLightUnknown
-                        confidence = 1.
-                    if label is not None:
-                        detected.append(
-                            DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3],
-                                           distance=distance,
-                                           label=label,
-                                           confidence=confidence))
-                    # Store traffic light data in folder to train a better network
-                    if self.data_collect_path is not None and distance < 25:
-                        # get cropped rgb image
-                        crop_rgb = rgb_image[y1:y2, x1:x2, :]
-                        # use inverted mask to clear the background
-                        crop_rgb[np.logical_not(mask)] = 0
-                        now = datetime.now().strftime("%H:%M:%S")
-                        folder = os.path.abspath(
-                            f"{self.data_collect_path}/{label.name if label is not None else 'unknown'}")
-                        if not os.path.exists(folder):
-                            os.mkdir(folder)
-                        cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
+                if not confidence >= self.confidence_min:
+                    label = Labels.TrafficLightUnknown
+                    confidence = 1.
 
-        self.inform_listener(detected)
+                detected.append(
+                    DetectedObject(x=boxes[i][0], y=boxes[i][1], width=boxes[i][2], height=boxes[i][3],
+                                   distance=distance,
+                                   label=label,
+                                   confidence=confidence))
+                # Store traffic light data in folder to train a better network
+                if self.data_collect_path is not None and distance < 25:
+                    # get cropped rgb image
+                    crop_rgb = rgb_image[y1:y2, x1:x2, :]
+                    # use inverted mask to clear the background
+                    crop_rgb[np.logical_not(mask)] = 0
+                    now = datetime.now().strftime("%H:%M:%S")
+                    folder = os.path.abspath(
+                        f"{self.data_collect_path}/{label.name if label is not None else 'unknown'}")
+                    if not os.path.exists(folder):
+                        os.mkdir(folder)
+                    cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
+
+        self.inform_listener(time,detected)
 
 
 # Show case code
@@ -199,10 +202,11 @@ if __name__ == "__main__":
     rospy.init_node("DetectionTest")
 
     detected_r = None
+    time = None
 
 
     def store_image(image, _):
-        global detected_r
+        global detected_r,time
 
         H, W = image.shape[:2]
 
@@ -220,12 +224,14 @@ if __name__ == "__main__":
                 text = "{}-{:.1f}m: {:.4f}".format(element.label.label_text, element.distance, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
+            print(f"Age {(rospy.Time.now()-time).to_nsec()/1e9}")
         show_image("Traffic light detection", image)
 
 
-    def on_detected(detected_list):
-        global detected_r
+    def on_detected(time_in,detected_list):
+        global detected_r,time
         detected_r = detected_list
+        time = time_in
 
 
     cam = RGBCamera()
