@@ -46,7 +46,7 @@ class ProblemStatus(Enum):
 
 class PathProviderCommonRoads:
 
-    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 20,
+    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 40,
                  role_name: str = "ego_vehicle",
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,

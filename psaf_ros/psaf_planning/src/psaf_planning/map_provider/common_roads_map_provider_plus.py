@@ -75,7 +75,7 @@ class CommonRoadMapProvider(MapProvider):
             self.map_cr = self._gen_raw_scenario()
             rospy.loginfo("CommonRoadMapProvider: Getting landmarks")
             self.landmark_provider = LandMarkProvider()
-            rospy.loginfo("CommonRoadMapProvider: detecting intersections")
+            rospy.loginfo("CommonRoadMapProvider: Detecting intersections")
             self._detect_intersections()
             rospy.loginfo("CommonRoadMapProvider: Adding traffic lights")
             self._traffic_lights_to_scenario(self.landmark_provider.get_marks_by_categorie('Signal_3Light_Post01'))
@@ -84,9 +84,12 @@ class CommonRoadMapProvider(MapProvider):
                     rospy.loginfo("CommonRoadMapProvider: Adding " + key + " signs")
                     self._speed_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key),
                                                   int(str(key).split("_", 1)[1]))
-                elif 'stop' in key.lower():
-                    rospy.loginfo("CommonRoadMapProvider: Stop signs and marks")
-                    self._stop_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key))
+                elif 'stencil_stop' in key.lower():
+                    rospy.loginfo("CommonRoadMapProvider: Adding stop marks")
+                    self._stop_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key), neighbouring=False)
+                elif 'sign_stop' in key.lower():
+                    rospy.loginfo("CommonRoadMapProvider: Adding stop signs")
+                    self._stop_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key), neighbouring=True)
             if self.debug:
                 self.planning_problem = self._generate_dummy_planning_problem()
                 self._visualize_scenario(self.map_cr, self.planning_problem)
@@ -134,13 +137,14 @@ class CommonRoadMapProvider(MapProvider):
             neighbour_lanelets.append(lane_under_obs)
         return neighbour_lanelets
 
-    def _stop_signs_to_scenario(self, stops: list):
+    def _stop_signs_to_scenario(self, stops: list, neighbouring: bool):
         """
         Add the stop signs or marks to the scenario
         :param stops: list of stop signs or marks as LandMarkPoints
+        :param neighbouring: map every stop instruction to all neighbouring lanelets (false or marks, true for signs)
         """
         for stop in stops:
-            mapped_lanelets = self._find_traffic_rule_lanelet(stop, self.max_angle_diff_sign, neighbouring=False)
+            mapped_lanelets = self._find_traffic_rule_lanelet(stop, self.max_angle_diff_sign, neighbouring=neighbouring)
             if len(mapped_lanelets) > 0:
                 for lanelet in mapped_lanelets:
                     index = self._find_vertex_index(lanelet, stop.pos_as_point())
