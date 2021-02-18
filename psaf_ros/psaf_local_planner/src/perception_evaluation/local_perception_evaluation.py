@@ -59,8 +59,8 @@ class LocalPerceptionEvaluation:
                     x1 = steer * (0.3 if steer > 0 else 0.6) + 0.5
                     # Calculate coordinates
                     x2 = min([x1 + 0.4, 1.])
-                    first_check = is_in_traffic_light_area(traffic_light, x1, x2, 0.4, 0.8)
-                    second_check = traffic_light.x>0.7 and traffic_light.distance < 3 # If we are very close to the traffic light
+                    first_check = is_in_traffic_light_area(traffic_light, x1, x2, 0.37, 0.8)
+                    second_check = traffic_light.x>0.7 and traffic_light.distance < 4 # If we are very close to the traffic light
                     if first_check or second_check:
                         return True
                 # check for traffic lights that are in front of the car on the other side of the intersection (american style)
