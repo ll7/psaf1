@@ -89,6 +89,12 @@ namespace psaf_local_planner {
          * 0 represents that no value was set
          */
         double start_time_stop_waiting;
+
+        /**
+        * Ros time in sec when the car was waiting at a traffic light and had no knowled about the traffic light state
+        * infinity represents that no value was set
+        */
+        double start_time_waiting_without_tl_state;
     };
 
     /**
@@ -107,9 +113,9 @@ namespace psaf_local_planner {
         void updateState(bool trafficLightDetected, bool stopDetected,
                          psaf_messages::TrafficLight trafficLightKnowledge, double stoppingDistance,
                          double currentSpeed, double distanceToStopLine, bool isIntersectionClear,
-                         double curTimeSec);
+                         double curTimeSec) override;
 
-        bool isInTrafficLightStates();
+        bool isInTrafficLightStates() override;
     };
 } // namespace psaf_local_planner
 

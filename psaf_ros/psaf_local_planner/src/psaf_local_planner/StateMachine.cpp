@@ -7,11 +7,10 @@ namespace psaf_local_planner {
         this->state = LocalPlannerState::UNKNOWN;
 
         this->start_time_stop_waiting = 0.;
+        this->start_time_waiting_without_tl_state = std::numeric_limits<double>::infinity();
     }
 
-    LocalPlannerStateMachine::~LocalPlannerStateMachine() {
-
-    }
+    LocalPlannerStateMachine::~LocalPlannerStateMachine() = default;
 
     void LocalPlannerStateMachine::init() {
         this->state = LocalPlannerState::DRIVING;
@@ -104,6 +103,23 @@ namespace psaf_local_planner {
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN) {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 }
+                if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_UNKNOWN){
+                    // Update time since we haven't seen a traffic light while waiting
+                    this->start_time_waiting_without_tl_state = std::min(this->start_time_waiting_without_tl_state,
+                                                                         currentTimeSec);
+                }else{
+                    // Set value to default if we know the current traffic light state
+                    this->start_time_waiting_without_tl_state = std::numeric_limits<double>::infinity();
+                }
+                // Check if we need an "emergency exit": We are waiting at the traffic light and have no knowledge about
+                // traffic light state -> this is indicated by the fact that we haven't get any information about the
+                // state for 15 seconds
+                // The intersection must be clear to prevent a collision
+                if(currentTimeSec-this->start_time_waiting_without_tl_state >= 15.0 && isIntersectionClear){
+                    ROS_WARN("The state machine used the emergency exit while waiting at TL because TL state is unknown"
+                             " for more than 15sec");
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                }
                 break;
                 // Begin Stop sign / mark transitions
             case LocalPlannerState::STOP_NEAR:
@@ -159,14 +175,15 @@ namespace psaf_local_planner {
                     return "Stop: waiting";
                 case LocalPlannerState::STOP_GO:
                     return "Stop: go";
+                case LocalPlannerState::UNKNOWN:
+                    return "Unknown";
             }
             return "unknown state";
         }
     }
 
 
-    LocalPlannerStateMachineWithoutTrafficRules::LocalPlannerStateMachineWithoutTrafficRules() {
-    }
+    LocalPlannerStateMachineWithoutTrafficRules::LocalPlannerStateMachineWithoutTrafficRules() = default;
 
     void LocalPlannerStateMachineWithoutTrafficRules::updateState(bool trafficLightDetected, bool stopDetected,
                                                                   psaf_messages::TrafficLight trafficLightKnowledge,
@@ -228,7 +245,5 @@ namespace psaf_local_planner {
     }
 
 
-    LocalPlannerStateMachineWithoutTrafficRules::~LocalPlannerStateMachineWithoutTrafficRules() {
-
-    }
+    LocalPlannerStateMachineWithoutTrafficRules::~LocalPlannerStateMachineWithoutTrafficRules() = default;
 }
