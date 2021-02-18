@@ -57,8 +57,14 @@ namespace psaf_local_planner
             dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
             dyn_serv->setCallback(f);
 
-            if (!ros::param::get("/path_provider/respect_traffic_rules",respect_traffic_rules)) {
+            if (!ros::param::get("respect_traffic_rules",respect_traffic_rules)) {
                 respect_traffic_rules = true;
+            }
+
+            // Replace the state machine if we drive without traffic rules
+            if(respect_traffic_rules==false){
+                ROS_WARN("The car will drive without respecting the traffic rules");
+                this->state_machine = new LocalPlannerStateMachineWithoutTrafficRules(); // TODO child class isn't called
             }
 
             this->state_machine->init();
@@ -92,18 +98,18 @@ namespace psaf_local_planner
                 cmd_vel.angular.z = 0;
                 goal_reached = true;
             }
-            else
-            {
+            else {
 
                 psaf_messages::XLanelet lanelet_out;
                 psaf_messages::CenterLineExtended center_point_out;
                 auto target_point = findLookaheadTarget(lanelet_out, center_point_out);
-                
+
                 if (!lanelet_out.isAtIntersection || max_velocity == 0) {
                     if (center_point_out.speed == 0) {
                         max_velocity = global_route[0].route_portion[0].speed / 3.6;
                     } else {
-                        max_velocity = std::min(global_route[0].route_portion[0].speed / 3.6, center_point_out.speed / 3.6);
+                        max_velocity = std::min(global_route[0].route_portion[0].speed / 3.6,
+                                                center_point_out.speed / 3.6);
                     }
                 }
 
@@ -113,7 +119,11 @@ namespace psaf_local_planner
 
                 target_velocity = getTargetVelDriving();
                 // Update target velocity regarding the right of way situation
-                target_velocity = getTargetVelIntersection();
+                if (this->respect_traffic_rules) {
+                    target_velocity = getTargetVelIntersectionWithTrafficRules();
+                }else{
+                    target_velocity = getTargetVelIntersectionWithoutTrafficRules();
+                }
                 target_velocity = checkLaneChangeFree();
 
                 cmd_vel.linear.x = target_velocity;

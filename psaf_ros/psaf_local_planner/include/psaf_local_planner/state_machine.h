@@ -48,14 +48,14 @@ namespace psaf_local_planner {
          * (=all states that are related to the correct behaviour near a traffic light)
          * @return whether the state machine is in the traffic light handling region
          */
-        bool isInTrafficLightStates();
+        virtual bool isInTrafficLightStates();
 
         /**
           * Returns whether the state machine is in the stop sign or stop mark handling region
           * (=all states that are related to the correct behaviour near a stop sign or stop mark)
           * @return whether the state machine is in the stop sign or stop mark handling region
           */
-        bool isInStopStates();
+        virtual bool isInStopStates();
 
         /**
          * Reset the state machine when a new plan is received
@@ -70,7 +70,7 @@ namespace psaf_local_planner {
          * @param currentSpeed
          * @param distanceToStopLine
          */
-        void updateState(bool trafficLightDetected, bool stopDetected,
+        virtual void updateState(bool trafficLightDetected, bool stopDetected,
                          psaf_messages::TrafficLight trafficLightKnowledge, double stoppingDistance,
                          double currentSpeed, double distanceToStopLine, bool isIntersectionClear);
 
@@ -80,8 +80,28 @@ namespace psaf_local_planner {
          */
         std::string getTextRepresentation();
 
-    private:
+    protected:
         LocalPlannerState state;
+    };
+
+    /**
+     * Statemachine when driving without traffic rules
+     * -> Handles the traffic lights as stop signs
+     */
+    class LocalPlannerStateMachineWithoutTrafficRules: public LocalPlannerStateMachine{
+    public:
+        /**
+        * Constructor: Nothing happens here, other than standard values are getting inited
+        */
+        LocalPlannerStateMachineWithoutTrafficRules();
+
+        ~LocalPlannerStateMachineWithoutTrafficRules();
+
+        void updateState(bool trafficLightDetected, bool stopDetected,
+                         psaf_messages::TrafficLight trafficLightKnowledge, double stoppingDistance,
+                         double currentSpeed, double distanceToStopLine, bool isIntersectionClear);
+
+        bool isInTrafficLightStates();
     };
 } // namespace psaf_local_planner
 

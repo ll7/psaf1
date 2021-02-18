@@ -260,12 +260,20 @@ namespace psaf_local_planner {
              */
             double getDistanceToIntersection();
 
+
             /**
-             * Calculates suitable target speed according to current traffic light state
+             * Calculates suitable target speed according to right of way situation at the intersection
              *
-             * @returns target_vel: current target velocity with attention to traffic lights
+             * @returns target_vel: current target speed according to right of way situation at the intersection
              */
-            double getTargetVelIntersection();
+            double getTargetVelIntersectionWithTrafficRules();
+
+            /**
+            * Calculates suitable target speed too pass the intersection as fast as possible but it ignores the right of way
+            *
+            * @returns target_vel: current target speed according to pass the intersectionsssss
+            */
+            double getTargetVelIntersectionWithoutTrafficRules();
 
             /**
              * Calculates the current stopping distance if the car makes a full braking

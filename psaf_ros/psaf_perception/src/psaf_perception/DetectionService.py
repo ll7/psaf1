@@ -19,10 +19,12 @@ class DetectionService:
         rospy.init_node("DetectionService")
         role_name = rospy.get_param("role_name", "ego_vehicle")
         use_gpu = rospy.get_param("use_gpu", True)
+        activate_traffic_light_detector = rospy.get_param("activate_traffic_light_detector", True)
         # Add detectors here
         # self.detectors.update({"trafficSign": TrafficSignDetector(role_name=role_name, use_gpu=use_gpu)})
         # self.detectors.update({"stopMarking": StopMarkDetector(role_name=role_name, use_gpu=use_gpu)})
-        self.detectors.update({"trafficLight": TrafficLightDetector(role_name=role_name, use_gpu=use_gpu)})
+        if activate_traffic_light_detector:
+            self.detectors.update({"trafficLight": TrafficLightDetector(role_name=role_name, use_gpu=use_gpu)})
         self.detectors.update({"stopLines": StopLineDetector(role_name=role_name)})
 
         # Data
@@ -54,7 +56,8 @@ class DetectionService:
         # Collect detection
         # self.detectors["trafficSign"].set_on_detection_listener(self.__on_new_traffic_sign)
         # self.detectors["stopMarking"].set_on_detection_listener(self.__on_new_stop)
-        self.detectors["trafficLight"].set_on_detection_listener(self.__on_new_traffic_light)
+        if activate_traffic_light_detector:
+            self.detectors["trafficLight"].set_on_detection_listener(self.__on_new_traffic_light)
         self.detectors["stopLines"].set_on_detection_listener(self.__on_new_stop_lines)
 
     def __on_new_traffic_sign(self, _, detected: List[DetectedObject]):
