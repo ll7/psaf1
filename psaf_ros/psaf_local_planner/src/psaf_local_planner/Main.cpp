@@ -64,7 +64,7 @@ namespace psaf_local_planner
             // Replace the state machine if we drive without traffic rules
             if(respect_traffic_rules==false){
                 ROS_WARN("The car will drive without respecting the traffic rules");
-                this->state_machine = new LocalPlannerStateMachineWithoutTrafficRules(); // TODO child class isn't called
+                this->state_machine = new LocalPlannerStateMachineWithoutTrafficRules();
             }
 
             this->state_machine->init();

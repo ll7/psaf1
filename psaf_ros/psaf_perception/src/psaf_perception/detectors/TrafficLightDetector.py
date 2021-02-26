@@ -121,7 +121,6 @@ class TrafficLightDetector(AbstractDetector):
             x2 = x1 + w
             y2 = y1 + h
             if w < h and w > 3 and h * H > 10:
-                # TODO idea apply mask at the beginning for the whole image
                 mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
                 # get cropped rgb image
                 crop_rgb = rgb_image[y1:y2, x1:x2, :]
