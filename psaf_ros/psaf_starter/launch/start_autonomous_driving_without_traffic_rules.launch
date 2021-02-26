@@ -3,8 +3,7 @@
     <!-- Launch file for competition without traffic rules-->
 
     <!-- Arguments begin-->
-    <!-- Map to load on startup (either a predefined CARLA town (e.g. 'Town01'), or a OpenDRIVE map file) -->
-    <arg name="town" default='Town03'/>
+
 
     <!-- Whether to respect the traffic rules -->
     <arg name='respect_traffic_rules' default='False'/>
@@ -14,7 +13,6 @@
 
     <include file="$(find psaf_starter)/launch/__start_autonomous_driving_base.launch">
         <arg name='respect_traffic_rules' value='$(arg respect_traffic_rules)'/>
-        <arg name='town' value='$(arg town)'/>
     </include>
 
 </launch> 
