@@ -82,7 +82,7 @@ namespace psaf_local_planner {
         this->state_machine->updateState(traffic_light_detected, stop_detected,
                                          this->traffic_light_state,
                                          this->getCurrentStoppingDistance(), this->current_speed,
-                                         this->stop_distance_at_intersection, is_intersection_clear);
+                                         this->stop_distance_at_intersection, is_intersection_clear, ros::Time::now().toSec());
         // Publish the new state
         this->publishCurrentStateForDebug();
     }

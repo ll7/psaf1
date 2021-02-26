@@ -121,7 +121,6 @@ class TrafficLightDetector(AbstractDetector):
             x2 = x1 + w
             y2 = y1 + h
             if w < h and w > 3 and h * H > 10:
-                # TODO idea apply mask at the beginning for the whole image
                 mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
                 # get cropped rgb image
                 crop_rgb = rgb_image[y1:y2, x1:x2, :]
@@ -150,8 +149,11 @@ class TrafficLightDetector(AbstractDetector):
 
                 # get cropped depth image
                 crop_depth = depth_image[y1:y2, x1:x2]
+                masked_crop_depth=crop_depth[mask[:, :, 1]]
                 # use mask to extract the traffic sign distances
-                distance = np.average(crop_depth[mask[:, :, 1]])
+                distance = np.average(masked_crop_depth)
+                # use the distance and repeat the computation to drop distance values that are two big
+                distance = np.average(np.clip(masked_crop_depth,a_min=0,a_max=distance))
                 label = classes[i]
                 confidence = confidences[i]
 

@@ -3,7 +3,7 @@
 // General
 #include <string>
 #include <filesystem>
-#include <assert.h>
+#include <cassert>
 
 // ros
 #include <ros/ros.h>
@@ -58,8 +58,10 @@
 
 // external non ros
 #include <boost/algorithm/clamp.hpp>
-#include <assert.h>
 
+// Ensure that we work with the correct standard
+// see https://stackoverflow.com/questions/41160276/does-c-stds-inf-behave-exactly-as-common-sensical-infinity
+static_assert(std::numeric_limits<double>::is_iec559, "The numeric standard doesn't fit our requirements!");
 
 namespace psaf_local_planner {
 

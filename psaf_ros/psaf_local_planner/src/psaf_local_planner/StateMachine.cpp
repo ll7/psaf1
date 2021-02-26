@@ -5,11 +5,12 @@
 namespace psaf_local_planner {
     LocalPlannerStateMachine::LocalPlannerStateMachine() {
         this->state = LocalPlannerState::UNKNOWN;
+
+        this->start_time_stop_waiting = 0.;
+        this->start_time_waiting_without_tl_state = std::numeric_limits<double>::infinity();
     }
 
-    LocalPlannerStateMachine::~LocalPlannerStateMachine() {
-
-    }
+    LocalPlannerStateMachine::~LocalPlannerStateMachine() = default;
 
     void LocalPlannerStateMachine::init() {
         this->state = LocalPlannerState::DRIVING;
@@ -42,9 +43,8 @@ namespace psaf_local_planner {
     void LocalPlannerStateMachine::updateState(bool trafficLightDetected, bool stopDetected,
                                                psaf_messages::TrafficLight trafficLightKnowledge,
                                                double stoppingDistance,
-                                               double currentSpeed, double distanceToStopLine,
-                                               bool isIntersectionClear) {
-
+                                               double currentSpeed, double distanceToStopLine, bool isIntersectionClear,
+                                               double currentTimeSec) {
         // Switch statement represents transitions -> if no transition for current input is found we stay in the current state
         switch (this->state) {
             case LocalPlannerState::UNKNOWN:
@@ -87,7 +87,7 @@ namespace psaf_local_planner {
             case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN) {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
-                } else if (distanceToStopLine < 2.0 || currentSpeed < 0.01) {
+                } else if (distanceToStopLine < 2.0 || currentSpeed < 0.01) { // Keep 2m distance to stop line and accept speed of 0.01 as waiting
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_WAITING;
                 }
                 break;
@@ -103,6 +103,23 @@ namespace psaf_local_planner {
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN) {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 }
+                if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_UNKNOWN){
+                    // Update time since we haven't seen a traffic light while waiting
+                    this->start_time_waiting_without_tl_state = std::min(this->start_time_waiting_without_tl_state,
+                                                                         currentTimeSec);
+                }else{
+                    // Set value to default if we know the current traffic light state
+                    this->start_time_waiting_without_tl_state = std::numeric_limits<double>::infinity();
+                }
+                // Check if we need an "emergency exit": We are waiting at the traffic light and have no knowledge about
+                // traffic light state -> this is indicated by the fact that we haven't get any information about the
+                // state for 15 seconds
+                // The intersection must be clear to prevent a collision
+                if(currentTimeSec-this->start_time_waiting_without_tl_state >= 15.0 && isIntersectionClear){
+                    ROS_WARN("The state machine used the emergency exit while waiting at TL because TL state is unknown"
+                             " for more than 15sec");
+                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                }
                 break;
                 // Begin Stop sign / mark transitions
             case LocalPlannerState::STOP_NEAR:
@@ -115,10 +132,12 @@ namespace psaf_local_planner {
             case LocalPlannerState::STOP_WILL_STOP:
                 if (distanceToStopLine <= 2 || currentSpeed < 0.01) {
                     this->state = LocalPlannerState::STOP_WAITING;
+                    this->start_time_stop_waiting = currentTimeSec;
                 }
                 break;
             case LocalPlannerState::STOP_WAITING:
-                if (isIntersectionClear) {
+                // Wait until intersection is clear and wait at least 3 seconds
+                if (isIntersectionClear && (currentTimeSec-this->start_time_stop_waiting)>3.) {
                     this->state = LocalPlannerState::STOP_GO;
                 }
                 break;
@@ -156,19 +175,22 @@ namespace psaf_local_planner {
                     return "Stop: waiting";
                 case LocalPlannerState::STOP_GO:
                     return "Stop: go";
+                case LocalPlannerState::UNKNOWN:
+                    return "Unknown";
             }
             return "unknown state";
         }
     }
 
 
-    LocalPlannerStateMachineWithoutTrafficRules::LocalPlannerStateMachineWithoutTrafficRules() {
-    }
+    LocalPlannerStateMachineWithoutTrafficRules::LocalPlannerStateMachineWithoutTrafficRules() = default;
 
     void LocalPlannerStateMachineWithoutTrafficRules::updateState(bool trafficLightDetected, bool stopDetected,
                                                                   psaf_messages::TrafficLight trafficLightKnowledge,
-                                                                  double stoppingDistance, double currentSpeed,
-                                                                  double distanceToStopLine, bool isIntersectionClear) {
+                                                                  double stoppingDistance,
+                                                                  double currentSpeed, double distanceToStopLine,
+                                                                  bool isIntersectionClear,
+                                                                  double curTimeSec) {
         // Switch statement represents transitions -> if no transition for current input is found we stay in the current state
         switch (this->state) {
             case LocalPlannerState::UNKNOWN:
@@ -223,7 +245,5 @@ namespace psaf_local_planner {
     }
 
 
-    LocalPlannerStateMachineWithoutTrafficRules::~LocalPlannerStateMachineWithoutTrafficRules() {
-
-    }
+    LocalPlannerStateMachineWithoutTrafficRules::~LocalPlannerStateMachineWithoutTrafficRules() = default;
 }
