@@ -52,16 +52,27 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 # determine relevant lanelets for an obstacle
                 car_lanelet = car_lanelet[0][0]
                 relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
+                rospy.loginfo("--------------------")
+                rospy.loginfo("Relevant:")
+                for lane in relevant_lanelets:
+                    rospy.loginfo("\t {}".format(lane))
                 real_obstacles = {}
+                rospy.loginfo("--------------------")
+                rospy.loginfo("Matched:")
                 for obs in obstacle.obstacles:
                     matching_lanelet = self._get_obstacle_lanelet(relevant_lanelets, obs)
                     if matching_lanelet == -1:
-                        rospy.logerr(
-                            "PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
+                        #rospy.logerr(
+                         #   "PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
                         self.status_pub.publish(
                             "Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering")
                     else:
+                        rospy.loginfo("\t {}".format(matching_lanelet))
                         real_obstacles[matching_lanelet] = obs
+                    test = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([obs.x, obs.y])])
+                    if test is not None:
+                        rospy.loginfo("\t other: {}".format(test[0]))
+                rospy.loginfo("--------------------")
                 for lane_id in real_obstacles:
                     rospy.loginfo("PathSupervisor: Processing obstacle: {}".format(real_obstacles[lane_id]))
                     success, car_lanelet = self._add_obstacle(real_obstacles[lane_id], car_lanelet, curr_pos, relevant_lanelets)
@@ -88,24 +99,25 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         """
         relevant = set()
         lanelet: Lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(car_lanelet)
-        if not self.manager.message_by_lanelet[car_lanelet].isAtIntersection:
-            relevant.add(car_lanelet)
         # add all neighbours and their successors, that are heading in the same direction
         # go through all right neighbours
         neighbour_lanelet = lanelet
         while True:
+            if not self.manager.message_by_lanelet[neighbour_lanelet.lanelet_id].isAtIntersection:
+                relevant.add(neighbour_lanelet.lanelet_id)
             tmp = neighbour_lanelet
             while neighbour_lanelet.adj_right_same_direction and neighbour_lanelet.adj_right is not None:
+                neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.adj_right)
                 if not self.manager.message_by_lanelet[neighbour_lanelet.lanelet_id].isAtIntersection:
                     relevant.add(neighbour_lanelet.lanelet_id)
-                neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.adj_right)
             # go through all left neighbours
             neighbour_lanelet = tmp
             while neighbour_lanelet.adj_left_same_direction and neighbour_lanelet.adj_left is not None:
+                neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.adj_left)
                 if not self.manager.message_by_lanelet[neighbour_lanelet.lanelet_id].isAtIntersection:
                     relevant.add(neighbour_lanelet.lanelet_id)
-                neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.adj_left)
-            if len(neighbour_lanelet.successor) > 1:
+            if len(neighbour_lanelet.successor) != 0 and \
+                    self.manager.message_by_lanelet[neighbour_lanelet.successor[0]].isAtIntersection:
                 break
             neighbour_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(neighbour_lanelet.successor[0])
 
@@ -120,11 +132,10 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         """
         matching: int = -1
         for lane in relevant:
-            lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(lane)
-            point_list = np.array([[obstacle.x, obstacle.y], [0, 0]])
-            if lanelet.contains_points(point_list)[0]:
+            poly = self.manager.map.lanelet_network.find_lanelet_by_id(lane).convert_to_polygon()
+            if poly.contains_point(np.array([obstacle.x, obstacle.y])):
                 matching = lane
-            break
+                break
         return matching
 
     def _add_obstacle(self, obstacle: Point, car_lanelet: int, curr_pos: Point, relevant: List[int]):
