@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import math
+import pathlib
 
+import rosbag
 from lanelet2.core import GPSPoint
 from tf.transformations import quaternion_from_euler
 
@@ -544,10 +546,36 @@ class PathProviderCommonRoads:
             rospy.logerr("PathProvider: No possible path was found")
 
         if self.enable_debug:
-            # TODO: serialize message for optimizer
-            pass
+            self._serialize_message(x_route=x_route)
 
         return x_route, best_value
+
+    def _serialize_message(self, x_route: XRoute):
+        """
+        Serialize path message and write to bag file
+        """
+        # suffix set to be .debug
+        suffix = ".debugpath"
+        # debug directory, common parent folder is four directory levels above current folder
+        dir_str = str(pathlib.Path(__file__).parent.absolute().parents[3]) + "/psaf_scenario/scenarios/"
+        bag_file = rosbag.Bag(str(dir_str + "path" + suffix), "w")
+        bag_file.write('XRoute', x_route)
+        bag_file.close()
+
+        rospy.loginfo("PathProvider: Created bag file with path. ../psaf_scenario/scenarios/")
+
+    def _create_bag_files(self, filename: str):
+        """
+        Creates a list of bag file objects
+        :param filename: filename of bag file
+        :return: list of bag file objects
+        """
+        # suffix set to be .debug
+        suffix = ".debugpath"
+        # debug directory, common parent folder is four directory levels above current folder
+        dir_str = str(pathlib.Path(__file__).parent.absolute().parents[3]) + "/psaf_scenario/scenarios/"
+        return rosbag.Bag(str(dir_str + filename + suffix), "w")
+
 
     def _prune_path(self, path: XRoute, start: Point, target: Point):
         """
