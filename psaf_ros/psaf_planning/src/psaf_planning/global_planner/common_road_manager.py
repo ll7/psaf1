@@ -139,6 +139,9 @@ class CommonRoadManager:
         id_lane_1 = self._generate_lanelet_id(id_start=lanelet_id)
         id_lane_2 = self._generate_lanelet_id(id_start=lanelet_id, exclude=id_lane_1)
         # make a local copy of the lanelet to be removed
+        # if a lanelet can't be found -> exit
+        if self.map.lanelet_network.find_lanelet_by_id(lanelet_id) is None:
+            return None, None
         lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(lanelet_id)
         # bounds lanelet1
         sep_index = 0
@@ -211,8 +214,14 @@ class CommonRoadManager:
                                 traffic_lights=lanelet_copy.traffic_lights)
             # update predecessor and successor of surrounding prev/next lanes
             for succ in lanelet_copy.successor:
+                # if a lanelet can't be found -> exit
+                if self.map.lanelet_network.find_lanelet_by_id(succ) is None:
+                    return None, None
                 self.map.lanelet_network.find_lanelet_by_id(succ)._predecessor.append(id_lane_2)
             for pred in lanelet_copy.predecessor:
+                # if a lanelet can't be found -> exit
+                if self.map.lanelet_network.find_lanelet_by_id(pred) is None:
+                    return None, None
                 self.map.lanelet_network.find_lanelet_by_id(pred)._successor.append(id_lane_1)
             # update neigbourhood
             self._add_to_neighbourhood(id_lane_1, list([[id_lane_2], lanelet_copy.predecessor]))
@@ -297,6 +306,10 @@ class CommonRoadManager:
         right_2 = None
         left_1 = None
         left_2 = None
+        # also split neighbours
+        # if a lanelet can't be found -> exit
+        if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id) is None:
+            return None, None
         # also split neighbours
         if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right is not None:
             right_1, right_2 = self._modify_lanelet(
