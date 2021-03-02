@@ -62,16 +62,13 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 for obs in obstacle.obstacles:
                     matching_lanelet = self._get_obstacle_lanelet(relevant_lanelets, obs)
                     if matching_lanelet == -1:
-                        #rospy.logerr(
-                         #   "PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
+                        rospy.logerr(
+                            "PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
                         self.status_pub.publish(
                             "Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering")
                     else:
                         rospy.loginfo("\t {}".format(matching_lanelet))
                         real_obstacles[matching_lanelet] = obs
-                    test = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([obs.x, obs.y])])
-                    if test is not None:
-                        rospy.loginfo("\t other: {}".format(test[0]))
                 rospy.loginfo("--------------------")
                 for lane_id in real_obstacles:
                     rospy.loginfo("PathSupervisor: Processing obstacle: {}".format(real_obstacles[lane_id]))
