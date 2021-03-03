@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(psaf_planning)
+project(psaf_global_planner)
 
 set(CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -41,9 +41,9 @@ qt5_add_resources(SRC_FILES panel_goal.qrc)
 ## Uncomment this if the package has a setup.py. This macro ensures
 catkin_python_setup()
 #build libraries
-add_library(psaf_global_planner_lib src/psaf_planning/rviz_plugins/plugin_global_planner.cpp) #global planner
-add_library(psaf_global_planner_lanelet2_lib src/psaf_planning/rviz_plugins/plugin_global_planner_lanelet2.cpp) #global planner lanelet2
-add_library(psaf_panel_goal_lib src/psaf_planning/rviz_plugins/panel_goal.cpp)                #goal panel
+add_library(psaf_global_planner_lib src/psaf_global_planner/rviz_plugins/plugin_global_planner.cpp) #global planner
+add_library(psaf_global_planner_lanelet2_lib src/psaf_global_planner/rviz_plugins/plugin_global_planner_lanelet2.cpp) #global planner lanelet2
+add_library(psaf_panel_goal_lib src/psaf_global_planner/rviz_plugins/panel_goal.cpp)                #goal panel
 target_link_libraries(psaf_panel_goal_lib ${QT_LIBRARIES} ${catkin_LIBRARIES})   #link goal panel with qt
 target_link_libraries(psaf_global_planner_lib ${catkin_LIBRARIES})   #link goal panel with qt
 target_link_libraries(psaf_global_planner_lanelet2_lib ${catkin_LIBRARIES})   #link goal panel with qt
@@ -130,7 +130,7 @@ target_link_libraries(psaf_global_planner_lanelet2_lib ${catkin_LIBRARIES})   #l
 ## DEPENDS: system dependencies of this project that dependent projects also need
 #catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES psaf_planning
+#  LIBRARIES psaf_global_planner
 #  CATKIN_DEPENDS lanelet2 roscpp rospy std_msgs
 #  DEPENDS system_lib
 #)
@@ -148,7 +148,7 @@ target_link_libraries(psaf_global_planner_lanelet2_lib ${catkin_LIBRARIES})   #l
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/psaf_planning.cpp
+#   src/${PROJECT_NAME}/psaf_global_planner.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -159,7 +159,7 @@ target_link_libraries(psaf_global_planner_lanelet2_lib ${catkin_LIBRARIES})   #l
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/psaf_planning_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/psaf_global_planner_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

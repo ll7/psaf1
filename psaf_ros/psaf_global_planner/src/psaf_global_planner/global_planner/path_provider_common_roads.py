@@ -21,12 +21,12 @@ from SMP.route_planner.route_planner.route_planner import RoutePlanner
 from SMP.route_planner.route_planner.route import Route
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
-from psaf_planning.global_planner.common_road_manager import CommonRoadManager
+from psaf_global_planner.global_planner.common_road_manager import CommonRoadManager
 from geometry_msgs.msg import PoseStamped, Point, Quaternion
 import sys
 from copy import deepcopy
 import rospy
-from psaf_planning.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
+from psaf_global_planner.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
 from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
 from enum import Enum
 from psaf_messages.msg import XRoute

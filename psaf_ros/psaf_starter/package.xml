@@ -51,15 +51,15 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>psaf_local_planner/</build_depend>
   <build_depend>psaf_perception/</build_depend>
-  <build_depend>psaf_planning</build_depend>
+  <build_depend>psaf_global_planner</build_depend>
   <build_depend>psaf_steering/</build_depend>
   <build_export_depend>psaf_local_planner/</build_export_depend>
   <build_export_depend>psaf_perception/</build_export_depend>
-  <build_export_depend>psaf_planning</build_export_depend>
+  <build_export_depend>psaf_global_planner</build_export_depend>
   <build_export_depend>psaf_steering/</build_export_depend>
   <exec_depend>psaf_local_planner/</exec_depend>
   <exec_depend>psaf_perception/</exec_depend>
-  <exec_depend>psaf_planning</exec_depend>
+  <exec_depend>psaf_global_planner</exec_depend>
   <exec_depend>psaf_steering/</exec_depend>
 
 

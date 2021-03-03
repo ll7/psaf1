@@ -27,7 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   tf2_ros
   visualization_msgs
-  psaf_planning
+  psaf_global_planner
   psaf_messages
 )
 

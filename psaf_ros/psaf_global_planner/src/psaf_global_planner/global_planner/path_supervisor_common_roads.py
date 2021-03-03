@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from psaf_messages.msg import Obstacle
-from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads
+from psaf_global_planner.global_planner.path_provider_common_roads import PathProviderCommonRoads
 import rospy
 from lanelet2.core import GPSPoint
 from geometry_msgs.msg import Point
@@ -233,7 +233,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
 def main():
     respect_traffic_rules = rospy.get_param('/path_provider/respect_traffic_rules', False)
-    provider = PathSupervisorCommonRoads(init_rospy=False, enable_debug=True,
+    provider = PathSupervisorCommonRoads(init_rospy=False, enable_debug=False,
                                          respect_traffic_rules=bool(respect_traffic_rules))
     rospy.spin()
 

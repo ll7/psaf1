@@ -14,7 +14,7 @@ from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from nav_msgs.msg import Path
 from sensor_msgs.msg import NavSatFix
 
-from psaf_planning.map_provider.map_provider import MapProvider
+from psaf_global_planner.map_provider.map_provider import MapProvider
 from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
 from std_msgs.msg import String
 import actionlib

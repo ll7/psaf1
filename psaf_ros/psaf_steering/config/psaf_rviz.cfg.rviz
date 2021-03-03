@@ -41,7 +41,7 @@ Panels:
     Tree Height: 920
   - Class: rviz_carla_plugin/CarlaControl
     Name: CarlaControl
-  - Class: psaf_planning/GoalPanel
+  - Class: psaf_global_planner/GoalPanel
     Name: GoalPanel
 Preferences:
   PromptSaveOnExit: true
