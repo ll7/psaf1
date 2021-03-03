@@ -18,7 +18,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
     def __init__(self, init_rospy: bool = False, enable_debug: bool = False, respect_traffic_rules: bool = False):
         if init_rospy:
             rospy.init_node('PathSupervisorCommonRoads', anonymous=True)
-        super(PathSupervisorCommonRoads, self).__init__(init_rospy=not init_rospy, enable_debug=enable_debug, respect_traffic_rules=respect_traffic_rules)
+        super(PathSupervisorCommonRoads, self).__init__(init_rospy=not init_rospy, enable_debug=enable_debug,
+                                                        respect_traffic_rules=respect_traffic_rules)
         self.busy: bool = False
         rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle, queue_size=1)
         self.obstacles = {}
@@ -72,7 +73,15 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 rospy.loginfo("--------------------")
                 for lane_id in real_obstacles:
                     rospy.loginfo("PathSupervisor: Processing obstacle: {}".format(real_obstacles[lane_id]))
-                    success, car_lanelet = self._add_obstacle(real_obstacles[lane_id], car_lanelet, curr_pos, relevant_lanelets)
+                    success, car_lanelet = self._add_obstacle(real_obstacles[lane_id], car_lanelet, curr_pos,
+                                                              relevant_lanelets)
+                    if not success:
+                        # if a lanelet network error occurred, abort mission
+                        rospy.logerr("PathSupervisor: Replanning aborted, network error !!")
+                        self.status_pub.publish("Replanning aborted, network error")
+                        self.busy = False
+                        return
+
                     relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
                 # generate new plan
                 self._replan()
@@ -144,6 +153,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         :param relevant: list of lanelets that are possible for obstacle insertion
         """
         rospy.loginfo("PathSupervisor: Add obstacle")
+        success = False
         obs_pos_x = obstacle.x
         obs_pos_y = obstacle.y
         matching_lanelet = self._get_obstacle_lanelet(relevant, obstacle)
@@ -151,7 +161,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         if matching_lanelet == -1:
             rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
             self.status_pub.publish("Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering")
-            return False, car_lanelet
+            return success, car_lanelet
 
         static_obstacle_id = self.manager.map.generate_object_id()
         static_obstacle_type = ObstacleType.PARKED_VEHICLE
@@ -177,14 +187,16 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 split_ids = self.manager.update_network(split_ids[0], curr_pos, split_point, None)
                 if split_ids[0] is not None:
                     car_lanelet = split_ids[0]
+                    success = True
         else:
             if static_obstacle is not None:
                 self.manager.map.lanelet_network.find_lanelet_by_id(
                     matching_lanelet).add_static_obstacle_to_lanelet(
                     static_obstacle.obstacle_id)
                 self.manager.map.add_objects(static_obstacle)
+                success = True
 
-        return True, car_lanelet
+        return success, car_lanelet
 
     def _get_current_position(self) -> Point:
         """
@@ -221,7 +233,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
 def main():
     respect_traffic_rules = rospy.get_param('/path_provider/respect_traffic_rules', False)
-    provider = PathSupervisorCommonRoads(init_rospy=False, enable_debug=True, respect_traffic_rules=bool(respect_traffic_rules))
+    provider = PathSupervisorCommonRoads(init_rospy=False, enable_debug=True,
+                                         respect_traffic_rules=bool(respect_traffic_rules))
     rospy.spin()
 
 

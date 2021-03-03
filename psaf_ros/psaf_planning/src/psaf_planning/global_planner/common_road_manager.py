@@ -216,12 +216,12 @@ class CommonRoadManager:
             for succ in lanelet_copy.successor:
                 # if a lanelet can't be found -> exit
                 if self.map.lanelet_network.find_lanelet_by_id(succ) is None:
-                    return None, None
+                    continue
                 self.map.lanelet_network.find_lanelet_by_id(succ)._predecessor.append(id_lane_2)
             for pred in lanelet_copy.predecessor:
                 # if a lanelet can't be found -> exit
                 if self.map.lanelet_network.find_lanelet_by_id(pred) is None:
-                    return None, None
+                    continue
                 self.map.lanelet_network.find_lanelet_by_id(pred)._successor.append(id_lane_1)
             # update neigbourhood
             self._add_to_neighbourhood(id_lane_1, list([[id_lane_2], lanelet_copy.predecessor]))
@@ -322,9 +322,11 @@ class CommonRoadManager:
 
         # split obstacle lanelet
         matching_1, matching_2 = self._modify_lanelet(matching_lanelet_id, modify_point, start_point)
+        if matching_1 is None or matching_2 is None:
+            return None, None
 
         # update neighbourhood
-        if right_1 is not None:
+        if right_1 is not None and right_2 is not None:
             # update right side of current lanelet
             self.map.lanelet_network.find_lanelet_by_id(matching_1)._adj_right = right_1
             self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_right = right_2
@@ -346,6 +348,8 @@ class CommonRoadManager:
                 right_1_old = right_1
                 right_2_old = right_2
                 right_1, right_2 = self._modify_lanelet(next, modify_point, start_point)
+                if right_1 is None or right_2 is None:
+                    return None, None
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_right = right_1
                     self.map.lanelet_network.find_lanelet_by_id(right_2_old)._adj_right = right_2
@@ -364,7 +368,7 @@ class CommonRoadManager:
                     self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_right = right_2_old
                     next = self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left
 
-        if left_1 is not None:
+        if left_1 is not None and left_2 is not None:
             # update left side of current lanelet
             self.map.lanelet_network.find_lanelet_by_id(matching_1)._adj_left = left_1
             self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_left = left_2
@@ -386,6 +390,8 @@ class CommonRoadManager:
                 left_1_old = left_1
                 left_2_old = left_2
                 left_1, left_2 = self._modify_lanelet(next, modify_point, start_point)
+                if left_1 is None or left_2 is None:
+                    return None, None
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_left = left_1
                     self.map.lanelet_network.find_lanelet_by_id(left_2_old)._adj_left = left_2

@@ -74,7 +74,8 @@ class PathProviderCommonRoads:
         self.path_message = XRoute()
         self.planning_problem = None
         self.manager = None
-        self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter), intersections=self.map_provider.intersection)
+        self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter),
+                                         intersections=self.map_provider.intersection)
         self.route_id = 1  # 1 is the first valid id, 0 is reserved as invalid
         rospy.Subscriber("/psaf/goal/set_instruction", PlanningInstruction, self._callback_goal)
         self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
@@ -256,7 +257,7 @@ class PathProviderCommonRoads:
         start_position = []
         index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start,
                                                                 prematured_stop=False, use_xcenterline=False)
-        start_position = [start_lanelet.center_vertices[index][0],start_lanelet.center_vertices[index][1]]
+        start_position = [start_lanelet.center_vertices[index][0], start_lanelet.center_vertices[index][1]]
 
         start_state: State = State(position=np.array([start_position[0], start_position[1]]), velocity=0,
                                    time_step=0, slip_angle=0, yaw_rate=0, orientation=self.start_orientation[2])
@@ -575,7 +576,6 @@ class PathProviderCommonRoads:
         # debug directory, common parent folder is four directory levels above current folder
         dir_str = str(pathlib.Path(__file__).parent.absolute().parents[3]) + "/psaf_scenario/scenarios/"
         return rosbag.Bag(str(dir_str + filename + suffix), "w")
-
 
     def _prune_path(self, path: XRoute, start: Point, target: Point):
         """
