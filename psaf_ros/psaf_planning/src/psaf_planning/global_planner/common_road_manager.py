@@ -140,9 +140,9 @@ class CommonRoadManager:
         id_lane_2 = self._generate_lanelet_id(id_start=lanelet_id, exclude=id_lane_1)
         # make a local copy of the lanelet to be removed
         # if a lanelet can't be found -> exit
-        if self.map.lanelet_network.find_lanelet_by_id(lanelet_id) is None:
-            return None, None
         lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(lanelet_id)
+        if lanelet_copy is None:
+            return None, None
         # bounds lanelet1
         sep_index = 0
         lanelet_center_list = lanelet_copy.center_vertices.tolist()
