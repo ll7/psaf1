@@ -61,7 +61,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 self._log_debug("--------------------")
                 self._log_debug("Relevant:")
                 for lane in relevant_lanelets:
-                    rospy.loginfo("\t {}".format(lane))
+                    self._log_debug("\t {}".format(lane))
                 real_obstacles = {}
                 self._log_debug("--------------------")
                 self._log_debug("Matched:")
