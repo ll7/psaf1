@@ -15,11 +15,16 @@ from commonroad.scenario.lanelet import Lanelet
 
 
 class PathSupervisorCommonRoads(PathProviderCommonRoads):
-    def __init__(self, init_rospy: bool = False, enable_debug: bool = False, respect_traffic_rules: bool = False):
+    def __init__(self, init_rospy: bool = False,
+                 enable_debug: bool = False,
+                 respect_traffic_rules: bool = False,
+                 export_path: bool = False):
+
         if init_rospy:
             rospy.init_node('PathSupervisorCommonRoads', anonymous=True)
         super(PathSupervisorCommonRoads, self).__init__(init_rospy=not init_rospy, enable_debug=enable_debug,
-                                                        respect_traffic_rules=respect_traffic_rules)
+                                                        respect_traffic_rules=respect_traffic_rules,
+                                                        export_path=export_path)
         self.busy: bool = False
         rospy.Subscriber("/psaf/planning/obstacle", Obstacle, self._callback_obstacle, queue_size=1)
         self.obstacles = {}
@@ -53,24 +58,25 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 # determine relevant lanelets for an obstacle
                 car_lanelet = car_lanelet[0][0]
                 relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
-                rospy.loginfo("--------------------")
-                rospy.loginfo("Relevant:")
+                self._log_debug("--------------------")
+                self._log_debug("Relevant:")
                 for lane in relevant_lanelets:
                     rospy.loginfo("\t {}".format(lane))
                 real_obstacles = {}
-                rospy.loginfo("--------------------")
-                rospy.loginfo("Matched:")
+                self._log_debug("--------------------")
+                self._log_debug("Matched:")
                 for obs in obstacle.obstacles:
                     matching_lanelet = self._get_obstacle_lanelet(relevant_lanelets, obs)
                     if matching_lanelet == -1:
-                        rospy.logerr(
+                        self._log_debug(
                             "PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
-                        self.status_pub.publish(
-                            "Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering")
+                        if self.enable_debug:
+                            self.status_pub.publish(
+                                "Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering")
                     else:
-                        rospy.loginfo("\t {}".format(matching_lanelet))
+                        self._log_debug("\t {}".format(matching_lanelet))
                         real_obstacles[matching_lanelet] = obs
-                rospy.loginfo("--------------------")
+                self._log_debug("--------------------")
                 for lane_id in real_obstacles:
                     rospy.loginfo("PathSupervisor: Processing obstacle: {}".format(real_obstacles[lane_id]))
                     success, car_lanelet = self._add_obstacle(real_obstacles[lane_id], car_lanelet, curr_pos,
@@ -230,11 +236,18 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
             self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
 
+    def _log_debug(self, msg):
+        if self.enable_debug:
+            rospy.loginfo(msg)
+
 
 def main():
     respect_traffic_rules = rospy.get_param('/path_provider/respect_traffic_rules', False)
-    provider = PathSupervisorCommonRoads(init_rospy=False, enable_debug=False,
-                                         respect_traffic_rules=bool(respect_traffic_rules))
+    export_path = rospy.get_param('/path_provider/export_path', False)
+    enable_debug = rospy.get_param('/path_provider/enable_debug', False)
+    provider = PathSupervisorCommonRoads(init_rospy=False, enable_debug=bool(enable_debug),
+                                         respect_traffic_rules=bool(respect_traffic_rules),
+                                         export_path=bool(export_path))
     rospy.spin()
 
 

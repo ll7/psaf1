@@ -52,7 +52,8 @@ class PathProviderCommonRoads:
                  role_name: str = "ego_vehicle",
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
-                 cost_stop_sign: int = 5, respect_traffic_rules: bool = False, turning_circle: float = 10.0):
+                 cost_stop_sign: int = 5, respect_traffic_rules: bool = False, turning_circle: float = 10.0,
+                 export_path: bool = False):
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
@@ -82,6 +83,7 @@ class PathProviderCommonRoads:
         self.status_pub.publish("PathProvider ready")
         self.u_turn_distances = []  # first entry is left, second entry is forward distance
         self.turning_circle = turning_circle
+        self.export_path: bool = export_path
 
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
@@ -546,7 +548,7 @@ class PathProviderCommonRoads:
         else:
             rospy.logerr("PathProvider: No possible path was found")
 
-        if self.enable_debug:
+        if self.export_path:
             self._serialize_message(x_route=x_route)
 
         return x_route, best_value
