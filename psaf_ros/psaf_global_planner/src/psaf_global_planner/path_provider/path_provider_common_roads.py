@@ -450,20 +450,19 @@ class PathProviderCommonRoads:
 
                     do_lane_change = False
             else:
-                # lane change -> set isLaneChange True
-                message.isLaneChange = True
                 if not do_lane_change:
-                    tmp_message = deepcopy(message)
+                    # lane change -> set isLaneChange True
+                    message.isLaneChange = True
                     # lane change occurs in front of a intersection
-                    tmp_message.hasStop = False
-                    tmp_message.hasLight = False
-                    tmp_message.isAtIntersection = False
-                    tmp_message.route_portion = message.route_portion[:len(message.route_portion) // 2]
-                    extended_route.route.append(deepcopy(tmp_message))
-                    time += message.route_portion[(len(message.route_portion) // 2) - 1].duration
+                    message.hasStop = False
+                    message.hasLight = False
+                    message.isAtIntersection = False
+                    message.route_portion = message.route_portion[:len(message.route_portion) // 2]
+                    extended_route.route.append(deepcopy(message))
+                    time += message.route_portion[-1].duration
                     # add lane change penalty
                     time += self.cost_lane_change
-                    dist += message.route_portion[(len(message.route_portion) // 2) - 1].distance
+                    dist += message.route_portion[-1].distance
                 else:
                     # lane changing over at least two lanes at once -> do not count the skipped middle lane
                     pass
