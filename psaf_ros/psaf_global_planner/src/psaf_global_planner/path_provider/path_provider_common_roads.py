@@ -453,10 +453,9 @@ class PathProviderCommonRoads:
                 if not do_lane_change:
                     # lane change -> set isLaneChange True
                     message.isLaneChange = True
-                    # lane change occurs in front of a intersection
+                    # lane change occurs in front of a intersection -> no traffic signs or lights
                     message.hasStop = False
                     message.hasLight = False
-                    message.isAtIntersection = False
                     message.route_portion = message.route_portion[:len(message.route_portion) // 2]
                     extended_route.route.append(deepcopy(message))
                     time += message.route_portion[-1].duration

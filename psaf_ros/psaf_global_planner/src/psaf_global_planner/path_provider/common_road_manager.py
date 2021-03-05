@@ -116,9 +116,9 @@ class CommonRoadManager:
 
     def _check_in_lanelet_for_intersection(self, lanelet: Lanelet) -> bool:
         """
-        Checks whether a intersection is ahead of the given lanelet
+        Checks whether a lanelet is on an intersection
         :param lanelet: lanelet to be checked
-        :return: True if there is a upcoming intersection, False if not
+        :return: True if lanelet is on an intersection, False if not
         """
 
         # check for the amount of predecessor
