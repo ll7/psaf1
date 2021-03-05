@@ -21,7 +21,7 @@ from SMP.route_planner.route_planner.route_planner import RoutePlanner
 from SMP.route_planner.route_planner.route import Route
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
-from psaf_global_planner.global_planner.common_road_manager import CommonRoadManager
+from psaf_global_planner.path_provider.common_road_manager import CommonRoadManager
 from geometry_msgs.msg import PoseStamped, Point, Quaternion
 import sys
 from copy import deepcopy

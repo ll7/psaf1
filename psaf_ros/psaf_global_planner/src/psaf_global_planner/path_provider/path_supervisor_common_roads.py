@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from psaf_messages.msg import Obstacle
-from psaf_global_planner.global_planner.path_provider_common_roads import PathProviderCommonRoads
+from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads
 import rospy
 from lanelet2.core import GPSPoint
 from geometry_msgs.msg import Point

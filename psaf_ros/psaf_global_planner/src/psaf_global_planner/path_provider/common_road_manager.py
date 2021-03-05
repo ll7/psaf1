@@ -73,7 +73,7 @@ class CommonRoadManager:
         :param lanelet: lanelet of which the given extended centerline should be generated
         :return: List of Waypoints and their corresponding speed. -> [[x,y,z, speed], ..]
         """
-        from psaf_global_planner.global_planner.path_provider_common_roads import PathProviderCommonRoads as pp
+        from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads as pp
         # first get speed_signs in current lanelet
         speed_signs = []
         for sign_id in lanelet.traffic_signs:
@@ -128,7 +128,7 @@ class CommonRoadManager:
             return False
 
     def _modify_lanelet(self, lanelet_id: int, modify_point: Point, start_point: Point) -> Tuple[int, int]:
-        from psaf_global_planner.global_planner.path_provider_common_roads import PathProviderCommonRoads as pp
+        from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads as pp
         """Splits a lanelet at a certain point
 
         :param lanelet_id: lanelet to be split
