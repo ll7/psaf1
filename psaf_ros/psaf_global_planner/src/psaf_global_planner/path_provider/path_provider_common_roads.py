@@ -53,7 +53,7 @@ class PathProviderCommonRoads:
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
                  cost_stop_sign: int = 5, respect_traffic_rules: bool = False, turning_circle: float = 10.0,
-                 export_path: bool = False):
+                 export_path: bool = False, cost_lane_change: int = 5):
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
@@ -72,6 +72,7 @@ class PathProviderCommonRoads:
         self.max_radius = max_radius
         self.cost_traffic_light = cost_traffic_light
         self.cost_stop_sign = cost_stop_sign
+        self.cost_lane_change = cost_lane_change
         self.path_message = XRoute()
         self.planning_problem = None
         self.manager = None
@@ -453,9 +454,15 @@ class PathProviderCommonRoads:
                 message.isLaneChange = True
                 if not do_lane_change:
                     tmp_message = deepcopy(message)
+                    # lane change occurs in front of a intersection
+                    tmp_message.hasStop = False
+                    tmp_message.hasLight = False
+                    tmp_message.isAtIntersection = False
                     tmp_message.route_portion = message.route_portion[:len(message.route_portion) // 2]
                     extended_route.route.append(deepcopy(tmp_message))
                     time += message.route_portion[(len(message.route_portion) // 2) - 1].duration
+                    # add lane change penalty
+                    time += self.cost_lane_change
                     dist += message.route_portion[(len(message.route_portion) // 2) - 1].distance
                 else:
                     # lane changing over at least two lanes at once -> do not count the skipped middle lane
