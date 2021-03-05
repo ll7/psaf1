@@ -5,7 +5,7 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QVBoxLayout>
-#include <sensor_msgs/NavSatFix.h>
+#include <geometry_msgs/Pose.h>
 
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(psaf_goal::GoalPanel, rviz::Panel)
@@ -16,17 +16,17 @@ namespace psaf_goal {
         QHBoxLayout *inputContainer = new QHBoxLayout;
 
         QFormLayout *gpsLayout = new QFormLayout;
-        leLongitude = new QLineEdit("0.0");
-        leLongitude->setValidator( new QDoubleValidator(-180, 180, 9, this) ); //longitude ranges from -180 to 180. 9 decimals result in a precision of 0.1mm
-        gpsLayout->addRow("Longitude", leLongitude);
+        leX = new QLineEdit("0.0");
+        leX->setValidator( new QDoubleValidator(-500, 500, 9, this) );
+        gpsLayout->addRow("X", leX);
 
-        leLatitude = new QLineEdit("0.0");
-        leLatitude->setValidator( new QDoubleValidator(-90, 90, 9, this) ); //latitude ranges from -90 to 90. 9 decimals result in a precision of 0.1mm
-        gpsLayout->addRow("Latitude", leLatitude);
+        leY = new QLineEdit("0.0");
+        leY->setValidator( new QDoubleValidator(-500, 500, 9, this) );
+        gpsLayout->addRow("Y", leY);
 
-        leAltitude = new QLineEdit("0.0");
-        leAltitude->setValidator( new QDoubleValidator(-500, 500, 9, this) );
-        gpsLayout->addRow("Altitude", leAltitude);
+        leZ = new QLineEdit("0.0");
+        leZ->setValidator( new QDoubleValidator(-500, 500, 9, this) );
+        gpsLayout->addRow("Z", leZ);
 
         inputContainer->addLayout(gpsLayout);
 
@@ -55,28 +55,28 @@ namespace psaf_goal {
         layout->addLayout(carlaLayout);
 
         setLayout(layout);
-        goalPublisher = nodeHandle.advertise<sensor_msgs::NavSatFix>("/psaf/goal/set", 1);
+        goalPublisher = nodeHandle.advertise<geometry_msgs::Pose>("/psaf/goal/set", 1);
         statusSubscriber = nodeHandle.subscribe("/psaf/status", 1000, &GoalPanel::statusCallback, this);
 
         }
 
-    void GoalPanel::setGoal(float latitude, float longitude, float altitude)
+    void GoalPanel::setGoal(float x, float y, float z)
     {
         // save gps coordinates
-        this->latitude = latitude;
-        this->longitude = longitude;
-        this->altitude = altitude;
+        this->x = x;
+        this->y = y;
+        this->z = z;
     }
 
     void GoalPanel::sendGoal()
     {
         if (ros::ok() && goalPublisher) {
-            setGoal(leLatitude->text().toDouble(),leLongitude->text().toDouble(),leAltitude->text().toDouble());
-            ROS_INFO("Send gps: %lf lat, %lf long, %lf alt",this->latitude, this->longitude, this->altitude);
-            sensor_msgs::NavSatFix msg;
-            msg.latitude = this->latitude;
-            msg.longitude = this->longitude;
-            msg.altitude = this->altitude;
+            setGoal(leX->text().toFloat(),leY->text().toFloat(),leZ->text().toFloat());
+            ROS_INFO("Send position: %lf lat, %lf long, %lf alt",this->x, this->y, this->z);
+            geometry_msgs::Pose msg;
+            msg.position.x = this->x;
+            msg.position.y = this->y;
+            msg.position.z = this->z;
             goalPublisher.publish(msg);
         }
     }

@@ -18,12 +18,12 @@ namespace psaf_goal {
         void spinOnce_Wrapper();
 
     private:
-        void setGoal(float latitude, float longitude, float altitude);
+        void setGoal(float x, float y, float z);
         void statusCallback(const std_msgs::String::ConstPtr& msg);
         QPushButton *bPublish;
-        QLineEdit *leLongitude;
-        QLineEdit *leLatitude;
-        QLineEdit *leAltitude;
+        QLineEdit *leX;
+        QLineEdit *leY;
+        QLineEdit *leZ;
         QLabel *lstatus;
 
         QTimer *timer;
@@ -32,8 +32,8 @@ namespace psaf_goal {
         ros::Subscriber statusSubscriber;
         ros::NodeHandle nodeHandle;
         //gps coordinates: current goal
-        double latitude{0.0};
-        double longitude{0.0};
-        double altitude{0.0};
+        float x{0.0};
+        float z{0.0};
+        float y{0.0};
     };
 } // end namespace psaf_goal
