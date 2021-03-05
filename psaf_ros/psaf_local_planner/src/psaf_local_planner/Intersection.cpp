@@ -3,6 +3,11 @@
 
 namespace psaf_local_planner {
 
+
+    double PsafLocalPlanner::computeCheckDistance(){
+        return std::max(1.5*getCurrentStoppingDistance(),15.);
+    }
+
     double PsafLocalPlanner::computeDistanceToUpcomingTrafficLight() {
 
         if (global_route.size() > 0) {
@@ -10,7 +15,9 @@ namespace psaf_local_planner {
                 double remaining_way_on_lanelet =
                         this->distanceBetweenCenterLines(global_route[0].route_portion.front(),
                                                          global_route[0].route_portion.back());
-                if (remaining_way_on_lanelet < 1.5 * getCurrentStoppingDistance()) {
+
+                double check_radius = this->computeCheckDistance();
+                if (remaining_way_on_lanelet < check_radius) {
                     // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
                     if(global_route[0].hasLight){
                         return remaining_way_on_lanelet;
@@ -23,9 +30,8 @@ namespace psaf_local_planner {
                     double remaining_way_to_next_lanelet_end = remaining_way_on_lanelet +
                             this->distanceBetweenCenterLines(global_route[1].route_portion.front(),
                                                              global_route[1].route_portion.back());
-                    if (remaining_way_to_next_lanelet_end > getCurrentStoppingDistance()
-                        && (remaining_way_on_lanelet < 1.5 * getCurrentStoppingDistance())) {
-                        // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
+                    if (remaining_way_to_next_lanelet_end > check_radius
+                        && (remaining_way_on_lanelet < check_radius)) {
                         if(global_route[0].hasLight){
                             return remaining_way_to_next_lanelet_end;
                         }
@@ -43,8 +49,10 @@ namespace psaf_local_planner {
                 double remaining_way_on_lanelet =
                         this->distanceBetweenCenterLines(global_route[0].route_portion.front(),
                                                          global_route[0].route_portion.back());
+                double check_radius = this->computeCheckDistance();
+
                 // if the lanelet is too short we look on the next lanelet
-                if (remaining_way_on_lanelet < 1.5 * getCurrentStoppingDistance()) {
+                if (remaining_way_on_lanelet < check_radius) {
                     // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
                     if(global_route[0].hasStop){
                         return remaining_way_on_lanelet;
@@ -56,9 +64,8 @@ namespace psaf_local_planner {
                     double remaining_way_to_next_lanelet_end = remaining_way_on_lanelet +
                                                                this->distanceBetweenCenterLines(global_route[1].route_portion.front(),
                                                                                                 global_route[1].route_portion.back());
-                    if (remaining_way_to_next_lanelet_end > getCurrentStoppingDistance()
-                        && (remaining_way_on_lanelet < 1.5 * getCurrentStoppingDistance())) {
-                        // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
+                    if (remaining_way_to_next_lanelet_end > check_radius
+                        && (remaining_way_on_lanelet < check_radius)) {
                         if(global_route[0].hasStop){
                             return remaining_way_to_next_lanelet_end;
                         }

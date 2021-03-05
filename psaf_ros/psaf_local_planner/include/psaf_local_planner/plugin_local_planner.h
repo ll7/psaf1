@@ -290,6 +290,13 @@ namespace psaf_local_planner {
             void updateStateMachine();
 
             /**
+             * Returns the distance within the car checks for traffic light and stop signs/marks.
+             * @return the distance within the car checks for traffic light and stop signs/marks.
+             */
+            double computeCheckDistance();
+
+
+            /**
              * Computes the distance to traffic light on lanelet if the lanelet before the upcoming intersection
              * has a traffic light that affects the car.
              * Checks the current lanelet and the next lanelet if the current one is too short
