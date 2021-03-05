@@ -289,7 +289,9 @@ namespace psaf_local_planner
             if (lanelet.isLaneChange && i + 1 < size) {
                 auto &next_lanelet = global_route[i + 1];
                 int lanelet_route_size = lanelet.route_portion.size();
-                unsigned long num_points = std::min(std::min(next_lanelet.route_portion.size(), lanelet.route_portion.size()), max_points_smoothing);
+                // smoothing should be dependent on max velocity
+                float speed_factor = lanelet.route_portion[0].speed / 3.6 / 5;
+                unsigned long num_points = std::min(std::min(next_lanelet.route_portion.size(), lanelet.route_portion.size()), (long unsigned int)(max_points_smoothing * speed_factor));
                 // first point of smoothing
                 double x1 = lanelet.route_portion[lanelet_route_size - num_points].x;
                 double y1 = lanelet.route_portion[lanelet_route_size - num_points].y;
