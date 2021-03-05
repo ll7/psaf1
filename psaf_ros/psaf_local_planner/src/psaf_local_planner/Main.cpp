@@ -221,6 +221,9 @@ namespace psaf_local_planner
         return (1 - t) * v0 + t * v1;
     }
 
+
+    
+
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
         ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
@@ -318,6 +321,45 @@ namespace psaf_local_planner
         }
 
 
+        // When at an intersection and turning left --> inserting a fake stop sign to check for collision
+        for (int i = 0; i < size; i++) {
+            auto &lanelet = global_route[i];
+            ROS_INFO("lanelet: %i intersection %i", lanelet.id, lanelet.isAtIntersection);
+            if (i + 1 < size) {
+                auto &next_lanelet = global_route[i + 1];
+                int lanelet_route_size = lanelet.route_portion.size();
+                int next_lanelet_route_size = next_lanelet.route_portion.size();
+
+                if (next_lanelet.isAtIntersection && !lanelet.hasStop && !lanelet.hasLight) {
+                    if (lanelet_route_size > 2 && next_lanelet_route_size > 10) {
+                        // calculate angle between three points
+                        // TODO: move to own function
+                        auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
+                        auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
+                        auto &next = next_lanelet.route_portion[10];
+
+                        auto v_last = tf2::Vector3(last.x, last.y, last.z);
+                        auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
+                        auto v_next = tf2::Vector3(next.x, next.y, next.z);
+
+                        auto v1 = v_last - v_second_last;
+                        auto v2 = v_next - v_last;
+
+                        double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
+
+                        // check if we are changing direction to left:
+                        if (angle < 0) {
+                            ROS_WARN("Adding a fake stop sign at due left turn at lanechange %i -> %i, at [%f %f]", lanelet.id, next_lanelet.id, next_lanelet.route_portion[0].x, next_lanelet.route_portion[0].y);
+                            lanelet.hasStop = true;
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+        // Convert xroute back into normal pose stamp list
         std::vector<geometry_msgs::PoseStamped> points = {};
 
         unsigned int counter = 0;
