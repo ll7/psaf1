@@ -306,7 +306,6 @@ class PathProviderLanelet2:
 
         self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
         self.start = self.GPS_Sensor.get_position()
-        self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
         rospy.loginfo("PathProvider: Received start and goal position")
         self.get_path_from_a_to_b(debug=self.enable_debug)
         self._trigger_move_base(self.path.poses[-1])

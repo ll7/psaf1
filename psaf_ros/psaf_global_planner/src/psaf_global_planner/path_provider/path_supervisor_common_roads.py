@@ -4,7 +4,7 @@ from psaf_messages.msg import Obstacle
 from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads
 import rospy
 from lanelet2.core import GPSPoint
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Pose
 import numpy as np
 from commonroad.geometry.shape import Rectangle
 from commonroad.scenario.obstacle import StaticObstacle, ObstacleType
@@ -218,10 +218,11 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         """
         Replan after change in observed obstacles
         """
-        # update current position
-        self.start = self.GPS_Sensor.get_position()
-        # and orientation
-        self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
+        # update current position and orientation
+        start = self.GPS_Sensor.get_position()
+        start = self.projector.forward(GPSPoint(start.latitude, start.longitude, start.altitude))
+        start_orientation = self.vehicle_status.get_status().orientation
+        self.start = Pose(position=Point(x=start.x, y=start.y, z=start.z), orientation=start_orientation)
         rospy.loginfo("PathSupervisor: Replanning instruction received")
         self.get_path_from_a_to_b()
         self.status_pub.publish("Replanning done")

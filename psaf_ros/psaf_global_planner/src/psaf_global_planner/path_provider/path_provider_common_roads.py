@@ -4,7 +4,7 @@ import pathlib
 
 import rosbag
 from lanelet2.core import GPSPoint
-from tf.transformations import quaternion_from_euler
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
 
 from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
@@ -22,12 +22,12 @@ from SMP.route_planner.route_planner.route import Route
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
 from psaf_global_planner.path_provider.common_road_manager import CommonRoadManager
-from geometry_msgs.msg import PoseStamped, Point, Quaternion
+from geometry_msgs.msg import PoseStamped, Point, Quaternion, Pose
 import sys
 from copy import deepcopy
 import rospy
 from psaf_global_planner.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
-from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
+from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
 from enum import Enum
 from psaf_messages.msg import XRoute
 from lanelet2.projection import UtmProjector
@@ -195,11 +195,11 @@ class PathProviderCommonRoads:
             # no solution was found
             return False, None
 
-    def _generate_planning_problem(self, start: Point, target: Point, u_turn: bool = False) -> ProblemStatus:
+    def _generate_planning_problem(self, start: Pose, target: Pose, u_turn: bool = False) -> ProblemStatus:
         """
         Generate the planning problem by setting the starting point and generating a target region
-        :param start:  x,y,z coordinates of the current staring position
-        :param target: x,y,z coordinates of the current goal position
+        :param start:  Pose: x,y,z coordinates of the current staring position and orientation
+        :param target: Pose x,y,z coordinates of the current goal position and orientation
         :param u_turn: if True plan route with a initial u_turn
         :return: status of the generated problem
         """
@@ -211,14 +211,15 @@ class PathProviderCommonRoads:
 
         start_lanelet: Lanelet
         # check if the car is already on a lanelet, if not get nearest lanelet to start
-        matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([start.x, start.y])])
+        matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position(
+            [np.array([start.position.x, start.position.y])])
         if len(matching_lanelet[0]) == 0:
-            start_lanelet = self._find_nearest_lanelet(start)
+            start_lanelet = self._find_nearest_lanelet(start.position)
         else:
             start_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
 
         # get nearest lanelet to target
-        goal_lanelet: Lanelet = self._find_nearest_lanelet(target)
+        goal_lanelet: Lanelet = self._find_nearest_lanelet(target.position)
 
         if start_lanelet is None:
             self.planning_problem = None
@@ -228,7 +229,7 @@ class PathProviderCommonRoads:
             return ProblemStatus.BadTarget
 
         if u_turn:
-            u_turn_succes, start_lanelet = self._find_nearest_u_turn_lanelet(start, start_lanelet)
+            u_turn_succes, start_lanelet = self._find_nearest_u_turn_lanelet(start.position, start_lanelet)
             if not u_turn_succes:
                 return ProblemStatus.BadUTurn
 
@@ -237,9 +238,11 @@ class PathProviderCommonRoads:
             # check whether start and target point are on that lanelet
             self.planning_problem = None
             start_index = PathProviderCommonRoads.find_nearest_path_index(route=start_lanelet.center_vertices,
-                                                                          compare_point=start, use_xcenterline=False)
+                                                                          compare_point=start.position,
+                                                                          use_xcenterline=False)
             end_index = PathProviderCommonRoads.find_nearest_path_index(route=start_lanelet.center_vertices,
-                                                                        compare_point=target, use_xcenterline=False)
+                                                                        compare_point=target.position,
+                                                                        use_xcenterline=False)
             # if the target point is ahead of the start point
             if start_index > end_index:
                 # split lanelet in between those two points to fix that issue for a further iteration
@@ -248,7 +251,7 @@ class PathProviderCommonRoads:
                                     start_lanelet.center_vertices[start_index][0], 0)
 
                 self.manager.update_network(matching_lanelet_id=goal_lanelet.lanelet_id, modify_point=split_point,
-                                            start_point=start, static_obstacle=None)
+                                            start_point=start.position, static_obstacle=None)
 
                 self.planning_problem = None
                 return ProblemStatus.BadLanelet
@@ -258,12 +261,16 @@ class PathProviderCommonRoads:
 
         # create start and goal state for planning problem
         start_position = []
-        index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start,
+        index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start.position,
                                                                 prematured_stop=False, use_xcenterline=False)
         start_position = [start_lanelet.center_vertices[index][0], start_lanelet.center_vertices[index][1]]
 
+        # yaw in third entry ([2]) of euler notation
+        start_yaw = euler_from_quaternion((start.orientation.x, start.orientation.y,
+                                           start.orientation.z, start.orientation.w))[2]
         start_state: State = State(position=np.array([start_position[0], start_position[1]]), velocity=0,
-                                   time_step=0, slip_angle=0, yaw_rate=0, orientation=self.start_orientation[2])
+                                   time_step=0, slip_angle=0, yaw_rate=0,
+                                   orientation=start_yaw)
 
         circle = Circle(1, center=np.array([goal_lanelet.center_vertices[len(goal_lanelet.center_vertices) // 2][0],
                                             goal_lanelet.center_vertices[len(goal_lanelet.center_vertices) // 2][1]]))
@@ -275,11 +282,11 @@ class PathProviderCommonRoads:
         self.planning_problem = PlanningProblem(0, start_state, goal_region)
         return ProblemStatus.Success
 
-    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, u_turn: bool = False):
+    def get_path_from_a_to_b(self, from_a: Pose = None, to_b: Pose = None, u_turn: bool = False):
         """
         Returns the shortest path from start to goal
-        :param  from_a: Start point [GPS Coord] optional
-        :param  to_b:   End point [GPS Coord] optional
+        :param  from_a: Start point [Pose] optional
+        :param  to_b:   End point [Pose] optional
         :param u_turn: if True: check if a u_turn at the start is beneficial
         :return: Path or only start if no path was found at all, or no map information is received
         """
@@ -333,9 +340,9 @@ class PathProviderCommonRoads:
                                 reversed: bool = False, prematured_stop: bool = False):
         """
         Get index of the a point x in path which is next to a given point y
-        :param route: List of route points, which are eather of type [x][y] or PoseStamped
+        :param route: List of route points, which are eather of type [x][y] or xcenterline
         :param compare_point: Point to compare the route_point -> Type Point
-        :param use_xcenterline:  route_point is a PoseStamped -> Type Bool
+        :param use_xcenterline:  route_point is a xcenterline entry
         :return: index
         """
         min_distance = float("inf")
@@ -363,9 +370,9 @@ class PathProviderCommonRoads:
     def _euclidean_2d_distance_from_to_position(route_point, compare_point: Point, use_xcenterline: bool = True):
         """
         This helper function calculates the euclidean distance between 2 Points
-        :param route_point: Has to be the point entry in path. -> PoseStamped
+        :param route_point: Has to be the point entry in path. -> xcenterline
         :param compare_point: Point to compare the route_point -> Type Point
-        :param use_xcenterline:  route_point is a PoseStamped -> Type Bool
+        :param use_xcenterline:  route_point is a xcenterline -> Type Bool
         :return: distance
         """
         if use_xcenterline:
@@ -470,11 +477,11 @@ class PathProviderCommonRoads:
 
         return extended_route, dist, time
 
-    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, u_turn: bool = False):
+    def _compute_route(self, from_a: Pose, to_b: Pose, u_turn: bool = False):
         """
         Compute shortest path
-        :param from_a: Start point -- GPS Coord in float: latitude, longitude, altitude
-        :param to_b: End point   -- GPS Coord in float: latitude, longitude, altitude
+        :param from_a: Start Pose
+        :param to_b: End Pose
         :param u_turn: if True plan route with a initial u_turn
         """""
         x_route = XRoute(isUTurn=u_turn)
@@ -485,21 +492,12 @@ class PathProviderCommonRoads:
         else:
             rospy.loginfo("PathProvider: Computing feasible path from a to b")
 
-        # first transform GPS_Position
-        gps_point_start = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
-        start_local_3d = self.projector.forward(gps_point_start)
-        start_point = Point(start_local_3d.x, start_local_3d.y, start_local_3d.z)
-
-        gps_point_target = GPSPoint(to_b.latitude, to_b.longitude, to_b.altitude)
-        target_local_3d = self.projector.forward(gps_point_target)
-        target_point = Point(target_local_3d.x, target_local_3d.y, start_local_3d.z)
-
-        # then generate planning_problem
-        status = self._generate_planning_problem(start_point, target_point, u_turn=u_turn)
+        # first generate planning_problem
+        status = self._generate_planning_problem(from_a, to_b, u_turn=u_turn)
 
         # now check planning_problem
         if status == ProblemStatus.BadLanelet:
-            status = self._generate_planning_problem(start_point, target_point, u_turn=u_turn)
+            status = self._generate_planning_problem(from_a, to_b, u_turn=u_turn)
 
         if status is ProblemStatus.BadStart:
             # planning_problem is None if e.g. start or goal position has not been found
@@ -538,7 +536,7 @@ class PathProviderCommonRoads:
             x_route.isUTurn = u_turn
 
             # Prune path to get exact start and end points
-            x_route = self._prune_path(x_route, start_point, target_point)
+            x_route = self._prune_path(x_route, from_a.position, to_b.position)
 
             if self.enable_debug:
                 # if debug: show results in .png
@@ -572,23 +570,11 @@ class PathProviderCommonRoads:
 
         rospy.loginfo("PathProvider: Created bag file with path. ../psaf_scenario/scenarios/")
 
-    def _create_bag_files(self, filename: str):
-        """
-        Creates a list of bag file objects
-        :param filename: filename of bag file
-        :return: list of bag file objects
-        """
-        # suffix set to be .debug
-        suffix = ".debugpath"
-        # debug directory, common parent folder is four directory levels above current folder
-        dir_str = str(pathlib.Path(__file__).parent.absolute().parents[3]) + "/psaf_scenario/scenarios/"
-        return rosbag.Bag(str(dir_str + filename + suffix), "w")
-
     def _prune_path(self, path: XRoute, start: Point, target: Point):
         """
         Prunes the path by the given start and target point
         :param path: Path to be pruned
-        :param start:  x,y,z coordinates of the current staring position
+        :param start:  x,y,z coordinates of the current starting position
         :param target: x,y,z coordinates of the current goal position
         :return: pruned path
         """
@@ -631,11 +617,13 @@ class PathProviderCommonRoads:
         :param data: data received
         """
         self._reset_map()
-        self.goal = GPS_Position(latitude=data.goalPoint.latitude, longitude=data.goalPoint.longitude,
-                                 altitude=data.goalPoint.altitude)
-        self.start = self.GPS_Sensor.get_position()
+        self.goal = Pose(position=data.goalPoint.position, orientation=data.goalPoint.orientation)
+        start = self.GPS_Sensor.get_position()
+        start = self.projector.forward(GPSPoint(start.latitude, start.longitude, start.altitude))
+        start_orientation = self.vehicle_status.get_status().orientation
+        self.start = Pose(position=Point(x=start.x, y=start.y, z=start.z), orientation=start_orientation)
         self.u_turn_distances = [data.obstacleDistanceLeft, data.obstacleDistanceForward]
-        self.start_orientation = self.vehicle_status.get_status().get_orientation_as_euler()
+
         rospy.loginfo("PathProvider: Received start and goal position")
         self.get_path_from_a_to_b(u_turn=data.planUTurn)
         self.status_pub.publish("PathProvider done")
