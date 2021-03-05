@@ -113,6 +113,10 @@ namespace psaf_local_planner
                     }
                 }
 
+                if (!respect_traffic_rules) {
+                    max_velocity *= 1.5;
+                }
+
                 double angle = computeSteeringAngle(target_point, current_pose.pose);
 
                 updateStateMachine();
