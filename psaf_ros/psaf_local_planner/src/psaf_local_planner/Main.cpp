@@ -320,6 +320,8 @@ namespace psaf_local_planner
             }
         }
 
+        const int lookahead_left_turn = 20;
+        const float lookahead_left_turn_angle_threshhold = 45 * M_PI/180;
 
         // When at an intersection and turning left --> inserting a fake stop sign to check for collision
         for (int i = 0; i < size; i++) {
@@ -330,13 +332,13 @@ namespace psaf_local_planner
                 int lanelet_route_size = lanelet.route_portion.size();
                 int next_lanelet_route_size = next_lanelet.route_portion.size();
 
-                if (next_lanelet.isAtIntersection && !lanelet.hasStop && !lanelet.hasLight) {
-                    if (lanelet_route_size > 2 && next_lanelet_route_size > 10) {
+                if (next_lanelet.isAtIntersection && !lanelet.isAtIntersection && !lanelet.hasStop && !lanelet.hasLight) {
+                    if (lanelet_route_size > 2 && next_lanelet_route_size > lookahead_left_turn) {
                         // calculate angle between three points
                         // TODO: move to own function
                         auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
                         auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
-                        auto &next = next_lanelet.route_portion[10];
+                        auto &next = next_lanelet.route_portion[lookahead_left_turn];
 
                         auto v_last = tf2::Vector3(last.x, last.y, last.z);
                         auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
@@ -348,7 +350,8 @@ namespace psaf_local_planner
                         double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
 
                         // check if we are changing direction to left:
-                        if (angle < 0) {
+                        ROS_WARN("Angle: %f", angle);
+                        if (angle > lookahead_left_turn_angle_threshhold) {
                             ROS_WARN("Adding a fake stop sign at due left turn at lanechange %i -> %i, at [%f %f]", lanelet.id, next_lanelet.id, next_lanelet.route_portion[0].x, next_lanelet.route_portion[0].y);
                             lanelet.hasStop = true;
                         }
@@ -369,8 +372,8 @@ namespace psaf_local_planner
         marker1.color.a = 1.0;
         marker1.color.r = 1.0;
         marker1.color.g = 1.0;
-        marker1.scale.x = 0.5;
-        marker1.scale.y = 0.5;
+        marker1.scale.x = 2;
+        marker1.scale.y = 2;
         marker1.scale.z = 4;
 
         for (auto &lanelet : global_route) {
