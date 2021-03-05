@@ -1,5 +1,0 @@
-<launch>
-    <node pkg="costmap_converter" type="standalone_converter" respawn="false" name="standalone_converter" output="screen">
-        <rosparam file="$(find psaf_steering)/config/costmap_converter_params.yaml" command="load" />
-    </node>
-</launch> 

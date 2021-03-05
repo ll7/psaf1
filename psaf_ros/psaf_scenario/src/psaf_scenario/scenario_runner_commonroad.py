@@ -3,6 +3,8 @@ import shutil
 import sys
 import pathlib
 import os
+from abc import abstractmethod
+
 import actionlib
 import math
 
@@ -266,36 +268,21 @@ class ScenarioRunner:
             if item.endswith(".path"):
                 os.remove(os.path.join("/tmp", item))
 
+    @abstractmethod
     def _unpack_route(self):
         """
         This function extracts the given route bag file and converts its content inits a list for further operations
         :return:
         """
-        rospy.loginfo("ScenarioRunner: Starting the unpacking")
-        try:
-            bag = rosbag.Bag(self.route_file)
-            for topic, msg, t in bag.read_messages(topics=['Path']):
-                for i in range(0, len(msg.poses)):
-                    pose = msg.poses[i]
-                    self.planned_route.append(pose)
-            bag.close()
-            rospy.loginfo("ScenarioRunner: Route unpacked")
-        except ROSBagException:
-            rospy.logerr("ScenarioRunner: Failure while extracting the route")
-            sys.exit(-1)
+        pass
 
+    @abstractmethod
     def _trigger_move_base(self, target: PoseStamped):
         """
         This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
         The last entry can be the goal if a path was found or the starting point if no path was found
         """
-        client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        client.wait_for_server()
-
-        goal = MoveBaseGoal()
-        goal.target_pose = target
-
-        client.send_goal(goal)
+        pass
 
     def _spawn_vehicle(self):
         # Move vehicle to the starting line
@@ -314,25 +301,3 @@ class ScenarioRunner:
         """
         return ((route_point.position.x - compare_point.position.x) ** 2 +
                 (route_point.position.y - compare_point.position.y) ** 2) ** 0.5
-
-
-def main():
-    print(rospy.get_name())
-    timeout = rospy.get_param('/scenario_runner_commonroad/timeout', -1.0)
-    radius = rospy.get_param('/scenario_runner_commonroad/radius', 5)
-    sample_cnt = rospy.get_param('/scenario_runner_commonroad/sample_cnt', 100)
-    file = rospy.get_param('/scenario_runner_commonroad/file', 'path.debugpath')
-    height = rospy.get_param('/scenario_runner_commonroad/height', 10)
-    scenario = ScenarioRunner(init_rospy=True, timeout=timeout, radius=radius, route_file=file,
-                              sample_cnt=sample_cnt, height=height)
-    scenario.init_scenario()
-    scenario.execute_scenario()
-    scenario.evaluate_route_quality_cos()
-    scenario.plot_routes()
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        pass

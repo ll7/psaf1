@@ -6,8 +6,8 @@ from commonroad.planning.goal import GoalRegion
 from commonroad.common.util import Interval
 from commonroad.geometry.shape import Circle
 
-from psaf_planning.map_provider.landmark_provider import LandMarkProvider, LandMarkPoint
-from psaf_planning.map_provider.map_provider import MapProvider
+from psaf_global_planner.map_provider.landmark_provider import LandMarkProvider, LandMarkPoint
+from psaf_global_planner.map_provider.map_provider import MapProvider
 from geometry_msgs.msg import Point
 from commonroad.scenario.lanelet import Lanelet
 from commonroad.scenario.traffic_sign import TrafficSignIDGermany, TrafficLight, TrafficSign, TrafficSignElement

@@ -73,7 +73,7 @@ class CommonRoadManager:
         :param lanelet: lanelet of which the given extended centerline should be generated
         :return: List of Waypoints and their corresponding speed. -> [[x,y,z, speed], ..]
         """
-        from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads as pp
+        from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads as pp
         # first get speed_signs in current lanelet
         speed_signs = []
         for sign_id in lanelet.traffic_signs:
@@ -128,7 +128,7 @@ class CommonRoadManager:
             return False
 
     def _modify_lanelet(self, lanelet_id: int, modify_point: Point, start_point: Point) -> Tuple[int, int]:
-        from psaf_planning.global_planner.path_provider_common_roads import PathProviderCommonRoads as pp
+        from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads as pp
         """Splits a lanelet at a certain point
 
         :param lanelet_id: lanelet to be split
@@ -139,7 +139,10 @@ class CommonRoadManager:
         id_lane_1 = self._generate_lanelet_id(id_start=lanelet_id)
         id_lane_2 = self._generate_lanelet_id(id_start=lanelet_id, exclude=id_lane_1)
         # make a local copy of the lanelet to be removed
+        # if a lanelet can't be found -> exit
         lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(lanelet_id)
+        if lanelet_copy is None:
+            return None, None
         # bounds lanelet1
         sep_index = 0
         lanelet_center_list = lanelet_copy.center_vertices.tolist()
@@ -211,8 +214,14 @@ class CommonRoadManager:
                                 traffic_lights=lanelet_copy.traffic_lights)
             # update predecessor and successor of surrounding prev/next lanes
             for succ in lanelet_copy.successor:
+                # if a lanelet can't be found -> exit
+                if self.map.lanelet_network.find_lanelet_by_id(succ) is None:
+                    continue
                 self.map.lanelet_network.find_lanelet_by_id(succ)._predecessor.append(id_lane_2)
             for pred in lanelet_copy.predecessor:
+                # if a lanelet can't be found -> exit
+                if self.map.lanelet_network.find_lanelet_by_id(pred) is None:
+                    continue
                 self.map.lanelet_network.find_lanelet_by_id(pred)._successor.append(id_lane_1)
             # update neigbourhood
             self._add_to_neighbourhood(id_lane_1, list([[id_lane_2], lanelet_copy.predecessor]))
@@ -298,6 +307,10 @@ class CommonRoadManager:
         left_1 = None
         left_2 = None
         # also split neighbours
+        # if a lanelet can't be found -> exit
+        if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id) is None:
+            return None, None
+        # also split neighbours
         if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right is not None:
             right_1, right_2 = self._modify_lanelet(
                 self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right,
@@ -309,9 +322,11 @@ class CommonRoadManager:
 
         # split obstacle lanelet
         matching_1, matching_2 = self._modify_lanelet(matching_lanelet_id, modify_point, start_point)
+        if matching_1 is None or matching_2 is None:
+            return None, None
 
         # update neighbourhood
-        if right_1 is not None:
+        if right_1 is not None and right_2 is not None:
             # update right side of current lanelet
             self.map.lanelet_network.find_lanelet_by_id(matching_1)._adj_right = right_1
             self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_right = right_2
@@ -333,6 +348,8 @@ class CommonRoadManager:
                 right_1_old = right_1
                 right_2_old = right_2
                 right_1, right_2 = self._modify_lanelet(next, modify_point, start_point)
+                if right_1 is None or right_2 is None:
+                    return None, None
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_right = right_1
                     self.map.lanelet_network.find_lanelet_by_id(right_2_old)._adj_right = right_2
@@ -351,7 +368,7 @@ class CommonRoadManager:
                     self.map.lanelet_network.find_lanelet_by_id(right_2)._adj_right = right_2_old
                     next = self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left
 
-        if left_1 is not None:
+        if left_1 is not None and left_2 is not None:
             # update left side of current lanelet
             self.map.lanelet_network.find_lanelet_by_id(matching_1)._adj_left = left_1
             self.map.lanelet_network.find_lanelet_by_id(matching_2)._adj_left = left_2
@@ -373,6 +390,8 @@ class CommonRoadManager:
                 left_1_old = left_1
                 left_2_old = left_2
                 left_1, left_2 = self._modify_lanelet(next, modify_point, start_point)
+                if left_1 is None or left_2 is None:
+                    return None, None
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_left = left_1
                     self.map.lanelet_network.find_lanelet_by_id(left_2_old)._adj_left = left_2

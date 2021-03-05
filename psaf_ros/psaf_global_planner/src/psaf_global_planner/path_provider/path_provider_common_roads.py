@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import math
+import pathlib
 
+import rosbag
 from lanelet2.core import GPSPoint
 from tf.transformations import quaternion_from_euler
 
@@ -19,12 +21,12 @@ from SMP.route_planner.route_planner.route_planner import RoutePlanner
 from SMP.route_planner.route_planner.route import Route
 import numpy as np
 from SMP.route_planner.route_planner.utils_visualization import draw_route, get_plot_limits_from_reference_path
-from psaf_planning.global_planner.common_road_manager import CommonRoadManager
+from psaf_global_planner.path_provider.common_road_manager import CommonRoadManager
 from geometry_msgs.msg import PoseStamped, Point, Quaternion
 import sys
 from copy import deepcopy
 import rospy
-from psaf_planning.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
+from psaf_global_planner.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
 from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
 from enum import Enum
 from psaf_messages.msg import XRoute
@@ -50,7 +52,8 @@ class PathProviderCommonRoads:
                  role_name: str = "ego_vehicle",
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
-                 cost_stop_sign: int = 5, respect_traffic_rules: bool = False, turning_circle: float = 10.0):
+                 cost_stop_sign: int = 5, respect_traffic_rules: bool = False, turning_circle: float = 10.0,
+                 export_path: bool = False, cost_lane_change: int = 5):
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
@@ -69,16 +72,19 @@ class PathProviderCommonRoads:
         self.max_radius = max_radius
         self.cost_traffic_light = cost_traffic_light
         self.cost_stop_sign = cost_stop_sign
+        self.cost_lane_change = cost_lane_change
         self.path_message = XRoute()
         self.planning_problem = None
         self.manager = None
-        self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter), intersections=self.map_provider.intersection)
+        self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter),
+                                         intersections=self.map_provider.intersection)
         self.route_id = 1  # 1 is the first valid id, 0 is reserved as invalid
         rospy.Subscriber("/psaf/goal/set_instruction", PlanningInstruction, self._callback_goal)
         self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
         self.status_pub.publish("PathProvider ready")
         self.u_turn_distances = []  # first entry is left, second entry is forward distance
         self.turning_circle = turning_circle
+        self.export_path: bool = export_path
 
     def _load_scenario(self, polling_rate: int, timeout_iter: int):
         """
@@ -254,7 +260,7 @@ class PathProviderCommonRoads:
         start_position = []
         index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start,
                                                                 prematured_stop=False, use_xcenterline=False)
-        start_position = [start_lanelet.center_vertices[index][0],start_lanelet.center_vertices[index][1]]
+        start_position = [start_lanelet.center_vertices[index][0], start_lanelet.center_vertices[index][1]]
 
         start_state: State = State(position=np.array([start_position[0], start_position[1]]), velocity=0,
                                    time_step=0, slip_angle=0, yaw_rate=0, orientation=self.start_orientation[2])
@@ -444,14 +450,19 @@ class PathProviderCommonRoads:
 
                     do_lane_change = False
             else:
-                # lane change -> set isLaneChange True
-                message.isLaneChange = True
                 if not do_lane_change:
-                    tmp_message = deepcopy(message)
-                    tmp_message.route_portion = message.route_portion[:len(message.route_portion) // 2]
-                    extended_route.route.append(deepcopy(tmp_message))
-                    time += message.route_portion[(len(message.route_portion) // 2) - 1].duration
-                    dist += message.route_portion[(len(message.route_portion) // 2) - 1].distance
+                    # lane change -> set isLaneChange True
+                    message.isLaneChange = True
+                    # lane change occurs in front of a intersection
+                    message.hasStop = False
+                    message.hasLight = False
+                    message.isAtIntersection = False
+                    message.route_portion = message.route_portion[:len(message.route_portion) // 2]
+                    extended_route.route.append(deepcopy(message))
+                    time += message.route_portion[-1].duration
+                    # add lane change penalty
+                    time += self.cost_lane_change
+                    dist += message.route_portion[-1].distance
                 else:
                     # lane changing over at least two lanes at once -> do not count the skipped middle lane
                     pass
@@ -543,11 +554,36 @@ class PathProviderCommonRoads:
         else:
             rospy.logerr("PathProvider: No possible path was found")
 
-        if self.enable_debug:
-            # TODO: serialize message for optimizer
-            pass
+        if self.export_path:
+            self._serialize_message(x_route=x_route)
 
         return x_route, best_value
+
+    def _serialize_message(self, x_route: XRoute):
+        """
+        Serialize path message and write to bag file
+        """
+        # suffix set to be .debug
+        suffix = ".debugpath"
+        # debug directory, common parent folder is four directory levels above current folder
+        dir_str = str(pathlib.Path(__file__).parent.absolute().parents[3]) + "/psaf_scenario/scenarios/"
+        bag_file = rosbag.Bag(str(dir_str + "path" + suffix), "w")
+        bag_file.write('XRoute', x_route)
+        bag_file.close()
+
+        rospy.loginfo("PathProvider: Created bag file with path. ../psaf_scenario/scenarios/")
+
+    def _create_bag_files(self, filename: str):
+        """
+        Creates a list of bag file objects
+        :param filename: filename of bag file
+        :return: list of bag file objects
+        """
+        # suffix set to be .debug
+        suffix = ".debugpath"
+        # debug directory, common parent folder is four directory levels above current folder
+        dir_str = str(pathlib.Path(__file__).parent.absolute().parents[3]) + "/psaf_scenario/scenarios/"
+        return rosbag.Bag(str(dir_str + filename + suffix), "w")
 
     def _prune_path(self, path: XRoute, start: Point, target: Point):
         """

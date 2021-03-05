@@ -1,7 +1,0 @@
-<library path="lib/libpsaf_local_planner">
-  <class name="psaf_local_planner/PsafLocalPlanner" type="psaf_local_planner::PsafLocalPlanner" base_class_type="nav_core::BaseLocalPlanner">
-    <description>
-      A implementation of a local planner for the PSAF-Project.
-    </description>
-  </class>
-</library>
