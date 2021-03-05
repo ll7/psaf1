@@ -357,7 +357,37 @@ namespace psaf_local_planner
             }
         }
 
+        // Publish stop signs as markers 
+        auto markers = visualization_msgs::MarkerArray();
+        auto marker1 = visualization_msgs::Marker();
 
+        marker1.type = visualization_msgs::Marker::SPHERE_LIST;
+        marker1.action = visualization_msgs::Marker::ADD;
+        marker1.ns = "stop";
+        marker1.header.frame_id = "map";
+        marker1.header.stamp = ros::Time::now();
+        marker1.color.a = 1.0;
+        marker1.color.r = 1.0;
+        marker1.color.g = 1.0;
+        marker1.scale.x = 0.5;
+        marker1.scale.y = 0.5;
+        marker1.scale.z = 4;
+
+        for (auto &lanelet : global_route) {
+            if (lanelet.hasStop) {
+                geometry_msgs::Point point;
+                point.x = lanelet.route_portion[lanelet.route_portion.size() - 1].x;
+                point.y = lanelet.route_portion[lanelet.route_portion.size() - 1].y;
+                point.z = 0;
+                marker1.points.push_back(point);
+                ROS_INFO("collision at %f, %f", point.x, point.y);
+
+            }
+        }
+
+        markers.markers.push_back(marker1);
+        debug_marker_pub.publish(markers);
+        
 
         // Convert xroute back into normal pose stamp list
         std::vector<geometry_msgs::PoseStamped> points = {};
