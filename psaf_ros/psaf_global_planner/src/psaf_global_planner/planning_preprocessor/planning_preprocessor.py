@@ -8,7 +8,8 @@
 
 import rospy
 from psaf_messages.msg import PlanningInstruction
-from sensor_msgs.msg import PointCloud2, NavSatFix
+from sensor_msgs.msg import PointCloud2
+from geometry_msgs.msg import Pose
 import sensor_msgs.point_cloud2 as pc2
 import matplotlib.pyplot as plt
 from matplotlib import patches
@@ -133,11 +134,11 @@ class PlanningPreprocessor:
             self.inner_sub = rospy.Subscriber('/carla/ego_vehicle/semantic_lidar/lidar_inner/point_cloud', PointCloud2,
                                               self.lidar_callback_inner, queue_size=1)
 
-    def goal_callback(self, data: NavSatFix):
+    def goal_callback(self, data: Pose):
         """
         Callback from RVIZ goal panel
         """
-        self.goal = data  # goal point from RVIZ
+        self.goal = data  # goal Pose from RVIZ
         # if uturn should be planned, acquire data from lidars
         # otherwise dont cehck lidar, just relay goal to global planner
         if self.plan_u_turn:
@@ -156,7 +157,7 @@ class PlanningPreprocessor:
             self.plan_u_turn = (not obey_rules) or always_turn
             rospy.loginfo(['Planning Preprocessor: Plan Turn: ', self.plan_u_turn])
 
-            rospy.Subscriber('/psaf/goal/set', NavSatFix, self.goal_callback, queue_size=1)
+            rospy.Subscriber('/psaf/goal/set', Pose, self.goal_callback, queue_size=1)
             self.instruction_pub = rospy.Publisher('/psaf/goal/set_instruction', PlanningInstruction,
                                                    queue_size=1)
 
