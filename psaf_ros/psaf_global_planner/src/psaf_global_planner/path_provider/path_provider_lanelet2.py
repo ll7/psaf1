@@ -9,13 +9,12 @@ from lanelet2.core import GPSPoint
 from lanelet2.io import Origin
 import rospy
 from tf.transformations import quaternion_from_euler
-from geometry_msgs.msg import PoseStamped, Point, Quaternion
+from geometry_msgs.msg import PoseStamped, Point, Quaternion, Pose
 from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from nav_msgs.msg import Path
-from sensor_msgs.msg import NavSatFix
 
 from psaf_global_planner.map_provider.map_provider import MapProvider
-from psaf_abstraction_layer.sensors.GPS import GPS_Position, GPS_Sensor
+from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
 from std_msgs.msg import String
 import actionlib
 import pathlib
@@ -55,7 +54,7 @@ class PathProviderLanelet2:
             self.map = None
         else:
             self.map = self._load_map(self.map_path)
-        rospy.Subscriber("/psaf/goal/set", NavSatFix, self._callback_goal)
+        rospy.Subscriber("/psaf/goal/set", Pose, self._callback_goal)
         self.status_pub.publish("PathProvider ready")
 
     def __del__(self):
@@ -125,7 +124,7 @@ class PathProviderLanelet2:
         """
         return ((objA.pose.position.x - objB.x) ** 2 + (objA.pose.position.y - objB.y) ** 2) ** 0.5
 
-    def get_path_from_a_to_b(self, from_a: GPS_Position = None, to_b: GPS_Position = None, debug=False,
+    def get_path_from_a_to_b(self, from_a: Pose = None, to_b: Pose = None, debug=False,
                              long: bool = False):
         """
         Returns the shortest path from start to goal
@@ -210,7 +209,7 @@ class PathProviderLanelet2:
 
         return p
 
-    def _compute_route(self, from_a: GPS_Position, to_b: GPS_Position, debug=False):
+    def _compute_route(self, from_a: Pose, to_b: Pose, debug=False):
         """
         Compute shortest path
         :param from_a: Start point -- GPS Coord in float: latitude, longitude, altitude
@@ -218,18 +217,12 @@ class PathProviderLanelet2:
         :param debug: Default value = False ; Generate Debug output
         """""
 
-        # step1: transform GPS Data (for starting point)
-        gps_point_start = GPSPoint(from_a.latitude, from_a.longitude, from_a.altitude)
-        start_local_3d = self.projector.forward(gps_point_start)
-        start_local_2d = lanelet2.core.BasicPoint2d(start_local_3d.x, start_local_3d.y)
-        # transform GPS Data for target point
-        gps_point_target = GPSPoint(to_b.latitude, to_b.longitude, to_b.altitude)
-        target_local_3d = self.projector.forward(gps_point_target)
-        target_local_2d = lanelet2.core.BasicPoint2d(target_local_3d.x, target_local_3d.y)
+        start_local_2d = lanelet2.core.BasicPoint2d(from_a.position.x, from_a.position.y)
+        target_local_2d = lanelet2.core.BasicPoint2d(to_b.position.x, to_b.position.y)
 
         if self.map is None:
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
-            start_point = Point(start_local_3d.x, start_local_3d.y, start_local_3d.z)
+            start_point = Point(from_a.position.x, from_a.position.y, from_a.position.z)
             rospy.logerr("PathProvider: Path computation aborted, no map available")
             self._create_path_long_message([self._get_pose_stamped(start_point, start_point)])
             self._create_path_message([self._get_pose_stamped(start_point, start_point)])
@@ -288,7 +281,7 @@ class PathProviderLanelet2:
 
         else:
             # Creates a empty path message, which is by consent filled with, and only with the starting_point
-            start_point = Point(start_local_3d.x, start_local_3d.y, start_local_3d.z)
+            start_point = Point(from_a.position.x, from_a.position.y, from_a.position.z)
             path_long_list.append(self._get_pose_stamped(start_point, start_point))
             path_short_list = path_long_list
             rospy.logerr("PathProvider: No possible path was found")
@@ -302,10 +295,11 @@ class PathProviderLanelet2:
         Callback function of psaf goal set subscriber
         :param data: data received
         """
-        self._reset_map()
-
-        self.goal = GPS_Position(latitude=data.latitude, longitude=data.longitude, altitude=data.altitude)
-        self.start = self.GPS_Sensor.get_position()
+        self.goal = Pose(position=data.position, orientation=data.orientation)
+        start = self.GPS_Sensor.get_position()
+        start = self.projector.forward(GPSPoint(start.latitude, start.longitude, start.altitude))
+        start_orientation = self.vehicle_status.get_status().orientation
+        self.start = Pose(position=Point(x=start.x, y=start.y, z=start.z), orientation=start_orientation)
         rospy.loginfo("PathProvider: Received start and goal position")
         self.get_path_from_a_to_b(debug=self.enable_debug)
         self._trigger_move_base(self.path.poses[-1])
@@ -365,9 +359,6 @@ class PathProviderLanelet2:
 
         # delete and return
         return np.delete(path_poses, index_list_to_del).tolist()
-
-    def _reset_map(self):
-        pass
 
 
 def main():
