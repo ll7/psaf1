@@ -12,20 +12,21 @@ PLUGINLIB_EXPORT_CLASS(psaf_goal::GoalPanel, rviz::Panel)
 
 namespace psaf_goal {
     GoalPanel::GoalPanel(QWidget *parent): rviz::Panel(parent) {
+        QRegExpValidator* rxv = new QRegExpValidator(QRegExp("[+-]?\\d*[\\.,]?\\d+"), this);
         QVBoxLayout *layout = new QVBoxLayout;
         QHBoxLayout *inputContainer = new QHBoxLayout;
 
         QFormLayout *gpsLayout = new QFormLayout;
         leX = new QLineEdit("0.0");
-        leX->setValidator( new QDoubleValidator(-500, 500, 9, this) );
+        leX->setValidator( new QRegExpValidator(QRegExp("[-]{0,1}\\d{0,}\\.\\d{0,}"),0)  );
         gpsLayout->addRow("X", leX);
 
         leY = new QLineEdit("0.0");
-        leY->setValidator( new QDoubleValidator(-500, 500, 9, this) );
+        leY->setValidator( new QRegExpValidator(QRegExp("[-]{0,1}\\d{0,}\\.\\d{0,}"),0)  );
         gpsLayout->addRow("Y", leY);
 
         leZ = new QLineEdit("0.0");
-        leZ->setValidator( new QDoubleValidator(-500, 500, 9, this) );
+        leZ->setValidator( new QRegExpValidator(QRegExp("[-]{0,1}\\d{0,}\\.\\d{0,}"),0)   );
         gpsLayout->addRow("Z", leZ);
 
         inputContainer->addLayout(gpsLayout);
