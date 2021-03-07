@@ -355,8 +355,8 @@ class CarlaAckermannControl(object):
         """
         fully breaks or fully stops when the diff is greater than x
         """
-        diff_accel = 1
-        diff_break = 1
+        diff_accel = 3
+        diff_break = 3
 
         if self.info.current.speed - diff_break > self.info.target.speed:
             self.info.output.brake = 1.0
