@@ -83,12 +83,16 @@ namespace psaf_local_planner
 
         return d_angle;
     }
-
+    /**
+     * function to calculate radius with the use of menger curvature
+     * https://en.wikipedia.org/wiki/Menger_curvature#Definition
+     */
     double PsafLocalPlanner::calculateRadius(unsigned int first, unsigned int last) {
+        // no curvature therefore radius -> infinity
         if (first == last || last == 0) {
             return INFINITY;
         }
-
+        // curvature too small
         if (last - first <= 5) {
             return INFINITY;
         }
@@ -107,37 +111,21 @@ namespace psaf_local_planner
         auto p2 = tf2::Vector3(x2, y2, 0);
         auto p3 = tf2::Vector3(x3, y3, 0);
 
-        // find center point of the circle using http://www.ambrsoft.com/TrigoCalc/Circle3D.htm
-        /*double a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
 
-        double b =  (x1*x1+y1*y1)*(y3-y2)+(x2*x2+y2*y2)*(y1-y3)+(x3*x3+y3*y3)*(y2-y1);
 
-        double c = (x1*x1 + y1*y1) * (x2 - x3) + (x2*x2 + y2*y2)*(x3 - x1) + (x3*x3 + y3*y3)*(x1 - x2);
-        double d = (x1*x1 + y1*y1)*(x3*y2 - x2*y3) + (x2*x2 + y2*y2)*(x1*y3-x3*y1)+(x3*x3 + y3*y3)*(x2*y1-x1*y2);
-
-        double r = std::sqrt((b * b + c * c - (4 * a * d)) / (4 * a * a));
-        double center_x = - b/(2*a);
-        double center_y = - c/(2*a);
-
-        ROS_INFO("first: %d, middle: %d, last: %d", first, middle, last);
-        ROS_INFO("x1: %f y1: %f x2: %f y2:%f x3: %f y3: %f", x1, y1, x2, y2, x3, y3);
-        ROS_INFO("a: %f b: %f c: %f d:%f", a, b, c, d);
-        ROS_INFO("r: %f, cx: %f cy: %f", r, center_x, center_y);*/
-
-        // next try:
-        // https://stackoverflow.com/questions/41144224/calculate-curvature-for-3-points-x-y
-        // https://en.wikipedia.org/wiki/Menger_curvature#Definition
         // https://math.stackexchange.com/questions/516219/finding-out-the-area-of-a-triangle-if-the-coordinates-of-the-three-vertices-are
         double triangle_area = ((x2 - x1)*(y3 - y1) - (x3 - x1)*(y2 - y1)) / 2.0;
+        // https://stackoverflow.com/questions/41144224/calculate-curvature-for-3-points-x-y
         double menger = (4 * triangle_area)/(tf2::tf2Distance(p1, p2)*tf2::tf2Distance(p2, p3)*tf2::tf2Distance(p3, p1));
         double r_m = std::abs(1.0 / menger);
 
-
         return r_m;
     }
-
-    double PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity()
-    {
+    /**
+     * function to calculate target velocity depending on the curvature
+     * */
+    double PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity(){
+        // calculation of curvature only possible with 3 or more points
         if (global_plan.size() < 3)
             return target_velocity;
 
@@ -165,8 +153,10 @@ namespace psaf_local_planner
 
         double min_radius = INFINITY;
 
+        // iterate over global plan
         for (; it != global_plan.end(); ++it, ++last)
         {
+            // calculated distance bigger than threshold
             if (sum_distance > estimate_curvature_distance)
                 break;
 
@@ -179,7 +169,7 @@ namespace psaf_local_planner
 
             double angle = v1.angle(v2);
             if (isfinite(angle)) {
-                // indendet purpose of this:
+                // intended purpose of this:
                 // find three points on the curvature
                 sum_angle += abs(angle);
                 if (abs(angle) < 0.0001) {
@@ -194,7 +184,7 @@ namespace psaf_local_planner
                     }
                 } else {
                     hasNonZero = true;
-                    // curvature is bending in different direction, therefor ended as well
+                    // curvature is bending in different direction, therefore ended as well
                     if (std::signbit(last_angle) != std::signbit(angle)) {
                         min_radius = std::min(min_radius, calculateRadius(first, last));
                         first = last;
@@ -209,7 +199,7 @@ namespace psaf_local_planner
             point2 = point3;
         }
 
-
+        // no curverature therefore no velocity restriction
         if (min_radius == INFINITY) {
             return getMaxVelocity();
         }
@@ -289,6 +279,10 @@ namespace psaf_local_planner
         return (pow(this->current_speed,2)*0.1296+1.2 * current_speed); // Standard formula with extra reaction time
     }
 
+
+    /**
+     * function to adjust target velocity according to obstacles ahead
+     * */
     double PsafLocalPlanner::getTargetVelDriving()
     {
                 double target_vel = estimateCurvatureAndSetTargetVelocity();
@@ -320,11 +314,14 @@ namespace psaf_local_planner
                 target_vel = target_vel - velocity_distance_diff;
                 return target_vel;
     }
-
+    /**
+     * function to calculate the distance to the next intersection
+     * */
     double PsafLocalPlanner::getDistanceToIntersection() {
         double distance = 0;
-
+        // iterate over upcoming lanelets in the route
         for (auto lanelet : global_route) {
+            // sum up distance until lanelet is marked as intersection
             distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
             if (lanelet.isAtIntersection)
                 return distance;
@@ -332,22 +329,28 @@ namespace psaf_local_planner
 
         return distance;
     }
-
+    /**
+     * function to check if area of lane change is free and return speed accordingly
+     * */
     double PsafLocalPlanner::checkLaneChangeFree() {
-        double distance_begin_check_lane_change = 10;
+        // distance treshold to lane change from where further needed calculation ist done
+        double distance_begin_check_lane_change = 20;
+        // radius of area to check for obstacles when lane changing
         double check_distance_lanechange = 7;
-
-        double distance = getDistanceToLaneChange(distance_begin_check_lane_change * 2);
+        // calc distance to next alne change
+        double distance = getDistanceToLaneChange(distance_begin_check_lane_change);
 
         if (distance < distance_begin_check_lane_change) {
+            // lanechange ahead, but lane change direction not calculated therefore presume as before
             if (lane_change_direction == 0) {
                 ROS_WARN("Direction is 0, but we should check for collsion! Driving normally");
                 return target_velocity;
             }
 
             std::vector<RaytraceCollisionData> collisions = {};
-
+            // calculate angles for ray tracing circle area
             double angle_from, angle_to;
+            // right(1) or left(-1)
             if (lane_change_direction > 0) {
                 angle_from = M_PI / 4.0;
                 angle_to = M_PI * (3.0/4.0);
@@ -355,9 +358,9 @@ namespace psaf_local_planner
                 angle_to = -M_PI / 4.0;
                 angle_from = -M_PI * (3.0/4.0);
             }
-
+            // raytrace area
             costmap_raytracer.raytraceSemiCircle(angle_from, angle_to, check_distance_lanechange, collisions);
-
+            // set max velocity according to ANHALTEWEG if obstacle in area
             if (collisions.size() > 0) {
                 // TODO: MOVE TO OWN FUNCTION
                 return std::min(target_velocity, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
@@ -366,10 +369,14 @@ namespace psaf_local_planner
 
         return target_velocity;
     }
-
+    /**
+     * function to calculate the distance to the next lanechange
+     * */
     double PsafLocalPlanner::getDistanceToLaneChange(double compute_direction_threshold) {
+        // within the distance of the compute_direction_treshold
         double distance = 0;
 
+        // iterate over the lanelets of the global route
         for (int i = 0; i < global_route.size(); i++) {
             auto &lanelet = global_route[i];
             distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
@@ -385,27 +392,31 @@ namespace psaf_local_planner
                             auto &next_lanelet = global_route[i + 1];
                             // calculate direction of lanechange right(1) or left(-1)
                             if (lanelet.route_portion.size() >= 2) {
+                                // last and second last point on lanelet before lanechange
                                 auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
                                 auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
+                                // first point on lanelet after lanechange
                                 auto &next = next_lanelet.route_portion[0];
-
+                                // compute vectors from points
                                 auto v_last = tf2::Vector3(last.x, last.y, last.z);
                                 auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
                                 auto v_next = tf2::Vector3(next.x, next.y, next.z);
 
+                                // calculate vectors needed for angle calculation
+                                // v1 equals current driving direction, v2 equals lane change direction
                                 auto v1 = v_last - v_second_last;
                                 auto v2 = v_next - v_last;
-
+                                // calculate the angle between v1 and v2
                                 double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
 
+                                // use the angle to determine direction of lanechange
                                 if (angle > 0) {
                                     lane_change_direction = +1;
                                 } else {
                                     lane_change_direction = -1;
                                 }
                                 lane_change_direction_calculated = true;
-
-                            } else {
+                            } else
                                 ROS_WARN("Not enough points to use three point method");
 
                             }
@@ -419,12 +430,9 @@ namespace psaf_local_planner
                     lane_change_direction_calculated = false;
                     lane_change_direction = 0;
                 }
-                
 
-                return distance;
             }
+        return distance;
         }
 
-        return distance;
     }
-}

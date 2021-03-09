@@ -4,8 +4,10 @@
 namespace psaf_local_planner
 {
 
-
-    // Check if there should be a obstacle published if speed of car/obstacle ahead is slower than VEL_DIF_THRESHOLD for NUM_SLOW_CAR_PUB iterations
+    /**
+    * Function to check if there should be a obstacle published
+    * if speed of car/obstacle ahead is slower than VEL_DIF_THRESHOLD for NUM_SLOW_CAR_PUB iterations
+    */
     void PsafLocalPlanner::checkForSlowCar(double velocity_distance_diff) {
         // working with counter that function is not blocking and peaks get normalized
         if (velocity_distance_diff > VEL_DIFF_THRESHOLD) {
@@ -74,6 +76,7 @@ namespace psaf_local_planner
     }
 
     /**
+     * function to calculate distance to obstacle in front
      * Returns false if it failed because something is close; true if out of bounds
      */
     bool PsafLocalPlanner::checkDistanceForward(double& distance, double &relative_x, double &relative_y)

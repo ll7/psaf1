@@ -223,7 +223,9 @@ namespace psaf_local_planner
 
 
     
-
+    /**
+     * Callback for new Global Plan
+     * */
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
         ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
