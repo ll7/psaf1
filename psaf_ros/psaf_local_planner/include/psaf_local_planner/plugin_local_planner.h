@@ -351,6 +351,14 @@ namespace psaf_local_planner {
 
             double checkLaneChangeFree();
 
+            /**
+             * Calculates how fast we should drive to be able to stop in time at before the given distance
+             * 
+             * uses formula for Anhalteweg (solved for velocity instead of distance)
+             * https://www.bussgeldkatalog.org/anhalteweg/
+             */
+            double getTargetVelocityForDistance(double distance);
+
 
             /** Helper object for raytracing */
             psaf_local_planner::CostmapRaytracer costmap_raytracer;

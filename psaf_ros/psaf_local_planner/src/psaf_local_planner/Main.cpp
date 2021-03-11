@@ -144,6 +144,11 @@ namespace psaf_local_planner
 
     /**
      * Deletes the points in the local plan that have been driven over
+     * 
+     * 
+     * Finds the closest point to the car with a lookahead of MAX_DELETE_OLD_POINTS_LOOKAHEAD points.
+     * This means if the closest point is more than MAX_DELETE_OLD_POINTS_LOOKAHEAD up until the car position 
+     * while the first point is closer it will not find the closest point
      */
     void PsafLocalPlanner::deleteOldPoints()
     {
@@ -169,6 +174,7 @@ namespace psaf_local_planner
                 closest_it = it;
                 last_dist  = distance_sq;
                 to_delete++;
+                break_counter = 0;
             } else {
                 // ensure that the closest point is ahead of the car when it is inside the bounds of the car
                 if (distance_sq < closest_point_local_plan_sq) {
@@ -176,6 +182,7 @@ namespace psaf_local_planner
                     to_delete++;
                 } else {
                     break_counter++;
+                    // prevent checking the whole list, as it is very unlikely that we will find anything after a few hundret points of increasing distance
                     if (break_counter > MAX_DELETE_OLD_POINTS_LOOKAHEAD) 
                         break;
                 }
@@ -184,7 +191,6 @@ namespace psaf_local_planner
             it++;
         }
 
-        // TODO: convert to meter once distance has been added to distance
         deleted_points += to_delete;
 
         // actually delete the points now
@@ -205,14 +211,6 @@ namespace psaf_local_planner
                 }
             }
         }
-
-        // validate whether the plans are the same length; TODO: Remove when sufficiently validated 
-        int route_len = 0;
-        for (auto lanelet : global_route) {
-            route_len += lanelet.route_portion.size();
-        }
-        
-        assert(route_len == global_plan.size());
     }
 
     // linear interpolation function returns point of fraction t between v0 and v1
@@ -220,7 +218,6 @@ namespace psaf_local_planner
     double lerp(double v0, double v1, double t) {
         return (1 - t) * v0 + t * v1;
     }
-
 
     
     /**

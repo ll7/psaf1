@@ -130,12 +130,15 @@ namespace psaf_local_planner
             return target_velocity;
 
         tf2::Vector3 point1, point2, point3;
-        unsigned int first = 0, middle, last = 0;
+        // index of the points that we want to compare later
+        unsigned int first = 0, last = 0;
+
+        // Whether the algorithm has found an angle which is != 0
         bool hasNonZero = false;
 
         auto it = global_plan.begin();
 
-        // tf2::convert(current_location.position, point1);
+        // beginn with getting the first two points to init the loop correctly
         const geometry_msgs::PoseStamped &w = *it;
         tf2::convert(w.pose.position, point1);
 
@@ -153,10 +156,11 @@ namespace psaf_local_planner
 
         double min_radius = INFINITY;
 
-        // iterate over global plan
+        // iterate over global plan and check next {estimate_curvature_distance} meters
+        // tries to find the smallest circle in the upcoming road
         for (; it != global_plan.end(); ++it, ++last)
         {
-            // calculated distance bigger than threshold
+            // stop when we checked the required distance
             if (sum_distance > estimate_curvature_distance)
                 break;
 
@@ -166,22 +170,28 @@ namespace psaf_local_planner
             sum_distance += tf2::tf2Distance(point2, point3);
             auto v1 = (point2 - point1);
             auto v2 = (point3 - point2);
-
+            
+            // Always calculate angle of the last three points
             double angle = v1.angle(v2);
+            
+            // With this we can figure out whether we are on a straight road or heading into a curve
             if (isfinite(angle)) {
                 // intended purpose of this:
                 // find three points on the curvature
                 sum_angle += abs(angle);
+
+                // we are currently checking a straight line
                 if (abs(angle) < 0.0001) {
-                    // find first point on circle
+                    // find first point on circle; hasNonZero == false means that we are on a straight line before we found any curve
                     if (!hasNonZero) {
                         first++;
                     } else {
-                        // curvature has ended
+                        // curvature has ended; calculate raidus for the given points
                         min_radius = std::min(min_radius, calculateRadius(first, last));
                         first = last;
                         hasNonZero = false;
                     }
+                // we are in a curce right now
                 } else {
                     hasNonZero = true;
                     // curvature is bending in different direction, therefore ended as well
@@ -225,6 +235,7 @@ namespace psaf_local_planner
         double desired_distance = std::pow(vel_x / lookahead_factor, 1.1) + lookahead_factor_const_additive;
         double sum_distance = 0;
 
+        // count up to the given distance and return the new pose
         for (auto &lanelet : global_route) {
             double base_dist = lanelet.route_portion[0].distance;
             for (auto &point : lanelet.route_portion) {
@@ -237,8 +248,6 @@ namespace psaf_local_planner
                     lanelet_out = lanelet;
                     center_point_out = point;
 
-                    // ROS_INFO("out: %i; id: %i", point.speed, lanelet_out.id);
-
                     return pose;
                 }
             }
@@ -246,19 +255,9 @@ namespace psaf_local_planner
             sum_distance += (*lanelet.route_portion.end()).distance - base_dist;
         }
 
-        /*for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
-        {
-            geometry_msgs::PoseStamped &w = *it;
-            tf2::convert(w.pose.position, current_point);
-            sum_distance += tf2::tf2Distance(last_point, current_point);
 
-            if (sum_distance > desired_distance) {
-                return w;
-            }
-
-            last_point = current_point;
-        }*/
-
+        // Special treatment if we reached the end when we didn't reach a point in the desired distance
+        // Returns the last possible point on the list (with few empty checks)
         geometry_msgs::Pose last_stamp; 
         if (global_route.size() > 0 && global_plan.size() > 0) {
             lanelet_out = *global_route.end();
@@ -280,6 +279,15 @@ namespace psaf_local_planner
     }
 
 
+    double getTargetVelocityForDistance(double distance) {
+        // slow and safe formula, working good
+        // uses formula for Anhalteweg (solved for velocity instead of distance)
+        // https://www.bussgeldkatalog.org/anhalteweg/
+        // faster formula, requires faster controller
+        // velocity_distance_diff = target_vel - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
+        return 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5)));
+    }
+
     /**
      * function to adjust target velocity according to obstacles ahead
      * */
@@ -296,14 +304,7 @@ namespace psaf_local_planner
                         ROS_INFO("attempting to stop");
                         velocity_distance_diff = target_vel;
                     } else {
-                        // TODO: validate if working
-                        // slow formula, working okay ish
-                        // uses formula for Anhalteweg (solved for velocity instead of distance)
-                        // https://www.bussgeldkatalog.org/anhalteweg/
-                        // TODO: MOVE TO OWN FUNCTION
-                        velocity_distance_diff = target_vel - std::min(target_vel, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
-                        // faster formula, requires faster controller
-                        //velocity_distance_diff = target_vel - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
+                        velocity_distance_diff = target_vel - std::min(target_vel, getTargetVelocityForDistance(distance));
                     }
 
                     ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
@@ -362,8 +363,7 @@ namespace psaf_local_planner
             costmap_raytracer.raytraceSemiCircle(angle_from, angle_to, check_distance_lanechange, collisions);
             // set max velocity according to ANHALTEWEG if obstacle in area
             if (collisions.size() > 0) {
-                // TODO: MOVE TO OWN FUNCTION
-                return std::min(target_velocity, 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5))));
+                return std::min(target_velocity, getTargetVelocityForDistance(distance));
             }
         }
 
