@@ -282,7 +282,7 @@ namespace psaf_local_planner
     }
 
 
-    double getTargetVelocityForDistance(double distance) {
+    double PsafLocalPlanner::getTargetVelocityForDistance(double distance) {
         // slow and safe formula, working good
         // uses formula for Anhalteweg (solved for velocity instead of distance)
         // https://www.bussgeldkatalog.org/anhalteweg/
@@ -296,27 +296,30 @@ namespace psaf_local_planner
      * */
     double PsafLocalPlanner::getTargetVelDriving()
     {
-                double target_vel = estimateCurvatureAndSetTargetVelocity();
-                double distance, relX, relY;
-                double velocity_distance_diff;
+        double target_vel = estimateCurvatureAndSetTargetVelocity();
+        double distance, relX, relY;
+        double velocity_distance_diff;
 
-                if (target_vel > 0 && !checkDistanceForward(distance, relX, relY))
-                {
-                    if (distance < 5)
-                    {
-                        ROS_INFO("attempting to stop");
-                        velocity_distance_diff = target_vel;
-                    } else {
-                        velocity_distance_diff = target_vel - std::min(target_vel, getTargetVelocityForDistance(distance));
-                    }
+        if (target_vel > 0 && !checkDistanceForward(distance, relX, relY))
+        {
+            // Alawys hard stop 5m behind any vehicle as it is to the center of our vehicle
+            if (distance < 5)
+            {
+                ROS_INFO("attempting to stop");
+                velocity_distance_diff = target_vel;
+            } else {
+                // slowly drive near the obstacle
+                velocity_distance_diff = target_vel - std::min(target_vel, getTargetVelocityForDistance(distance));
+            }
 
-                    ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
-                }
+            ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
+        }
+        
+        // Check for slow car: Initiate a lanechange if it falls below a threshhold
+        checkForSlowCar(velocity_distance_diff);
 
-                checkForSlowCar(velocity_distance_diff);
-
-                target_vel = target_vel - velocity_distance_diff;
-                return target_vel;
+        target_vel = target_vel - velocity_distance_diff;
+        return target_vel;
     }
     /**
      * function to calculate the distance to the next intersection
