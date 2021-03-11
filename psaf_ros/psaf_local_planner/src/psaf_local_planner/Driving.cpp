@@ -221,6 +221,9 @@ namespace psaf_local_planner
         return target_vel;
     }
 
+    /** 
+     * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
+     */
     geometry_msgs::Pose PsafLocalPlanner::findLookaheadTarget(psaf_messages::XLanelet &lanelet_out, psaf_messages::CenterLineExtended &center_point_out) {
         tf2::Vector3 last_point, current_point, acutal_point;
         tf2::convert(current_pose.pose.position, last_point);
@@ -317,7 +320,7 @@ namespace psaf_local_planner
     }
     /**
      * function to calculate the distance to the next intersection
-     * */
+     */
     double PsafLocalPlanner::getDistanceToIntersection() {
         double distance = 0;
         // iterate over upcoming lanelets in the route
@@ -332,7 +335,7 @@ namespace psaf_local_planner
     }
     /**
      * function to check if area of lane change is free and return speed accordingly
-     * */
+     */
     double PsafLocalPlanner::checkLaneChangeFree() {
         // distance treshold to lane change from where further needed calculation ist done
         double distance_begin_check_lane_change = 20;

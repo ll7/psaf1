@@ -337,6 +337,8 @@ namespace psaf_local_planner {
             /**
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
              *
+             * @param lanelet_out: Lanelet where the target point is on
+             * @param center_point_out: target point in the XRoute format
              * @return pose of the target point
              */
             geometry_msgs::Pose findLookaheadTarget(psaf_messages::XLanelet &lanelet_out, psaf_messages::CenterLineExtended &center_point_out);
@@ -349,6 +351,11 @@ namespace psaf_local_planner {
              */
             double getDistanceToLaneChange(double compute_direction_threshold);
 
+            /**
+             * Checks if area of the lane change is free and return speed accordingly
+             * 
+             * @return new max target velocity
+             */ 
             double checkLaneChangeFree();
 
             /**
