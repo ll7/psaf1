@@ -1,27 +1,30 @@
 #include "psaf_local_planner/costmap_raytracer.h"
 
-
 namespace psaf_local_planner
 {
 
     RaytraceCollisionData::RaytraceCollisionData(double x, double y, double angle, double distance)
-                    : x(x), y(y), angle(angle), distance(distance)
-    {}
+        : x(x), y(y), angle(angle), distance(distance)
+    {
+    }
 
-    CostmapRaytracer::CostmapRaytracer() 
-                    : costmap_ros(nullptr), current_pose(nullptr), debug_pub(nullptr)
-    {}
+    CostmapRaytracer::CostmapRaytracer()
+        : costmap_ros(nullptr), current_pose(nullptr), debug_pub(nullptr)
+    {
+    }
 
-    CostmapRaytracer::CostmapRaytracer(costmap_2d::Costmap2DROS *costmap_ros, geometry_msgs::PoseStamped *current_pose, ros::Publisher *debug_pub) 
-                    : costmap_ros(costmap_ros), current_pose(current_pose), debug_pub(debug_pub)
-    {}
+    CostmapRaytracer::CostmapRaytracer(costmap_2d::Costmap2DROS *costmap_ros, geometry_msgs::PoseStamped *current_pose, ros::Publisher *debug_pub)
+        : costmap_ros(costmap_ros), current_pose(current_pose), debug_pub(debug_pub)
+    {
+    }
 
-
-    void CostmapRaytracer::raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions) {
+    void CostmapRaytracer::raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions)
+    {
         raytraceSemiCircle(-angle / 2, angle / 2, distance, collisions);
     }
 
-    void CostmapRaytracer::raytraceSemiCircle(double angle_from, double angle_to, double distance, std::vector<RaytraceCollisionData> &collisions) {
+    void CostmapRaytracer::raytraceSemiCircle(double angle_from, double angle_to, double distance, std::vector<RaytraceCollisionData> &collisions)
+    {
         tf2::Transform current_transform;
         tf2::convert(current_pose->pose, current_transform);
 
@@ -31,13 +34,15 @@ namespace psaf_local_planner
         // Rotation around z axis of the car
         double orientation = tf2::getYaw(current_transform.getRotation());
 
-        for (double actual_angle = angle_from; actual_angle <= angle_to; actual_angle += (M_PI / 180) * 5) {
+        for (double actual_angle = angle_from; actual_angle <= angle_to; actual_angle += (M_PI / 180) * 5)
+        {
             double x = std::cos(actual_angle + orientation) * distance;
             double y = std::sin(actual_angle + orientation) * distance;
             double coll_x, coll_y;
 
-            double dist = raytrace(x + m_self_x , y + m_self_y, coll_x, coll_y);
-            if (dist < INFINITY) {
+            double dist = raytrace(x + m_self_x, y + m_self_y, coll_x, coll_y);
+            if (dist < INFINITY)
+            {
                 collisions.push_back(RaytraceCollisionData(coll_x, coll_y, actual_angle, distance));
             }
         }
@@ -57,7 +62,8 @@ namespace psaf_local_planner
         marker1.scale.y = 0.5;
         marker1.scale.z = 4;
 
-        for (auto &pos : collisions) {
+        for (auto &pos : collisions)
+        {
             geometry_msgs::Point point;
             point.x = pos.x;
             point.y = pos.y;
@@ -70,7 +76,8 @@ namespace psaf_local_planner
         debug_pub->publish(markers);
     }
 
-    double CostmapRaytracer::raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y) {
+    double CostmapRaytracer::raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y)
+    {
         double m_self_x, m_self_y;
         unsigned int c_self_x, c_self_y, c_target_x, c_target_y;
         auto costmap = costmap_ros->getCostmap();
@@ -78,21 +85,23 @@ namespace psaf_local_planner
         m_self_x = current_pose->pose.position.x;
         m_self_y = current_pose->pose.position.y;
 
-        if (!costmap->worldToMap(m_self_x, m_self_y, c_self_x, c_self_y)) {
+        if (!costmap->worldToMap(m_self_x, m_self_y, c_self_x, c_self_y))
+        {
             ROS_WARN("self out of bounds: %f %f", m_self_x, m_self_y);
             return INFINITY;
         }
 
-        if (!costmap->worldToMap(m_target_x, m_target_y, c_target_x, c_target_y)) {
+        if (!costmap->worldToMap(m_target_x, m_target_y, c_target_x, c_target_y))
+        {
             ROS_WARN("target out of bounds: %f %f", m_target_x, m_target_y);
             return INFINITY;
         }
 
-
-        for(base_local_planner::LineIterator line(c_self_x, c_self_y, c_target_x, c_target_y); line.isValid(); line.advance())
+        for (base_local_planner::LineIterator line(c_self_x, c_self_y, c_target_x, c_target_y); line.isValid(); line.advance())
         {
             int cost = costmap->getCost(line.getX(), line.getY());
-            if (cost > 128 && cost != costmap_2d::NO_INFORMATION) {
+            if (cost > 128 && cost != costmap_2d::NO_INFORMATION)
+            {
                 costmap->mapToWorld(line.getX(), line.getY(), coll_x, coll_y);
                 return std::sqrt((m_self_x - coll_x) * (m_self_x - coll_x) + (m_self_y - coll_y) * (m_self_y - coll_y));
             }
@@ -101,8 +110,10 @@ namespace psaf_local_planner
         return INFINITY;
     }
 
-    bool isCollisionInVector(const RaytraceCollisionData &coll, const std::vector<RaytraceCollisionData> &vec, double manhattan_epsilon) {
-        for (auto element : vec) {
+    bool isCollisionInVector(const RaytraceCollisionData &coll, const std::vector<RaytraceCollisionData> &vec, double manhattan_epsilon)
+    {
+        for (auto element : vec)
+        {
             if (std::abs(element.x - coll.x) < manhattan_epsilon || std::abs(element.y - coll.y) < manhattan_epsilon)
                 return true;
         }
@@ -110,25 +121,28 @@ namespace psaf_local_planner
         return false;
     }
 
-    bool CostmapRaytracer::checkForNoMovement(double angle, double distance, unsigned int required_confidence) {
+    bool CostmapRaytracer::checkForNoMovement(double angle, double distance, unsigned int required_confidence)
+    {
         auto now = ros::Time::now();
-        if ((now - last_movement_check) > ros::Duration(MOVEMENT_CHECK_MAX_ITERATION_PAUSE_SECONDS)) {
+        if ((now - last_movement_check) > ros::Duration(MOVEMENT_CHECK_MAX_ITERATION_PAUSE_SECONDS))
+        {
             confidence = 0;
             second_last_raytrace_results.clear();
             last_raytrace_results.clear();
         }
 
-
         std::vector<RaytraceCollisionData> raytrace_results;
         raytraceSemiCircle(angle, distance, raytrace_results);
 
-        if (raytrace_results.empty()) return true;
+        if (raytrace_results.empty())
+            return true;
 
         bool hasMovement = false;
 
-
-        for (auto coll : raytrace_results) {
-            if (!isCollisionInVector(coll, second_last_raytrace_results, MANHATTAN_EPSILON) || !isCollisionInVector(coll, last_raytrace_results, MANHATTAN_EPSILON)) {
+        for (auto coll : raytrace_results)
+        {
+            if (!isCollisionInVector(coll, second_last_raytrace_results, MANHATTAN_EPSILON) || !isCollisionInVector(coll, last_raytrace_results, MANHATTAN_EPSILON))
+            {
                 hasMovement = true;
                 break;
             }
@@ -137,9 +151,12 @@ namespace psaf_local_planner
         second_last_raytrace_results = last_raytrace_results;
         last_raytrace_results = raytrace_results;
 
-        if (hasMovement) {
+        if (hasMovement)
+        {
             confidence = 0;
-        } else {
+        }
+        else
+        {
             confidence = std::max(confidence + 1, required_confidence);
         }
 

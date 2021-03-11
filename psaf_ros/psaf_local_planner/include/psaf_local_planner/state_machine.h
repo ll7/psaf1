@@ -2,9 +2,11 @@
 #ifndef PSAF_STATE_MACHINE_H
 #define PSAF_STATE_MACHINE_H
 
-namespace psaf_local_planner {
+namespace psaf_local_planner
+{
 
-    enum class LocalPlannerState {
+    enum class LocalPlannerState
+    {
 
         UNKNOWN,
         /**
@@ -22,7 +24,8 @@ namespace psaf_local_planner {
         STOP_GO
     };
 
-    class LocalPlannerStateMachine {
+    class LocalPlannerStateMachine
+    {
     public:
         /**
          * Constructor: Nothing happens here, other than standard values are getting inited
@@ -41,7 +44,6 @@ namespace psaf_local_planner {
          * @return the current state
          */
         LocalPlannerState getState();
-
 
         /**
          * Returns whether the state machine is in the traffic light handling region
@@ -83,6 +85,7 @@ namespace psaf_local_planner {
 
     protected:
         LocalPlannerState state;
+
     private:
         /**
          * Ros time in sec when we entered the state STOP_WAITING
@@ -101,7 +104,8 @@ namespace psaf_local_planner {
      * Statemachine when driving without traffic rules
      * -> Handles the traffic lights as stop signs
      */
-    class LocalPlannerStateMachineWithoutTrafficRules: public LocalPlannerStateMachine{
+    class LocalPlannerStateMachineWithoutTrafficRules : public LocalPlannerStateMachine
+    {
     public:
         /**
         * Constructor: Nothing happens here, other than standard values are getting inited

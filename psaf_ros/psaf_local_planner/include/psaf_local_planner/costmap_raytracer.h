@@ -17,75 +17,77 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2/utils.h>
 
-namespace psaf_local_planner {
-    class RaytraceCollisionData {
-        public:
-            RaytraceCollisionData(double x, double y, double angle, double distance);
-            double x, y, angle, distance;
+namespace psaf_local_planner
+{
+    class RaytraceCollisionData
+    {
+    public:
+        RaytraceCollisionData(double x, double y, double angle, double distance);
+        double x, y, angle, distance;
     };
 
-    class CostmapRaytracer {
-        public:
-            CostmapRaytracer();
-            CostmapRaytracer(costmap_2d::Costmap2DROS *costmap_ros, geometry_msgs::PoseStamped *current_pose, ros::Publisher *debug_pub);
+    class CostmapRaytracer
+    {
+    public:
+        CostmapRaytracer();
+        CostmapRaytracer(costmap_2d::Costmap2DROS *costmap_ros, geometry_msgs::PoseStamped *current_pose, ros::Publisher *debug_pub);
 
-            /**
-             * Send a raytrace along the costmap from the current position of the car
-             * 
-             * @param m_target_x: x position where to raytrace to in global map coordinates (in meters)
-             * @param m_target_y: x position where to raytrace to in global map coordinates (in meters)
-             * @param coll_x: x position where the collision happend on the costmap in global map coordinates (in meters)
-             * @param coll_y: x position where the collision happend on the costmap in global map coordinates (in meters)
-             * @return distance of the raytrace; returns infinity if there was no collision between those two points
-             */
-            double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
+        /**
+         * Send a raytrace along the costmap from the current position of the car
+         * 
+         * @param m_target_x: x position where to raytrace to in global map coordinates (in meters)
+         * @param m_target_y: x position where to raytrace to in global map coordinates (in meters)
+         * @param coll_x: x position where the collision happend on the costmap in global map coordinates (in meters)
+         * @param coll_y: x position where the collision happend on the costmap in global map coordinates (in meters)
+         * @return distance of the raytrace; returns infinity if there was no collision between those two points
+         */
+        double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
 
-            /**
-             * Sends out a bunch of raytraces around the car in a semi circle with the given angle
-             * 
-             * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
-             * @param distance: max distance that should be looked at by the raytrace
-             * @param collisions: in case of collisions they are getting added to the vector
-             */
-            void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
+        /**
+         * Sends out a bunch of raytraces around the car in a semi circle with the given angle
+         * 
+         * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
+         * @param distance: max distance that should be looked at by the raytrace
+         * @param collisions: in case of collisions they are getting added to the vector
+         */
+        void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
 
+        void raytraceSemiCircle(double angle_from, double angle_to, double distance, std::vector<RaytraceCollisionData> &collisions);
 
-            void raytraceSemiCircle(double angle_from, double angle_to, double distance, std::vector<RaytraceCollisionData> &collisions);
+        /**
+         * Checks for no movement; has to be called multiple times to be expressive
+         * 
+         * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
+         * @param distance: max distance that should be looked at by the raytrace
+         * @param confidence: the count how often it should check for the area to be free of movement
+         * @return returns true if there was no movement between this and the last function call
+         */
+        bool checkForNoMovement(double angle, double distance, unsigned int required_confidence);
 
-            /**
-             * Checks for no movement; has to be called multiple times to be expressive
-             * 
-             * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
-             * @param distance: max distance that should be looked at by the raytrace
-             * @param confidence: the count how often it should check for the area to be free of movement
-             * @return returns true if there was no movement between this and the last function call
-             */
-            bool checkForNoMovement(double angle, double distance, unsigned int required_confidence);
+        /**
+         * Epsilon that is used to determine whether two points are the same collision on the costmap
+         * 
+         * calulcation uses manhattan norm for the distance calucaltion
+         */
+        static constexpr double MANHATTAN_EPSILON = 0.4;
 
-            /**
-             * Epsilon that is used to determine whether two points are the same collision on the costmap
-             * 
-             * calulcation uses manhattan norm for the distance calucaltion
-             */
-            static constexpr double MANHATTAN_EPSILON = 0.4;
+        /** Time in seconds that should cause the old maps to be reset if there wasn't a movement check inbetween */
+        static constexpr int MOVEMENT_CHECK_MAX_ITERATION_PAUSE_SECONDS = 3;
 
-            /** Time in seconds that should cause the old maps to be reset if there wasn't a movement check inbetween */
-            static constexpr int MOVEMENT_CHECK_MAX_ITERATION_PAUSE_SECONDS = 3;
-        private:
-            /** The pointer to the costmap, updates automatically when the costmap changes */
-            costmap_2d::Costmap2DROS *costmap_ros;
+    private:
+        /** The pointer to the costmap, updates automatically when the costmap changes */
+        costmap_2d::Costmap2DROS *costmap_ros;
 
+        /** pointer to the current pose of the vehicle; targeted field should be updated */
+        geometry_msgs::PoseStamped *current_pose;
 
-            /** pointer to the current pose of the vehicle; targeted field should be updated */
-            geometry_msgs::PoseStamped *current_pose;
+        /** Publisher for debug messages; e.g. arrows along path, obstacle bobbels */
+        ros::Publisher *debug_pub;
 
-            /** Publisher for debug messages; e.g. arrows along path, obstacle bobbels */
-            ros::Publisher *debug_pub;
+        std::vector<RaytraceCollisionData> second_last_raytrace_results;
+        std::vector<RaytraceCollisionData> last_raytrace_results;
 
-            std::vector<RaytraceCollisionData> second_last_raytrace_results;
-            std::vector<RaytraceCollisionData> last_raytrace_results;
-            
-            unsigned int confidence;
-            ros::Time last_movement_check;
+        unsigned int confidence;
+        ros::Time last_movement_check;
     };
 };

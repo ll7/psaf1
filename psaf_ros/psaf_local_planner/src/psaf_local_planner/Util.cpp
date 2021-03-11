@@ -1,11 +1,11 @@
 #include "psaf_local_planner/plugin_local_planner.h"
 #include <pluginlib/class_list_macros.h>
 
-
 namespace psaf_local_planner
 {
 
-    void PsafLocalPlanner::reconfigureCallback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level) {
+    void PsafLocalPlanner::reconfigureCallback(psaf_local_planner::PsafLocalPlannerParameterConfig &config, uint32_t level)
+    {
         ROS_INFO("Reconfigure Request");
     }
 
@@ -31,73 +31,90 @@ namespace psaf_local_planner
             base_local_planner::publishPlan(path, g_plan_pub);
     }
 
-    void PsafLocalPlanner::odometryCallback(const carla_msgs::CarlaEgoVehicleStatus &msg){
-        this->current_speed = (double) msg.velocity * (msg.control.reverse?-1:1);
+    void PsafLocalPlanner::odometryCallback(const carla_msgs::CarlaEgoVehicleStatus &msg)
+    {
+        this->current_speed = (double)msg.velocity * (msg.control.reverse ? -1 : 1);
     }
 
+    void PsafLocalPlanner::trafficSituationCallback(const psaf_messages::TrafficSituation::ConstPtr &msg)
+    {
 
-    void PsafLocalPlanner::trafficSituationCallback(const psaf_messages::TrafficSituation::ConstPtr &msg) {
-
-        if (msg->trafficLight.size() > 0) {
+        if (msg->trafficLight.size() > 0)
+        {
             this->traffic_light_state = msg->trafficLight.front();
-        } else { // If no traffic light is detected set state to unknown
+        }
+        else
+        { // If no traffic light is detected set state to unknown
             psaf_messages::TrafficLight new_light;
             new_light.state = psaf_messages::TrafficLight::STATE_UNKNOWN;
             this->traffic_light_state = new_light;
-
         }
         // Distance to stop can be determined in two the distance to the end of the lanelet,
         // the distance to the traffic light on the right hand side or the distance to the stop line
-        if(msg->distanceToStopLine<1e6){ // abstraction for infinity
+        if (msg->distanceToStopLine < 1e6)
+        { // abstraction for infinity
             // Use the stop line distance
             this->stop_distance_at_intersection = msg->distanceToStopLine;
-        }else{
+        }
+        else
+        {
             this->stop_distance_at_intersection = this->computeDistanceToStoppingPointWithoutStopLine();
         }
     }
 
-    double PsafLocalPlanner::computeDistanceToStoppingPointWithoutStopLine() {
-        if (state_machine->isInTrafficLightStates()){ // Use traffic light data only when in correct state
+    double PsafLocalPlanner::computeDistanceToStoppingPointWithoutStopLine()
+    {
+        if (state_machine->isInTrafficLightStates())
+        { // Use traffic light data only when in correct state
             // Use the traffic light distance if the perception already knows something
-            if(this->traffic_light_state.state!=psaf_messages::TrafficLight::STATE_UNKNOWN){
+            if (this->traffic_light_state.state != psaf_messages::TrafficLight::STATE_UNKNOWN)
+            {
                 // if the traffic_light is on the right hand side we want to stop 4 meters in front of it
-                if(this->traffic_light_state.x>0.5 && this->traffic_light_state.y>0.32){
-                    return this->traffic_light_state.distance-4;
-                }else{ // else the traffic light is on the other side of the intersection (american style)
+                if (this->traffic_light_state.x > 0.5 && this->traffic_light_state.y > 0.32)
+                {
+                    return this->traffic_light_state.distance - 4;
+                }
+                else
+                { // else the traffic light is on the other side of the intersection (american style)
                     // we keep 20 meters as distance
-                    return this->traffic_light_state.distance-20;
+                    return this->traffic_light_state.distance - 20;
                 }
-            } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
-                    double distance_to_traffic_light = this->computeDistanceToUpcomingTrafficLight();
-                    if( distance_to_traffic_light <1e6){
-                        return std::max((distance_to_traffic_light-10),0.0);
-                    }
-                    // No success go to fallback return
+            }
+            else
+            { // if we don't have any other information we use the map data minus 10 meters as safety distance
+                double distance_to_traffic_light = this->computeDistanceToUpcomingTrafficLight();
+                if (distance_to_traffic_light < 1e6)
+                {
+                    return std::max((distance_to_traffic_light - 10), 0.0);
                 }
-        }else if (state_machine->isInStopStates()) {
+                // No success go to fallback return
+            }
+        }
+        else if (state_machine->isInStopStates())
+        {
             // because we don't have any other information we use the map data minus 10 meters as safety distance guess
             double distance_to_stop = this->computeDistanceToUpcomingStop();
-            if(distance_to_stop < 1e6){
-                return std::max((distance_to_stop),0.0);
+            if (distance_to_stop < 1e6)
+            {
+                return std::max((distance_to_stop), 0.0);
             }
             // No success go to fallback return
-
         }
         // if we didn't find a way to guess the distance let's return infinity because the stopping point must be far away
         return std::numeric_limits<double>::infinity(); // "to infinity and beyond" ~ buzz lightyear
     }
 
-    double PsafLocalPlanner::distanceBetweenCenterLines(psaf_messages::CenterLineExtended first, psaf_messages::CenterLineExtended second){
-        return second.distance-first.distance;
+    double PsafLocalPlanner::distanceBetweenCenterLines(psaf_messages::CenterLineExtended first, psaf_messages::CenterLineExtended second)
+    {
+        return second.distance - first.distance;
     }
 
-
-    void PsafLocalPlanner::publishCurrentStateForDebug() {
+    void PsafLocalPlanner::publishCurrentStateForDebug()
+    {
         std_msgs::String msg;
         msg.data = this->state_machine->getTextRepresentation();
 
         this->debug_state_pub.publish(msg);
     }
-
 
 }

@@ -24,9 +24,8 @@ namespace psaf_local_planner
         // using atan instead of acos here to get the correct sign with the direction of the angle
         tf2::Vector3 forward_vector = tf2::Vector3(cos(orientation), sin(orientation), 0);
         double unclamped_angle = atan2(
-                forward_vector.getX() * target_vector.getY() - forward_vector.getY() * target_vector.getX(),
-                forward_vector.getX() * target_vector.getX() + forward_vector.getY() * target_vector.getY()
-        );
+            forward_vector.getX() * target_vector.getY() - forward_vector.getY() * target_vector.getX(),
+            forward_vector.getX() * target_vector.getX() + forward_vector.getY() * target_vector.getY());
 
         // Limit angle to the limits of the car
         auto d_angle = boost::algorithm::clamp(unclamped_angle, -1.2, 1.2);
@@ -87,13 +86,16 @@ namespace psaf_local_planner
      * function to calculate radius with the use of menger curvature
      * https://en.wikipedia.org/wiki/Menger_curvature#Definition
      */
-    double PsafLocalPlanner::calculateRadius(unsigned int first, unsigned int last) {
+    double PsafLocalPlanner::calculateRadius(unsigned int first, unsigned int last)
+    {
         // no curvature therefore radius -> infinity
-        if (first == last || last == 0) {
+        if (first == last || last == 0)
+        {
             return INFINITY;
         }
         // curvature too small
-        if (last - first <= 5) {
+        if (last - first <= 5)
+        {
             return INFINITY;
         }
 
@@ -111,12 +113,10 @@ namespace psaf_local_planner
         auto p2 = tf2::Vector3(x2, y2, 0);
         auto p3 = tf2::Vector3(x3, y3, 0);
 
-
-
         // https://math.stackexchange.com/questions/516219/finding-out-the-area-of-a-triangle-if-the-coordinates-of-the-three-vertices-are
-        double triangle_area = ((x2 - x1)*(y3 - y1) - (x3 - x1)*(y2 - y1)) / 2.0;
+        double triangle_area = ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)) / 2.0;
         // https://stackoverflow.com/questions/41144224/calculate-curvature-for-3-points-x-y
-        double menger = (4 * triangle_area)/(tf2::tf2Distance(p1, p2)*tf2::tf2Distance(p2, p3)*tf2::tf2Distance(p3, p1));
+        double menger = (4 * triangle_area) / (tf2::tf2Distance(p1, p2) * tf2::tf2Distance(p2, p3) * tf2::tf2Distance(p3, p1));
         double r_m = std::abs(1.0 / menger);
 
         return r_m;
@@ -124,7 +124,8 @@ namespace psaf_local_planner
     /**
      * function to calculate target velocity depending on the curvature
      * */
-    double PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity(){
+    double PsafLocalPlanner::estimateCurvatureAndSetTargetVelocity()
+    {
         // calculation of curvature only possible with 3 or more points
         if (global_plan.size() < 3)
             return target_velocity;
@@ -145,7 +146,7 @@ namespace psaf_local_planner
         ++it;
         ++last;
 
-        const geometry_msgs::PoseStamped &w2  = *it;
+        const geometry_msgs::PoseStamped &w2 = *it;
         tf2::convert(w2.pose.position, point2);
 
         ++it;
@@ -170,32 +171,40 @@ namespace psaf_local_planner
             sum_distance += tf2::tf2Distance(point2, point3);
             auto v1 = (point2 - point1);
             auto v2 = (point3 - point2);
-            
+
             // Always calculate angle of the last three points
             double angle = v1.angle(v2);
-            
+
             // With this we can figure out whether we are on a straight road or heading into a curve
-            if (isfinite(angle)) {
+            if (isfinite(angle))
+            {
                 // intended purpose of this:
                 // find three points on the curvature
                 sum_angle += abs(angle);
 
                 // we are currently checking a straight line
-                if (abs(angle) < 0.0001) {
+                if (abs(angle) < 0.0001)
+                {
                     // find first point on circle; hasNonZero == false means that we are on a straight line before we found any curve
-                    if (!hasNonZero) {
+                    if (!hasNonZero)
+                    {
                         first++;
-                    } else {
+                    }
+                    else
+                    {
                         // curvature has ended; calculate raidus for the given points
                         min_radius = std::min(min_radius, calculateRadius(first, last));
                         first = last;
                         hasNonZero = false;
                     }
-                // we are in a curce right now
-                } else {
+                    // we are in a curce right now
+                }
+                else
+                {
                     hasNonZero = true;
                     // curvature is bending in different direction, therefore ended as well
-                    if (std::signbit(last_angle) != std::signbit(angle)) {
+                    if (std::signbit(last_angle) != std::signbit(angle))
+                    {
                         min_radius = std::min(min_radius, calculateRadius(first, last));
                         first = last;
                         hasNonZero = false;
@@ -210,7 +219,8 @@ namespace psaf_local_planner
         }
 
         // no curverature therefore no velocity restriction
-        if (min_radius == INFINITY) {
+        if (min_radius == INFINITY)
+        {
             return getMaxVelocity();
         }
 
@@ -224,7 +234,8 @@ namespace psaf_local_planner
     /** 
      * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
      */
-    geometry_msgs::Pose PsafLocalPlanner::findLookaheadTarget(psaf_messages::XLanelet &lanelet_out, psaf_messages::CenterLineExtended &center_point_out) {
+    geometry_msgs::Pose PsafLocalPlanner::findLookaheadTarget(psaf_messages::XLanelet &lanelet_out, psaf_messages::CenterLineExtended &center_point_out)
+    {
         tf2::Vector3 last_point, current_point, acutal_point;
         tf2::convert(current_pose.pose.position, last_point);
         last_point.setZ(0);
@@ -239,11 +250,14 @@ namespace psaf_local_planner
         double sum_distance = 0;
 
         // count up to the given distance and return the new pose
-        for (auto &lanelet : global_route) {
+        for (auto &lanelet : global_route)
+        {
             double base_dist = lanelet.route_portion[0].distance;
-            for (auto &point : lanelet.route_portion) {
+            for (auto &point : lanelet.route_portion)
+            {
                 double dist = sum_distance + point.distance - base_dist;
-                if (dist > desired_distance) {
+                if (dist > desired_distance)
+                {
                     geometry_msgs::Pose pose;
                     pose.position.x = point.x;
                     pose.position.y = point.y;
@@ -258,13 +272,14 @@ namespace psaf_local_planner
             sum_distance += (*lanelet.route_portion.end()).distance - base_dist;
         }
 
-
         // Special treatment if we reached the end when we didn't reach a point in the desired distance
         // Returns the last possible point on the list (with few empty checks)
-        geometry_msgs::Pose last_stamp; 
-        if (global_route.size() > 0 && global_plan.size() > 0) {
+        geometry_msgs::Pose last_stamp;
+        if (global_route.size() > 0 && global_plan.size() > 0)
+        {
             lanelet_out = *global_route.end();
-            if (lanelet_out.route_portion.size() > 0) {
+            if (lanelet_out.route_portion.size() > 0)
+            {
                 center_point_out = *lanelet_out.route_portion.end();
             }
             last_stamp = (*global_plan.end()).pose;
@@ -273,22 +288,24 @@ namespace psaf_local_planner
         return last_stamp;
     }
 
-    double PsafLocalPlanner::getMaxVelocity() {
+    double PsafLocalPlanner::getMaxVelocity()
+    {
         return max_velocity;
     }
 
-    double PsafLocalPlanner::getCurrentStoppingDistance(){
-        return (pow(this->current_speed,2)*0.1296+1.2 * current_speed); // Standard formula with extra reaction time
+    double PsafLocalPlanner::getCurrentStoppingDistance()
+    {
+        return (pow(this->current_speed, 2) * 0.1296 + 1.2 * current_speed); // Standard formula with extra reaction time
     }
 
-
-    double PsafLocalPlanner::getTargetVelocityForDistance(double distance) {
+    double PsafLocalPlanner::getTargetVelocityForDistance(double distance)
+    {
         // slow and safe formula, working good
         // uses formula for Anhalteweg (solved for velocity instead of distance)
         // https://www.bussgeldkatalog.org/anhalteweg/
         // faster formula, requires faster controller
         // velocity_distance_diff = target_vel - std::min(target_velocity, 25.0/9.0 * std::sqrt(distance - 5));
-        return 25.0/18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5)));
+        return 25.0 / 18.0 * (-1 + std::sqrt(1 + 4 * (distance - 5)));
     }
 
     /**
@@ -307,14 +324,16 @@ namespace psaf_local_planner
             {
                 ROS_INFO("attempting to stop");
                 velocity_distance_diff = target_vel;
-            } else {
+            }
+            else
+            {
                 // slowly drive near the obstacle
                 velocity_distance_diff = target_vel - std::min(target_vel, getTargetVelocityForDistance(distance));
             }
 
             ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
         }
-        
+
         // Check for slow car: Initiate a lanechange if it falls below a threshhold
         checkForSlowCar(velocity_distance_diff);
 
@@ -324,10 +343,12 @@ namespace psaf_local_planner
     /**
      * function to calculate the distance to the next intersection
      */
-    double PsafLocalPlanner::getDistanceToIntersection() {
+    double PsafLocalPlanner::getDistanceToIntersection()
+    {
         double distance = 0;
         // iterate over upcoming lanelets in the route
-        for (auto lanelet : global_route) {
+        for (auto lanelet : global_route)
+        {
             // sum up distance until lanelet is marked as intersection
             distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
             if (lanelet.isAtIntersection)
@@ -339,7 +360,8 @@ namespace psaf_local_planner
     /**
      * function to check if area of lane change is free and return speed accordingly
      */
-    double PsafLocalPlanner::checkLaneChangeFree() {
+    double PsafLocalPlanner::checkLaneChangeFree()
+    {
         // distance treshold to lane change from where further needed calculation ist done
         double distance_begin_check_lane_change = 20;
         // radius of area to check for obstacles when lane changing
@@ -347,9 +369,11 @@ namespace psaf_local_planner
         // calc distance to next alne change
         double distance = getDistanceToLaneChange(distance_begin_check_lane_change);
 
-        if (distance < distance_begin_check_lane_change) {
+        if (distance < distance_begin_check_lane_change)
+        {
             // lanechange ahead, but lane change direction not calculated therefore presume as before
-            if (lane_change_direction == 0) {
+            if (lane_change_direction == 0)
+            {
                 ROS_WARN("Direction is 0, but we should check for collsion! Driving normally");
                 return target_velocity;
             }
@@ -358,17 +382,21 @@ namespace psaf_local_planner
             // calculate angles for ray tracing circle area
             double angle_from, angle_to;
             // right(1) or left(-1)
-            if (lane_change_direction > 0) {
+            if (lane_change_direction > 0)
+            {
                 angle_from = M_PI / 4.0;
-                angle_to = M_PI * (3.0/4.0);
-            } else {
+                angle_to = M_PI * (3.0 / 4.0);
+            }
+            else
+            {
                 angle_to = -M_PI / 4.0;
-                angle_from = -M_PI * (3.0/4.0);
+                angle_from = -M_PI * (3.0 / 4.0);
             }
             // raytrace area
             costmap_raytracer.raytraceSemiCircle(angle_from, angle_to, check_distance_lanechange, collisions);
             // set max velocity according to ANHALTEWEG if obstacle in area
-            if (collisions.size() > 0) {
+            if (collisions.size() > 0)
+            {
                 return std::min(target_velocity, getTargetVelocityForDistance(distance));
             }
         }
@@ -378,26 +406,33 @@ namespace psaf_local_planner
     /**
      * function to calculate the distance to the next lanechange
      * */
-    double PsafLocalPlanner::getDistanceToLaneChange(double compute_direction_threshold) {
+    double PsafLocalPlanner::getDistanceToLaneChange(double compute_direction_threshold)
+    {
         // within the distance of the compute_direction_treshold
         double distance = 0;
 
         // iterate over the lanelets of the global route
-        for (int i = 0; i < global_route.size(); i++) {
+        for (int i = 0; i < global_route.size(); i++)
+        {
             auto &lanelet = global_route[i];
             distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
 
             // LaneChange in Lanelet is existant
-            if (lanelet.isLaneChange) {
+            if (lanelet.isLaneChange)
+            {
                 //LanneChange is closer than threshold
-                if (compute_direction_threshold >= distance) {
+                if (compute_direction_threshold >= distance)
+                {
                     // calculate direction only if not already calculated
-                    if (!lane_change_direction_calculated) {
+                    if (!lane_change_direction_calculated)
+                    {
                         // check if succeeding lanelet is existant
-                        if (i + 1 < global_route.size()) {
+                        if (i + 1 < global_route.size())
+                        {
                             auto &next_lanelet = global_route[i + 1];
                             // calculate direction of lanechange right(1) or left(-1)
-                            if (lanelet.route_portion.size() >= 2) {
+                            if (lanelet.route_portion.size() >= 2)
+                            {
                                 // last and second last point on lanelet before lanechange
                                 auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
                                 auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
@@ -416,29 +451,34 @@ namespace psaf_local_planner
                                 double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
 
                                 // use the angle to determine direction of lanechange
-                                if (angle > 0) {
+                                if (angle > 0)
+                                {
                                     lane_change_direction = +1;
-                                } else {
+                                }
+                                else
+                                {
                                     lane_change_direction = -1;
                                 }
                                 lane_change_direction_calculated = true;
-                            } else
-                                ROS_WARN("Not enough points to use three point method");
-
                             }
-                        } else {
-                            ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
+                            else
+                                ROS_WARN("Not enough points to use three point method");
                         }
                     }
+                    else
+                    {
+                        ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
+                    }
                 }
-                // recent LaneChang is terminated, reset flags
-                else{
-                    lane_change_direction_calculated = false;
-                    lane_change_direction = 0;
-                }
-
             }
-        return distance;
+            // recent LaneChang is terminated, reset flags
+            else
+            {
+                lane_change_direction_calculated = false;
+                lane_change_direction = 0;
+            }
         }
-
+        return distance;
     }
+
+}
