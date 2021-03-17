@@ -51,10 +51,13 @@ namespace psaf_local_planner {
     }
 
     void PsafLocalPlanner::updateStateMachine() {
+        // A traffic light is detected if it is within our check distance on our path
         bool traffic_light_detected = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight) <=
                                       this->getCheckDistanceForLanelets();
+        // A stop is detected if it is within our check distance on our path
         bool stop_detected = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop) <=
                              this->getCheckDistanceForLanelets();
+        // whether the intersection is clear
         bool is_intersection_clear = false;
         // Without traffic rules we are less strict regarding a clear intersection
         if (this->respect_traffic_rules) {
