@@ -17,8 +17,8 @@ namespace psaf_local_planner {
                                                          global_route[0].route_portion.back());
 
                 double check_radius = this->computeCheckDistance();
+                // if the lanelet end is within the check radius we check the lanelet for a traffic light
                 if (remaining_way_on_lanelet < check_radius) {
-                    // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
                     if(global_route[0].hasLight){
                         return remaining_way_on_lanelet;
                     }
@@ -32,7 +32,7 @@ namespace psaf_local_planner {
                                                              global_route[1].route_portion.back());
                     if (remaining_way_to_next_lanelet_end > check_radius
                         && (remaining_way_on_lanelet < check_radius)) {
-                        if(global_route[0].hasLight){
+                        if(global_route[1].hasLight){
                             return remaining_way_to_next_lanelet_end;
                         }
                     }
@@ -50,10 +50,8 @@ namespace psaf_local_planner {
                         this->distanceBetweenCenterLines(global_route[0].route_portion.front(),
                                                          global_route[0].route_portion.back());
                 double check_radius = this->computeCheckDistance();
-
-                // if the lanelet is too short we look on the next lanelet
+                // if the lanelet end is within the check radius we check the lanelet for a stop
                 if (remaining_way_on_lanelet < check_radius) {
-                    // If the remaining distance is smaller than the 1.5*stopping distance we check if there is a traffic light
                     if(global_route[0].hasStop){
                         return remaining_way_on_lanelet;
                     }
@@ -66,7 +64,7 @@ namespace psaf_local_planner {
                                                                                                 global_route[1].route_portion.back());
                     if (remaining_way_to_next_lanelet_end > check_radius
                         && (remaining_way_on_lanelet < check_radius)) {
-                        if(global_route[0].hasStop){
+                        if(global_route[1].hasStop){
                             return remaining_way_to_next_lanelet_end;
                         }
                         return std::numeric_limits<double>::infinity();
@@ -81,6 +79,7 @@ namespace psaf_local_planner {
         bool traffic_light_detected = this->computeDistanceToUpcomingTrafficLight()<1e6;
         bool stop_detected = this->computeDistanceToUpcomingStop()<1e6;
         bool is_intersection_clear = false;
+        // Without traffic rules we are less strict regarding a clear intersection
         if(this->respect_traffic_rules) {
             is_intersection_clear = this->costmap_raytracer.checkForNoMovement(M_PI, 25, 5);
         }else{
