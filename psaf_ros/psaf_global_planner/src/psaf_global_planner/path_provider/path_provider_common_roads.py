@@ -53,7 +53,8 @@ class PathProviderCommonRoads:
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
                  cost_stop_sign: int = 5, respect_traffic_rules: bool = False, turning_circle: float = 10.0,
-                 export_path: bool = False, cost_lane_change: int = 5):
+                 export_path: bool = False, cost_lane_change: int = 5, line_crossing_penalty: int = 30,
+                 cost_line_crossing: int = 15):
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
@@ -67,12 +68,22 @@ class PathProviderCommonRoads:
         self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
         self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
         self.status_pub.publish("PathProvider not ready")
+
+        # search parameters for finding a nearest lanelet
         self.radius = initial_search_radius
         self.step_size = step_size
         self.max_radius = max_radius
+
+        # define heuristic costs, considered in the path selection process
         self.cost_traffic_light = cost_traffic_light
         self.cost_stop_sign = cost_stop_sign
         self.cost_lane_change = cost_lane_change
+        # total cost for line crossing is the heuristic cost and the penalty if traffic rules should be obeyed
+        if self.respect_traffic_rules:
+            self.cost_line_crossing = line_crossing_penalty + cost_line_crossing
+        else:
+            self.cost_line_crossing = cost_line_crossing
+
         self.path_message = XRoute()
         self.planning_problem = None
         self.manager = None
@@ -299,6 +310,8 @@ class PathProviderCommonRoads:
 
         if u_turn:
             x_route_u, best_value_u = self._compute_route(start, goal, u_turn=True)
+            # add line crossing cost to the value of the u_turn path
+            best_value_u += self.cost_line_crossing
             x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
             # compare distance based on obey_traffic_rules param and save best
             if best_value_u < best_value_no_u:
