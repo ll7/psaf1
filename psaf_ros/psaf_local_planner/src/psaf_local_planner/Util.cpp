@@ -68,7 +68,7 @@ namespace psaf_local_planner
                     return this->traffic_light_state.distance-20;
                 }
             } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
-                    double distance_to_traffic_light = this->computeDistanceToUpcomingTrafficLight();
+                    double distance_to_traffic_light = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
                     if( distance_to_traffic_light <1e6){
                         return std::max((distance_to_traffic_light-10),0.0);
                     }
@@ -76,7 +76,7 @@ namespace psaf_local_planner
                 }
         }else if (state_machine->isInStopStates()) {
             // because we don't have any other information we use the map data minus 10 meters as safety distance guess
-            double distance_to_stop = this->computeDistanceToUpcomingStop();
+            double distance_to_stop = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop);
             if(distance_to_stop < 1e6){
                 return std::max((distance_to_stop),0.0);
             }
