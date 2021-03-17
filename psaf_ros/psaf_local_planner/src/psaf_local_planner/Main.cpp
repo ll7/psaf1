@@ -57,17 +57,7 @@ namespace psaf_local_planner
             dynamic_reconfigure::Server<PsafLocalPlannerParameterConfig>::CallbackType f = boost::bind(&PsafLocalPlanner::reconfigureCallback, this, _1, _2);
             dyn_serv->setCallback(f);
 
-            if (!ros::param::get("respect_traffic_rules",respect_traffic_rules)) {
-                respect_traffic_rules = true;
-            }
 
-            // Replace the state machine if we drive without traffic rules
-            if(respect_traffic_rules==false){
-                ROS_WARN("The car will drive without respecting the traffic rules");
-                this->state_machine = new LocalPlannerStateMachineWithoutTrafficRules();
-            }
-
-            this->state_machine->init();
 
             costmap_raytracer = CostmapRaytracer(costmap_ros, &current_pose, &debug_marker_pub);
 
@@ -220,6 +210,21 @@ namespace psaf_local_planner
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
         ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
+
+        if (!ros::param::get("respect_traffic_rules",respect_traffic_rules)) {
+                respect_traffic_rules = true;
+            }
+
+        // Replace the state machine if we drive without traffic rules
+        if(respect_traffic_rules==false){
+            ROS_WARN("The car will drive WITHOUT respecting the traffic rules");
+            this->state_machine = new LocalPlannerStateMachineWithoutTrafficRules();
+        } else {
+            this->state_machine = new LocalPlannerStateMachine();
+            ROS_WARN("The car will drive WITH respecting the traffic rules");
+        }
+
+            this->state_machine->init();
 
         // validate duration of routes only if a global route already exists
         if (global_route.size() > 0 && !goal_reached && respect_traffic_rules) {
