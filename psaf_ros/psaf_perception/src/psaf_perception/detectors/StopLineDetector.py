@@ -46,24 +46,39 @@ class StopLineDetector(AbstractDetector):
     def __on_new_image(self, segmentation_image, time):
         (H, W) = segmentation_image.shape[:2]
 
+        # Scale image to improve performance
+        max_width, max_height = 600, 400
+
+        limit = (max_height, max_width)
+        fac = 1.0
+        if H > limit[0]:
+            fac = limit[0] / H
+        if W > limit[1]:
+            fac = limit[1] / W
+        segmentation_image = cv2.resize(segmentation_image, (int(W * fac), int(H * fac)))
+        H *= fac
+        W *= fac
         # List oif detected elements
         detected = []
 
         filter_image = SegmentationCamera.filter_for_tags(segmentation_image, {Tag.RoadLine})
 
-        canny_output = cv2.Canny(filter_image, self.canny_threshold, self.canny_threshold * 2)
-        contours, _ = cv2.findContours(canny_output, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        edges = cv2.Canny(filter_image, 50, 150, apertureSize=3)
+        lines = cv2.HoughLinesP(edges, 1, np.pi /180 , 30, minLineLength=W*0.25,maxLineGap=20)
 
-        for i, c in enumerate(contours):
-            contours_poly = cv2.approxPolyDP(c, 3, True)
-            x1, y1, w, h = np.array(cv2.boundingRect(contours_poly)) / np.array([W, H, W, H])
-            rect_coord = cv2.minAreaRect(contours_poly)
-            angle = rect_coord[2]
+        if lines is not None:
+            for i, line in enumerate(lines):
 
-            if y1 > 0.55 and x1 + w >  0.6 and \
-                 w > 0.3 and -40 < angle < 40 and int(h / w * 1000) in self.ratio_range_per_mille:
-                detected.append(DetectedObject(x1, y1, w, h, distance=self.__heuristic_calc_distance_by_y(y1+h),
-                                               label=Labels.StopLine))
+                x1_abs, y1_abs, x2_abs, y2_abs = line[0]
+                x1, y1, x2, y2 = np.array(line[0]) / np.array([W, H, W, H])
+
+                w= x2-x1
+                h= y2-y1
+                angle = math.degrees(math.atan2(h,w))
+
+                if x2 >0.5 and w > 0.1 and -30 < angle < 30 :
+                    detected.append(DetectedObject(x1, y1, w, h, distance=self.__heuristic_calc_distance_by_y(y1+h/2),
+                                                   label=Labels.StopLine))
 
         self.inform_listener(time, detected)
 
