@@ -17,7 +17,12 @@
 
 ## Übersicht
 ### Kurzbeschreibung
-Das Global Planner Package
+Die Hauptaufgabe des Global Planner Package ist die der initialen Planung und der dynamischen Neuplanung.
+Als Ergebnis wird ein globaler Plan bereitgestellt. Zur Berechnung von diesem müssen entsprechende Karteninformationen
+generiert, bzw. konvertiert und aufbereitet werden. Im Verlauf des Projekts wurde der Umfang des globalen Plans 
+und damit die geforderte Funktionalität erweitert.
+Der globale Plan beinhaltet nun deutlich mehr Informationen als eine simple Abfolge von XY-Koordinaten.
+Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#message-struktur), verweisen. 
 
 ### Topics
 #### Publish
@@ -162,7 +167,7 @@ also auf Kartendaten ohne Hindernisse und ohne modifiziertes Lanelet-Netzwerk au
 Die Idee des Common Road Managers ist es, dass er die Hauptschnittstelle zwischen der Planung und den Common Road 
 Kartendaten abbildet. Er besitzt hierfür zwei grundlegende Funktionalitäten:
 1. Er berechnet die vorgehaltenen Informationen, welche für die Planung im [Replanner](#replanner-path_supervisor) benötigt werden.
-   Konkret handelt es sich hierbei um das Common Road Scenario und eine XLanelet Repräsentation jeder Lanelet.
+   Konkret handelt es sich hierbei um das Common Road Scenario und eine [XLanelet](#message-struktur) Repräsentation jeder Lanelet.
    Letztere ist als vorgefertigte Nachricht jeder Lanelet anzusehen, sodass im [Planer](#planner-path_provider)
    nur noch diese Nachrichten (gesamt, oder in Teilen bei Spurwechseln) für alle Lanelets eines Pfades zusammengesetzt werden müssen.
    Diese Informationen werden im Konstruktor des Managers einmalig (bzw. einmalig für jede Lanelet) berechnet. 
