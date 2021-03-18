@@ -20,6 +20,18 @@
 Das Global Planner Package
 
 ### Topics
+#### Publish
+| Topic | Datatype | Module|
+| ----------- | ----------- |----------- |
+| /psaf/status | String | Path Provider |
+| /psaf/xroute | XRoute | Path Provider|
+
+#### Subscribe
+| Topic | Datatype | Module|
+| ----------- | ----------- |----------- |
+| /psaf/goal/set_instruction | PlanningInstruction | Path Provider |
+| /psaf/planning/obstacle | Obstacle | Path Provider|
+
 
 ### Message Struktur
 Der ausgehende globale Pfad hat die folgende Struktur: <br>
@@ -40,6 +52,16 @@ Der ausgehende globale Pfad hat die folgende Struktur: <br>
         - uint8 speed
         - float32 duration
         - float32 distance
+    
+**Obstacle**:
+- uint8 id
+- geometry_msgs/Point[] obstacles
+
+**PlanningInstruction**:
+- geometry_msgs/Pose goalPoint
+- bool planUTurn
+- float32 obstacleDistanceForward
+- float32 obstacleDistanceLeft
 
 ## Funktionalität
 Die Funktionalität dieses Packages ist grundsätzlich in drei Schritte aufzuteilen. Der [Map Provider](#map-provider) ist
@@ -124,14 +146,28 @@ wie das Auto befindet.
   - Abschnitt drei ist der Abschnitt der Lanelet auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
 
 Im dritten und letzten Schritt wird die Neuplanung angestoßen. Hierbei gilt nur zu beachten, 
-dass Straßen mit einem Hindernis ein hohes Kantengewicht zugeteilt bekommen, sodass der Planungsalgorithmus (A-Start) 
+dass Straßen mit einem Hindernis ein hohes Kantengewicht zugeteilt bekommen, sodass der Planungsalgorithmus (A-Star) 
 Straßen mit Hindernissen nur wählt, wenn es keine Alternativen gibt. Also beispielsweise, wenn sich vor und neben dem 
 Fahrzeug ein anderes Fahrzeug befindet.
 
+Ein weiterer wichtiger Punkt ist es, dass eine Planung immer auf den Originalkartendaten, 
+also spricht auf Kartendaten ohne Hindernissen ausgeführt wird. 
+
 #### Map Manager (common_road_manager)
 
-<Beschreibung der Func>
-
+Die Idee des Common Road Managers ist es, dass er die Hauptschnittstelle zwischen der Planung und den Common Road 
+Kartendaten abbildet. Er besitzt hierfür zwei grundlegende Funktionalitäten:
+1. Er berechnet die vorgehaltenen Informationen, welche für die Planung im [Replanner](#replanner-path_supervisor) benötigt werden.
+    konkret handelt es sich hierbei um eine XLanelet Repräsentation jeder Lanelet und um das Common Road Scenario. 
+   Diese Informationen werden im Konstruktor des Managers einmalig berechnet. Im späteren Verlauf werden nur noch Änderungen vorgenommen.
+   Das führt zu einer effizienten Reaktion Änderungswünsche.
+   
+2. Zusätzlich ist er für das Aufsplitten von Lanelets verantwortlich. Hierbei werden die angegebene Lanelet und alle 
+   bekannten rechten und linken Nachbarn am angegebenen Punkt aufgetrennt. Um eine Lanelet aufzutrennen wird dies 
+   erst entfernt um dann durch zwei neue ersetzt. Im Zuge dessen werden die Referenzen im 
+   gesamten Straßennetz aktualisiert, um die Integrität des Netzes beizubehalten. Das Refernzenupdate wird ebenfalls 
+   aus Geschwindigkeitsgründen anhand einer Vorher berechneten Nachbarschafts information vollzogen. 
+   
 ### Planning Preprocessor
 
 <Beschreibung der Func>
