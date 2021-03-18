@@ -33,14 +33,14 @@ class CommonRoadManager:
     def _handle_turnaround_town_03(self, map_name: string):
         if map_name == "Town03":
             rospy.loginfo("Handling turnaround")
-            # coordinates for turnaround
+            # coordinates for turnaround splits
             split_point: list = [[6, -50], [-6, -50],
                                  [50, -6]]
             # handling split to optimize the turnaround
             for point in split_point:
                 matching_lanelet_id = self.map.lanelet_network.lanelets_in_proximity(np.array(point), 10)
                 # remove the lanelet, to be split, from the intersections dict
-                self.intersections.pop(matching_lanelet_id[0])
+                self.intersections.pop(matching_lanelet_id[0].lanelet_id)
 
                 split_1, split_2 = self.update_network(matching_lanelet_id=matching_lanelet_id[0].lanelet_id,
                                                        modify_point=Point(x=point[0], y=point[1]),
