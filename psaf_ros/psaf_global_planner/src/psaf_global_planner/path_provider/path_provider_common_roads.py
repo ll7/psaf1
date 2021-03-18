@@ -88,7 +88,7 @@ class PathProviderCommonRoads:
         self.planning_problem = None
         self.manager = None
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter),
-                                         intersections=self.map_provider.intersection)
+                                         intersections=self.map_provider.intersection, map_name=self.map_provider.map_name)
         self.route_id = 1  # 1 is the first valid id, 0 is reserved as invalid
         rospy.Subscriber("/psaf/goal/set_instruction", PlanningInstruction, self._callback_goal)
         self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
@@ -338,7 +338,7 @@ class PathProviderCommonRoads:
         plot_limits = get_plot_limits_from_reference_path(route)
         # option 2: plot limits from lanelets in the route
         # plot_limits = get_plot_limits_from_routes(route)
-
+        rospy.loginfo("Visualize")
         # determine the figure size for better visualization
         size_x = 10
         ratio_x_y = (plot_limits[1] - plot_limits[0]) / (plot_limits[3] - plot_limits[2])

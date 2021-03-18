@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import string
 
 from commonroad.scenario.scenario import Scenario
 from commonroad.scenario.lanelet import Lanelet
@@ -12,9 +13,10 @@ import numpy as np
 import rospy
 
 
+
 class CommonRoadManager:
 
-    def __init__(self, hd_map: Scenario, default_speed: int = 50, intersections: Dict ={}):
+    def __init__(self, hd_map: Scenario, map_name: string, default_speed: int = 50, intersections: Dict = {}):
         rospy.loginfo("CommonRoadManager: Started!")
         self.default_speed = default_speed
         self.map = hd_map
@@ -22,10 +24,31 @@ class CommonRoadManager:
         self.neighbourhood = self._analyze_neighbourhood(self.map)
         self.original_neighbourhood = deepcopy(self.neighbourhood)
         self.message_by_lanelet = {}
-        self.intersections = intersections
+        self.intersections = deepcopy(intersections)
         self._fill_message_dict()
+        self._handle_turnaround_town_03(map_name)
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
+
+    def _handle_turnaround_town_03(self, map_name: string):
+        if map_name == "Town03":
+            rospy.loginfo("Handling turnaround")
+            # coordinates for turnaround
+            split_point: list = [[6, -50], [-6, -50],
+                                 [50, -6]]
+            # handling split to optimize the turnaround
+            for point in split_point:
+                matching_lanelet_id = self.map.lanelet_network.lanelets_in_proximity(np.array(point), 10)
+                # remove the lanelet, to be split, from the intersections dict
+                self.intersections.pop(matching_lanelet_id[0])
+
+                split_1, split_2 = self.update_network(matching_lanelet_id=matching_lanelet_id[0].lanelet_id,
+                                                       modify_point=Point(x=point[0], y=point[1]),
+                                                       start_point=Point(x=point[0], y=point[1]), static_obstacle=None)
+                # add the new lanelet to the intersections dict
+                self.intersections[split_1] = len(self.map.lanelet_network.find_lanelet_by_id(split_1).successor) > 1
+                self.intersections[split_2] = len(self.map.lanelet_network.find_lanelet_by_id(split_2).successor) > 1
+
 
     def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int):
         # add the new lanelets to the dict
