@@ -13,7 +13,7 @@ from typing import *
 import numpy as np
 import rospy
 
-import matplotlib.pyplot as plt
+
 class CommonRoadManager:
 
     def __init__(self, hd_map: Scenario, map_name: string, default_speed: int = 50, intersections: Dict = {}):
@@ -30,7 +30,6 @@ class CommonRoadManager:
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
         rospy.loginfo("CommonRoadManager: Done!")
-
 
     def _handle_turnaround_town_03(self, map_name: string):
         if map_name == "Town03":
