@@ -26,9 +26,7 @@ class CommonRoadManager:
         self.message_by_lanelet = {}
         self.intersections = deepcopy(intersections)
         self._fill_message_dict()
-        if map_name == "Town03":
-            self._handle_turnaround_town_03(map_name)
-            self._fill_message_dict()
+        self._handle_turnaround_town_03(map_name)
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
         rospy.loginfo("CommonRoadManager: Done!")
@@ -57,15 +55,17 @@ class CommonRoadManager:
                                                   pos_index=len(self.map.lanelet_network.find_lanelet_by_id(
                                                       split_1).center_vertices) - 1,
                                                   typ=TrafficSignIDGermany.STOP,cur_mark_id =split_1+1)
+                        self.message_by_lanelet[self.map.lanelet_network.find_lanelet_by_id(split_1).adj_right].hasStop = True
                     if self.map.lanelet_network.find_lanelet_by_id(split_1).adj_left_same_direction and self.map.lanelet_network.find_lanelet_by_id(split_1).adj_left is not None:
                         self._add_sign_to_lanelet(lanelet_id=self.map.lanelet_network.find_lanelet_by_id(split_1).adj_left,
                                                   pos_index=len(self.map.lanelet_network.find_lanelet_by_id(
                                                       split_1).center_vertices) - 1,
                                                   typ=TrafficSignIDGermany.STOP,cur_mark_id =split_1-1)
-
+                        self.message_by_lanelet[self.map.lanelet_network.find_lanelet_by_id(split_1).adj_left].hasStop = True
                     self._add_sign_to_lanelet(lanelet_id=split_1,
                                               pos_index=len(self.map.lanelet_network.find_lanelet_by_id(split_1).center_vertices)-1,
                                               typ=TrafficSignIDGermany.STOP, cur_mark_id =split_1)
+                    self.message_by_lanelet[split_1].hasStop = True
             # add stop signs to not split lanes
             not_split: list = [347, 281, 277, 181, 184]
             for _id in not_split:
