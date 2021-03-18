@@ -72,6 +72,7 @@ class CommonRoadManager:
                 self._add_sign_to_lanelet(lanelet_id=_id,
                                           pos_index=len(self.map.lanelet_network.find_lanelet_by_id(_id).center_vertices)-1,
                                           typ=TrafficSignIDGermany.STOP, cur_mark_id =_id)
+                self.message_by_lanelet[_id].hasStop = True
 
     def _add_sign_to_lanelet(self, lanelet_id: int, pos_index: int, typ: TrafficSignIDGermany, additional: list = [],
                              cur_mark_id = -1):
