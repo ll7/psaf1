@@ -101,7 +101,32 @@ Vorteil ist.
 
 #### Replanner (path_supervisor)
 
-<Beschreibung der Func>
+Der Path Supervisor erweitert die Funktionalität des Planners um die Möglichkeit dynamisch, während der Laufzeit, eine
+Neuplanung auf Basis von erkannten Hindernissen anzustoßen. Eine Neuplanung wird initiiert, wenn der Provider eine 
+Obstacle Nachricht über den Subscriber erhält.
+
+Nach Erhalt der Nachricht wir in einem ersten Schritt überprüft, ob die erhaltenen Hindernissen relevant für den 
+derzeitigen Fahrtverlauf sind. Konkret werden nur Hindernisse beachtet, die sich vor und neben dem Fahrzeug befinden,
+wobei die Fahrtrichtung der Straße, auf der ein Hindernis eingeplant wird, ebenfalls eine Rolle spielt. 
+Dementsprechend werden nur Hindernisse, die auf einer Fahrbahn liegt, welche nicht in die Richtung der Fahrbahn des 
+Autos verläuft, eingefügt. 
+
+Für die relevanten Hindernisse wird im zweiten Schritt überprüft, ob sich das Hindernis auf der gleichen Lanelet 
+wie das Auto befindet.
+- Falls sich das Hindernis nicht auf der Lanelet des Autos befindet, wird es nur der gematcht Lanelet hinzufügt.
+- Falls sich das Hindernis auf der Lanelet des Autos befindet, wird die Lanelet in drei Abschnitte aufgeteilt und das 
+  Hindernis wird auf den dritten Abschnitt eingefügt. 
+  Das genaue Vorgehen eines Teilungsprozesses wird im [CommonRoadManager](#map-manager-common_road_manager) beschrieben.
+  - Abschnitt eins ist der Teil der Lanelet auf der sich das Auto befindet. **[Lanelet Start, Position Auto]**
+  - Abschnitt zwei ist der Teil der Lanelet auf der sich das zwischen auto und dem Hindernis befindet. 
+    Dieser Abschnitt wird benötigt damit der Überholvorgang sauber zwischen Auto und Hindernis eingeplant werden kann. 
+    **]Position Auto, Position Hindernis[**
+  - Abschnitt drei ist der Abschnitt der Lanelet auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
+
+Im dritten und letzten Schritt wird die Neuplanung angestoßen. Hierbei gilt nur zu beachten, 
+dass Straßen mit einem Hindernis ein hohes Kantengewicht zugeteilt bekommen, sodass der Planungsalgorithmus (A-Start) 
+Straßen mit Hindernissen nur wählt, wenn es keine Alternativen gibt. Also beispielsweise, wenn sich vor und neben dem 
+Fahrzeug ein anderes Fahrzeug befindet.
 
 #### Map Manager (common_road_manager)
 
