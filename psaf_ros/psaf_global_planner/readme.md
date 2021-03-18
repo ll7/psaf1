@@ -34,7 +34,6 @@ Das Global Planner Package
 
 
 ### Message Struktur
-Der ausgehende globale Pfad hat die folgende Struktur: <br>
 
 **XRoute**:
 - uint32 id
@@ -79,7 +78,7 @@ Letztere Information wird dann für die potenzielle Einplanung eines U-Turns im 
 
 Die Aufgabe des Path Providers, ist wie der Name schon vermuten lässt, einen Pfad von einem Startpunkt zu einem Zielpunkt bereitzustellen. 
 Diese Pfadplanung basiert auf den vom [Map Provider](#map-provider) bereitgestellten Karteninformationen.
-Der globale Pfad hat dabei die bereits in der [Übersicht](#bersicht) gezeigte [Struktur](#message-struktur).
+Der globale Pfad hat dabei die bereits in der [Übersicht](#bersicht) gezeigte [Struktur](#message-struktur) der (e)X(tended)Route.
 Der Path Provider Lanelet2 befindet sich zu Zwecken der Veranschaulichung der Möglichkeiten der Lanelet2 Bibliothek 
 ebenso in diesem Package.
 Wenngleich die Kompatibilität (bei Starten des entsprechenden launch file in /psaf_starter) dazu gewährleistet wird, 
@@ -99,7 +98,7 @@ Die Basis Klasse, jene von der der [Replanner](#replanner-path_supervisor) erbt,
 Der Ablauf eines Pfad-Planungs-Aufrufs lässt sich wie folgt beschreiben. Zunächst wird die aktuelle Position des Fahrzeugs,
 gemessen mithilfe des GPS Sensors, festgelegt. Die Planungs-Aufforderung beinhaltet die geforderte Startposition. Aus 
 den genannten Informationen wird anschließend ein Planungsproblem formuliert. Auf dessen Grundlage werden dann mithilfe
-der CommonRoad Search Bibliothek alle möglichen Pfade (auf dem zugrunde liegenden Lanelet-Netzwerk) berechnet.
+der CommonRoad Search Bibliothek alle möglichen Pfade (auf dem zugrunde liegenden Lanelet-Netzwerk) berechnet (A-Star).
 Anschließend wird aus den im [CommonRoadManager](#map-manager-common_road_manager) vorgehaltenen Message Informationen, 
 die Pfad Message aus den zu berücksichtigen Lanelets (bzw. Lanelet Abschnitten) zusammengesetzt.
 Aus dieser Kandidatenliste wird darauffolgend der (Pfad-) Kandidat ausgewählt, welcher die geringsten Pfad-Kosten aufweist.
@@ -130,43 +129,52 @@ Obstacle Nachricht über den Subscriber erhält.
 Nach Erhalt der Nachricht wir in einem ersten Schritt überprüft, ob die erhaltenen Hindernissen relevant für den 
 derzeitigen Fahrtverlauf sind. Konkret werden nur Hindernisse beachtet, die sich vor und neben dem Fahrzeug befinden,
 wobei die Fahrtrichtung der Straße, auf der ein Hindernis eingeplant wird, ebenfalls eine Rolle spielt. 
-Dementsprechend werden nur Hindernisse, die auf einer Fahrbahn liegt, welche nicht in die Richtung der Fahrbahn des 
-Autos verläuft, eingefügt. 
+Dementsprechend werden nur Hindernisse, die in Fahrtrichtung unseres Fahrzeugs liegen, eingefügt.
 
 Für die relevanten Hindernisse wird im zweiten Schritt überprüft, ob sich das Hindernis auf der gleichen Lanelet 
 wie das Auto befindet.
-- Falls sich das Hindernis nicht auf der Lanelet des Autos befindet, wird es nur der gematcht Lanelet hinzufügt.
+- Falls sich das Hindernis nicht auf der Lanelet des Autos befindet, wird es nur seiner eigenen Lanelet hinzufügt.
 - Falls sich das Hindernis auf der Lanelet des Autos befindet, wird die Lanelet in drei Abschnitte aufgeteilt und das 
   Hindernis wird auf den dritten Abschnitt eingefügt. 
   Das genaue Vorgehen eines Teilungsprozesses wird im [CommonRoadManager](#map-manager-common_road_manager) beschrieben.
   - Abschnitt eins ist der Teil der Lanelet auf der sich das Auto befindet. **[Lanelet Start, Position Auto]**
-  - Abschnitt zwei ist der Teil der Lanelet auf der sich das zwischen auto und dem Hindernis befindet. 
+  - Abschnitt zwei ist der Teil der Lanelet auf der sich das zwischen Auto und dem Hindernis befindet. 
     Dieser Abschnitt wird benötigt damit der Überholvorgang sauber zwischen Auto und Hindernis eingeplant werden kann. 
     **]Position Auto, Position Hindernis[**
   - Abschnitt drei ist der Abschnitt der Lanelet auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
+    
+Zu erwähnen ist, dass das Teilen einer Lanelet unmittelbar ein Aktualisieren aller Referenzen der Lanelets in der Umgebung, sowie ein
+Teilen aller adjazenten Lanelets zur Folge haben muss, da nur so das Lanelet-Netzwerk konsistent und mögliche 
+Routenplanungen (inkl. Spurwechseln) plausibel gehalten werden können. Das fällt unter den Aufgabenbereich des 
+[Map Managers](#map-manager-common_road_manager) und wird in diesem Kapitel genauer beschrieben.
 
-Im dritten und letzten Schritt wird die Neuplanung angestoßen. Hierbei gilt nur zu beachten, 
-dass Straßen mit einem Hindernis ein hohes Kantengewicht zugeteilt bekommen, sodass der Planungsalgorithmus (A-Star) 
-Straßen mit Hindernissen nur wählt, wenn es keine Alternativen gibt. Also beispielsweise, wenn sich vor und neben dem 
-Fahrzeug ein anderes Fahrzeug befindet.
+Im dritten und letzten Schritt wird die Neuplanung angestoßen. Hierbei gilt es nur zu beachten, 
+dass Straßen mit einem Hindernis ein hohes Kantengewicht zugeteilt bekommen, sodass der Planungsalgorithmus
+Straßen mit Hindernissen nur dann wählt, wenn es keine Alternativen gibt. Also beispielsweise, wenn sich vor und neben dem 
+Fahrzeug ein anderes Fahrzeug befindet. Ist dies der Fall, fordert der globale Plan folglich indirekt dazu auf dem 
+vorausfahrenden Fahrzeug zu folgen, da es sich trotz Hindernis weiterhin um die, je nach Metrik, optimalste Route handelt.
 
-Ein weiterer wichtiger Punkt ist es, dass eine Planung immer auf den Originalkartendaten, 
-also spricht auf Kartendaten ohne Hindernissen ausgeführt wird. 
+Ein weiterer wichtiger Punkt ist es, dass eine Neuplanung immer auf den Originalkartendaten, 
+also auf Kartendaten ohne Hindernisse und ohne modifiziertes Lanelet-Netzwerk ausgeführt wird.
 
 #### Map Manager (common_road_manager)
 
 Die Idee des Common Road Managers ist es, dass er die Hauptschnittstelle zwischen der Planung und den Common Road 
 Kartendaten abbildet. Er besitzt hierfür zwei grundlegende Funktionalitäten:
 1. Er berechnet die vorgehaltenen Informationen, welche für die Planung im [Replanner](#replanner-path_supervisor) benötigt werden.
-    konkret handelt es sich hierbei um eine XLanelet Repräsentation jeder Lanelet und um das Common Road Scenario. 
-   Diese Informationen werden im Konstruktor des Managers einmalig berechnet. Im späteren Verlauf werden nur noch Änderungen vorgenommen.
-   Das führt zu einer effizienten Reaktion Änderungswünsche.
+   Konkret handelt es sich hierbei um das Common Road Scenario und eine XLanelet Repräsentation jeder Lanelet.
+   Letztere ist als vorgefertigte Nachricht jeder Lanelet anzusehen, sodass im [Planer](#planner-path_provider)
+   nur noch diese Nachrichten (gesamt, oder in Teilen bei Spurwechseln) für alle Lanelets eines Pfades zusammengesetzt werden müssen.
+   Diese Informationen werden im Konstruktor des Managers einmalig (bzw. einmalig für jede Lanelet) berechnet. 
+   Im späteren Verlauf werden nur noch Änderungen, die zum Beispiel durch Lanelet-Splits (siehe Abschnitt 2.) hervorgerufen werden, vorgenommen.
+   Das führt zu einer effizienten Reaktion Änderungswünsche und hat den Vorteil, dass die sehr umfangreichen Inhalte 
+   der XRoute nicht in jedem Planungsaufruf neu generiert werden müssen.
    
 2. Zusätzlich ist er für das Aufsplitten von Lanelets verantwortlich. Hierbei werden die angegebene Lanelet und alle 
-   bekannten rechten und linken Nachbarn am angegebenen Punkt aufgetrennt. Um eine Lanelet aufzutrennen wird dies 
-   erst entfernt um dann durch zwei neue ersetzt. Im Zuge dessen werden die Referenzen im 
-   gesamten Straßennetz aktualisiert, um die Integrität des Netzes beizubehalten. Das Refernzenupdate wird ebenfalls 
-   aus Geschwindigkeitsgründen anhand einer Vorher berechneten Nachbarschafts information vollzogen. 
+   bekannten rechten und linken Nachbarn am angegebenen Punkt aufgetrennt. Um eine Lanelet aufzutrennen wird diese 
+   erst entfernt, um anschließend durch zwei Neue ersetzt zu werden. Im Zuge dessen werden die Referenzen im 
+   gesamten Straßennetz aktualisiert, um die Integrität des Netzes beizubehalten. Das Referenzenupdate wird ebenfalls 
+   aus Geschwindigkeitsgründen anhand einer vorher berechneten Nachbarschafts-Information vollzogen. 
    
 ### Planning Preprocessor
 
