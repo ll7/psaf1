@@ -26,8 +26,9 @@ class CommonRoadManager:
         self.message_by_lanelet = {}
         self.intersections = deepcopy(intersections)
         self._fill_message_dict()
-        self._handle_turnaround_town_03(map_name)
-        self._fill_message_dict()
+        if map_name == "Town03":
+            self._handle_turnaround_town_03(map_name)
+            self._fill_message_dict()
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
         rospy.loginfo("CommonRoadManager: Done!")
