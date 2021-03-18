@@ -77,7 +77,7 @@ Letztere Information wird dann für die potenzielle Einplanung eines U-Turns im 
 ### Map Provider
 
 <Beschreibung der Func>
-
+TODO
 
 ### Path Provider
 
@@ -184,3 +184,4 @@ Kartendaten abbildet. Er besitzt hierfür zwei grundlegende Funktionalitäten:
 ### Planning Preprocessor
 
 <Beschreibung der Func>
+TODO
