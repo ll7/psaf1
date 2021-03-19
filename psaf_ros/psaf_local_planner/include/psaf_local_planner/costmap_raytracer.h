@@ -20,6 +20,9 @@
 namespace psaf_local_planner {
     class RaytraceCollisionData {
         public:
+            /**
+             * Data Class which contains the data that is tracked in a collision
+             */
             RaytraceCollisionData(double x, double y, double angle, double distance);
             double x, y, angle, distance;
     };
@@ -49,7 +52,15 @@ namespace psaf_local_planner {
              */
             void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
 
-
+            /**
+             * Sends out a bunch of raytraces around the car in a semi circle with the given angles
+             * Allows greater controll over the semi circle due to using two angle
+             * 
+             * @param angle_from: the minimum angle in rad around the car; negative angles are to the left of the car
+             * @param angle_to: the maximum angle in rad around the car; positive angles are to the right of the car
+             * @param distance: max distance that should be looked at by the raytrace
+             * @param collisions: in case of collisions they are getting added to the vector
+             */
             void raytraceSemiCircle(double angle_from, double angle_to, double distance, std::vector<RaytraceCollisionData> &collisions);
 
             /**
@@ -82,10 +93,16 @@ namespace psaf_local_planner {
             /** Publisher for debug messages; e.g. arrows along path, obstacle bobbels */
             ros::Publisher *debug_pub;
 
+            /** Second list of the recent collisions which have been found; allows comparing the current collisions with two generations of collisions */
             std::vector<RaytraceCollisionData> second_last_raytrace_results;
+
+            /** First list of the recent collisions which have been found; allows comparing the current collisions with two generations of collisions */
             std::vector<RaytraceCollisionData> last_raytrace_results;
             
+            /** Describes how certain the algorithm is with his response; Corresponds to the number of iterations where no collsions have been detected*/ 
             unsigned int confidence;
+
+            /** Last time a movement check has been initated; if the time difference is too long a new check is started and previous data is cleared */
             ros::Time last_movement_check;
     };
 };
