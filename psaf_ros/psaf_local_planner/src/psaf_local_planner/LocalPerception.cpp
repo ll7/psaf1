@@ -4,8 +4,10 @@
 namespace psaf_local_planner
 {
 
-
-    // Check if there should be a obstacle published if speed of car/obstacle ahead is slower than VEL_DIF_THRESHOLD for NUM_SLOW_CAR_PUB iterations
+    /**
+    * Function to check if there should be a obstacle published
+    * if speed of car/obstacle ahead is slower than VEL_DIF_THRESHOLD for NUM_SLOW_CAR_PUB iterations
+    */
     void PsafLocalPlanner::checkForSlowCar(double velocity_distance_diff) {
         // working with counter that function is not blocking and peaks get normalized
         if (velocity_distance_diff > VEL_DIFF_THRESHOLD) {
@@ -74,12 +76,15 @@ namespace psaf_local_planner
     }
 
     /**
-     * Returns false if it failed because something is close; true if out of bounds
+     * Checks the distance which is free on the global plan using the costmap
+     *
+     * @return true if a obstacle was found in the bounds of the costmap
      */
     bool PsafLocalPlanner::checkDistanceForward(double& distance, double &relative_x, double &relative_y)
     {
         tf2::Vector3 last_point, current_point, actual_point;
         tf2::convert(current_pose.pose.position, last_point);
+        // on elevations the car position is != 0 unlike the map position
         last_point.setZ(0);
         actual_point = last_point;
 
@@ -87,10 +92,10 @@ namespace psaf_local_planner
         int count_error = 0;
 
         auto costmap = costmap_ros->getCostmap();
-        auto model = base_local_planner::CostmapModel(*costmap);
         auto bound_x = costmap->getSizeInCellsX();
         auto bound_y = costmap->getSizeInCellsY();
 
+        // iterate over global plan up until {check_collision_max_distance} meters
         for (auto it = global_plan.begin(); it != global_plan.end(); ++it)
         {
             if (sum_distance > check_collision_max_distance)
@@ -101,22 +106,28 @@ namespace psaf_local_planner
             sum_distance += tf2::tf2Distance(last_point, current_point);
 
             unsigned int cx, cy;
+            // checks the costmap at the given position of the route; ignore if out of bounds of the local map
             if (costmap_ros->getCostmap()->worldToMap(current_point.getX(), current_point.getY(), cx, cy))
             {
                 bool has_coll = false;
-
+                // We need to check more than a single small square on the costmap
+                // Checking only a small area we are sometimes unable to reliably detect small vehicles 
+                // like bicycles which might not be completely centered on the route
+                // Checking in a 3x3 square around the route position should be sufficient.
+                // Has to be adapted for the resolultion of the local costmap
                 for (int ix = -1; ix <= 1 && !has_coll; ix++) {
                     for (int iy = -1; iy <= 1 && !has_coll; iy++) {
                         if (cx <= 0 || cy <= 0 || cx + ix > bound_x || cy + iy > bound_y)
                             continue;
 
                         unsigned char cost = costmap_ros->getCostmap()->getCost(cx + ix, cy + iy);
+                        // We are ignoring unknown costs in this case as we are clearing the costmap every iteration 
+                        // with the {{psaf_obstacle_layer}} Packge
                         if (cost > COSTMAP_THRESHOLD && cost != costmap_2d::NO_INFORMATION) {
                             has_coll = true;
                         }
                     }
                 }
-                // unsigned char cost = costmap_ros->getCostmap()->getCost(cx, cy);
 
                 if (has_coll)
                 {
