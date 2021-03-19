@@ -13,9 +13,12 @@ Der PsafObstacleLayer ist eine Erweiterung des [Obstacle Layers](https://docs.ro
 
 
 ## Artefaktverhinderung
-Durch Überschreiben von `PsafObstacleLayer::updateCosts` kann beeinflusst werden, was jede Iteration ausgeführt wird. Hier kann durch Ausführen von `ObstacleLayer::reset()` die Costmap geleert werden.
+Durch Überschreiben von `PsafObstacleLayer::updateCosts` kann beeinflusst werden, was jede Iteration ausgeführt wird. Hier kann durch das Ausführen von `ObstacleLayer::reset()` die Costmap geleert werden.
 Durch die hohe Auflösung der Lidar Sensoren kann die Costmap jede Iteration neu erstellt werden, wobei nur die tatsächliche Hülle der Fahrzeuge erkannt wird.
-![Ohne Artefakte der Fahrzeuge](doc/fixed.png)
+
+<img src="doc/fixed.png" alt="Ohne Artefakte der Fahrzeuge" width="500">
+
 
 Dies verhindert Artekfakte, die trotz des Parameters `observation_persistence: 0.1` auftreten. Aufgrund dieser Artefakte könnte die Position der Fahrzeuge nicht zuverlässig erkannt werden.
-![Artefakte der Fahrzeuge](doc/artifacts.png)
+
+<img src="doc/artifacts.png" alt="Artefakte der Fahrzeuge" width="500">
