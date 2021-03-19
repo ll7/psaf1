@@ -1,8 +1,7 @@
 # Costmap Raytracer
 ###### [Source (.cpp)](src/psaf_local_planner/costmap_raytracer.cpp)  | [Header (.h)](include/psaf_local_planner/costmap_raytracer.h)
-
 Der Costmap Raytracer findet durch Raytracing Hindernisse auf der Costmap innerhalb eines Teilkreises mit definiertem Radius und Winkeln um das Auto herum (vgl. Abb unten).
-Durch eine niedrige Schrittweite zwischen den Rays, können einzelne Fahrzeuge teilweise mehrmals getroffen werdnen. So wird die Position des Hindernisses, der Abstand zum Fahrzeug ermittelt sowie die Seite des Fahrzeugs auf der sich das Hinderniss befindet.
+Durch eine niedrige Schrittweite zwischen den Rays, können einzelne Fahrzeuge teilweise mehrmals getroffen werdnen. So wird die Position des Hindernisses, der Abstand zum Fahrzeug sowie die Seite des Fahrzeugs, auf der sich das Hinderniss befindet, ermittelt.
 
 
 ```
