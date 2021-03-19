@@ -80,12 +80,12 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 ```
 
 ### Launch Files
-- **psaf_global_planner_path_common_roads.launch** startet den ```path_supervisor_common_roads``` 
-  und den ```planning_preprocessor```. Dies beinhaltet unter Verwendung der CommonRoads Bibliothek alle in 
+- **psaf_global_planner_path_common_roads.launch** startet den ```path_supervisor_common_roads.py``` 
+  und den ```planning_preprocessor.py```. Dies beinhaltet, unter Verwendung der CommonRoads Bibliothek, alle in 
   diesem Package beschriebenen Funktionalitäten. Zur Generierung des o.g. globalen Plans muss dieses launch file
   ausgeführt werden.
 
-- **psaf_global_planner_path_lanelet2.launch** startet den ```path_provider_lanelet2```, welcher auf Basis des Lanelet2
+- **psaf_global_planner_path_lanelet2.launch** startet den ```path_provider_lanelet2.py```, welcher auf Basis des Lanelet2
   Frameworks einen einfachen globalen Plan generiert. Dieses launch file sollte nur zu Testzwecken der Fähigkeiten von
   Lanelet2 ausgeführt werden.
 
