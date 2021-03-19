@@ -88,7 +88,7 @@ Hierfür ist jedoch der Kreisradius der Kurve nötig. Dieser kann mit der [Menge
 ```
                o x x x x x
           x x
-      x o 
+      o x 
     x
   x
  x
