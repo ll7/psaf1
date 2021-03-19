@@ -102,7 +102,7 @@ Letztere Information wird dann für die potenzielle Einplanung eines U-Turns im 
 Der Map Provider ist für die Bereitstellung der Karteninformationen verantwortlich. Der Kern dieser Informationen
 bildet dabei das Lanelet-Netzwerk. Eine Lanelet ist eine als Straßenabschnitt zu bezeichnende Darstellung, definiert
 durch die Grenzen der Fahrspur und ihrer Mittellinie. Das Lanelet-Netzwerk ergibt sich somit als Graph aus 
-Straßenabschnitten, wobei deren Verbindungen durch Kanten (Vor- und Nachfolger- Referenzen) representiert sind.
+Straßenabschnitten, wobei deren Verbindungen durch Kanten (Vor- und Nachfolger- Referenzen) repräsentiert sind.
 Eine detailliertere Beschreibungen folgt in den Unterkapiteln.
 
 #### Map Converter (map_provider)
