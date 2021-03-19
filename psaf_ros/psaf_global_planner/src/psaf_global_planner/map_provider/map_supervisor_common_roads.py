@@ -149,7 +149,7 @@ class MapSupervisorCommonRoads(MapProvider):
         :param neighbouring: map every stop instruction to all neighbouring lanelets (false or marks, true for signs)
         """
         for stop in stops:
-            mapped_lanelets = self._find_traffic_rule_lanelet(stop, self.max_angle_diff_sign, neighbouring=neighbouring)
+            mapped_lanelets = self._find_traffic_light_lanelet(stop, self.max_angle_diff_sign, neighbouring=neighbouring)
             if len(mapped_lanelets) > 0:
                 for lanelet in mapped_lanelets:
                     index = self._find_vertex_index(lanelet, stop.pos_as_point())
@@ -210,7 +210,7 @@ class MapSupervisorCommonRoads(MapProvider):
                 return nearest
         return None
 
-    def _find_traffic_rule_lanelet(self, light: LandMarkPoint, max_angle_diff: float, neighbouring: bool = True):
+    def _find_traffic_light_lanelet(self, light: LandMarkPoint, max_angle_diff: float, neighbouring: bool = True):
         """
         Given a traffic light -> find the lanelet to which the traffic light is effective
         :param light: trafficLight as a LandMarkPoint
@@ -258,14 +258,14 @@ class MapSupervisorCommonRoads(MapProvider):
         Detect all intersections on the map and store the results in an intersection hashmap with a lanelet_id as key
         """
         for lanelet in self.map_cr.lanelet_network.lanelets:
-            # get the successor of the successor of the given lanelet
+            # get the the successor of the given lanelet
             lane = lanelet
             if len(lane.successor) == 0:
                 return False
             succ = lanelet.successor[0]
             lane = self.map_cr.lanelet_network.find_lanelet_by_id(succ)
 
-            # check for the amount of predecessor
+            # check for the amount of predecessor, if there are more than 1 -> lanelet is on an intersection
             self.intersection[lanelet.lanelet_id] = len(lane.predecessor) > 1
 
         # now double check -> if my neighbour is at an intersection, i am too
@@ -325,7 +325,7 @@ class MapSupervisorCommonRoads(MapProvider):
         :param lights: list of trafficLights as LandMarkPoints
         """
         for light in lights:
-            mapped_lanelets = self._find_traffic_rule_lanelet(light, self.max_angle_diff_light)
+            mapped_lanelets = self._find_traffic_light_lanelet(light, self.max_angle_diff_light)
             if len(mapped_lanelets) > 0:
                 for lanelet in mapped_lanelets:
                     self._add_light_to_lanelet(lanelet.lanelet_id)
