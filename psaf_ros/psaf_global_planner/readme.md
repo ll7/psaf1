@@ -45,6 +45,7 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 ### Message Struktur
 
 **XRoute**:
+```
 - uint32 id
 - bool isUTurn
 - XLanelet[] route:
@@ -60,16 +61,21 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
         - uint8 speed
         - float32 duration
         - float32 distance
+```
     
 **Obstacle**:
+```
 - uint8 id
 - geometry_msgs/Point[] obstacles
+```
 
 **PlanningInstruction**:
+```
 - geometry_msgs/Pose goalPoint
 - bool planUTurn
 - float32 obstacleDistanceForward
 - float32 obstacleDistanceLeft
+```
 
 ## Funktionalität
 Die Funktionalität dieses Packages ist grundsätzlich in drei Schritte aufzuteilen. Der [Map Provider](#map-provider) ist
