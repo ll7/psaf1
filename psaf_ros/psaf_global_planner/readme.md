@@ -34,13 +34,13 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
 | /psaf/status | String | Path Provider |
-| /psaf/xroute | XRoute | Path Provider|
+| /psaf/xroute | [XRoute](../psaf_messages/msg/XRoute.msg) | Path Provider|
 
 #### Subscribe
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
-| /psaf/goal/set_instruction | PlanningInstruction | Path Provider |
-| /psaf/planning/obstacle | Obstacle | Path Provider|
+| /psaf/goal/set_instruction | [PlanningInstruction](../psaf_messages/msg/PlanningInstruction.msg) | Path Provider |
+| /psaf/planning/obstacle | [Obstacle](../psaf_messages/msg/Obstacle.msg) | Path Provider|
 | /carla/world_info | CarlaWorldInfo | Map Provider |
 
 

@@ -6,6 +6,7 @@
 * [Übersicht](#bersicht)
     * [Kurzbeschreibung](#kurzbeschreibung)
     * [Topics](#topics)
+    * [Launch Files](#launch-files)
 * [Funktionalität](#funktionalitt)
     * [Scenario Runner](#psaf_scenario)
 
@@ -26,7 +27,14 @@ angegebene Route abgefahren und die Position des Fahrzeugs, sowie die Laufzeit w
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
 | /carla/ego_vehicle/odometry | Odometry |Scenario Runner |
+### Launch Files
+- **psaf_scenario_run_scenario_path.launch** startet den ```scenario_runner_path.py```, welcher auf Basis einer 
+  Debugpath Datei (Bag Datei mit einem Path) ein Szenario startet. Zusätzlich können der Timeout, die Höhe des Spawns, 
+  der Zielradius und der Sample Count für die Bewertung festgelegt werden.
 
+- **psaf_scenario_run_scenario_xroute.launch** startet den ```scenario_runner_xroute.py```, welcher auf Basis einer 
+  Debugpath Datei (Bag Datei mit einem XRoute) ein Szenario startet. Zusätzlich können der Timeout, die Höhe des Spawns, 
+  der Zielradius und der Sample Count für die Bewertung festgelegt werden.
 
 ## Funktionalität
 ### Scenario Runner (scenario_runner)
