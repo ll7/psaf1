@@ -83,7 +83,10 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 - **psaf_global_planner_path_common_roads.launch** startet den ```path_supervisor_common_roads.py``` 
   und den ```planning_preprocessor.py```. Dies beinhaltet, unter Verwendung der CommonRoads Bibliothek, alle in 
   diesem Package beschriebenen Funktionalitäten. Zur Generierung des o.g. globalen Plans muss dieses launch file
-  ausgeführt werden.
+  ausgeführt werden. Über Parameter kann der das Verhalten des Planners gesteuert werden. Die Beachtung 
+  von Verkehrsregeln, Debugging Nachrichten, der Export der XRoute in eine DebugPath Datei 
+  (für den [Scenario Runner](../psaf_scenario/readme.md)) und das 
+  Erzwingen eines U-Turns (wenn mgl) kann aktiviert werden.
 
 - **psaf_global_planner_path_lanelet2.launch** startet den ```path_provider_lanelet2.py```, welcher auf Basis des Lanelet2
   Frameworks einen einfachen globalen Plan generiert. Dieses launch file sollte nur zu Testzwecken der Fähigkeiten von
