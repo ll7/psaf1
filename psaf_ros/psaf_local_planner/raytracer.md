@@ -20,7 +20,7 @@ Zur Überprüfung ob z.B. Stopkreuzungen [TODO: Link zu Stopkreuzungen in Doku](
 
 # Local Perception
 ###### [Source (.cpp)](src/psaf_local_planner/LocalPerception.cpp)  | [Header (.h)](include/psaf_local_planner/plugin_local_planner.h#L223)
-Die Local Perception vehindert anhand der Costmap die Kollision mit vorausfahrenden bzw. haltenden Fahrzeugen. Hierfür wird die Distanz vom eingenen Fahrzeug bis zum nächsten Hinderniss gemessen.
+Die Local Perception vehindert anhand der Costmap die Kollision mit vorausfahrenden bzw. haltenden Fahrzeugen. Hierfür wird die Distanz vom eigenem Fahrzeug bis zum nächsten Hinderniss gemessen.
 So kann mithilfe der Formel für den [Anhalteweg](https://www.bussgeldkatalog.org/anhalteweg/), die nach der Geschwindigkeit umgestellt wird, die nötige Geschwindigkeit herausgefunden werden, die das Fahrzeug ansteuern muss, um einen konstanten Abstand zu halten.
 
 Unterschreitet diese Geschwindigkeit über einen längeren Zeitraum einen bestimmten Schwellenwert, dann wird eine Spurwechsel initiert. Hierfür werden alle durch den [Costmap Raytracer](#Costmap-Raytracer) erkannten Hindernisse in der [Obstacle](../psaf_messages/msg/Obstacle.msg) Message an den Global Planner gesendet.
