@@ -220,6 +220,7 @@ class ScenarioRunner:
     def _position_listener(self, position: Odometry):
         """
         Position callback function
+        :param position: current vehicle odometry data
         :return:
         """
         self.current_pose = position.pose.pose
@@ -281,6 +282,8 @@ class ScenarioRunner:
         """
         This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
         The last entry can be the goal if a path was found or the starting point if no path was found
+        :param target: position and orientation of the goal
+        :return:
         """
         pass
 

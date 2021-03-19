@@ -57,6 +57,8 @@ class ScenarioRunnerXRoute(ScenarioRunner):
         """
         This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
         The last entry can be the goal if a path was found or the starting point if no path was found
+        :param target: position and orientation of the goal
+        :return:
         """
         while self.xroute_pub.get_num_connections() == 0:
             self.rate.sleep()
@@ -70,7 +72,14 @@ class ScenarioRunnerXRoute(ScenarioRunner):
 
         client.send_goal(goal)
 
-    def _orientation_for_point(self, pos, prev_pos):
+    def _orientation_for_point(self, pos: Point, prev_pos: Point):
+        """
+        This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
+        The last entry can be the goal if a path was found or the starting point if no path was found
+        :param pos: point in question
+        :param prev_pos: compare position
+        :return: yaw angle in rad
+        """
         angles = list()
         # describes the relative position of the pos to the prev pos
         rel_x = 1 if (pos.x - prev_pos.x) >= 0 else -1

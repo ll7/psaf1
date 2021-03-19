@@ -99,6 +99,10 @@ class SimulatedAnnealingOptimizer:
             sys.exit(1)
 
     def _set_params_pid(self, params: np.ndarray):
+        """
+        Implements the functionality to set the pid parameters
+        :param params: list of parameters
+        """
         try:
             rec_client = dynamic_reconfigure.client.Client('/carla/ego_vehicle/ackermann_control', timeout=10)
             if self.param_enum is ParameterType.speed:
@@ -153,7 +157,7 @@ class SimulatedAnnealingOptimizer:
 
         return np.array(params)
 
-    def find_optimum(self, it_count, time_weight: float, quality_weight: float):
+    def find_optimum(self, it_count: int, time_weight: float, quality_weight: float):
         """
         o = current_index, o' = neighbour_index, o_best = best_index
         b(o) = current_value, b(o_best) = best_value, b(o') = neighbour_value
@@ -195,12 +199,29 @@ class SimulatedAnnealingOptimizer:
         return best_value, best_index
 
     def _cooling_function(self, i_max, i):
+        """
+        Calculates the cooling function
+        :param i_max: max iteration count
+        :param i: current iteration
+        :return: current cooling value
+        """
         return i_max * (self.alpha ** i)
 
     def _acceptance_probability(self, delta, t):
+        """
+        Calculates the acceptance probability
+        :param delta: delta
+        :param t: current time
+        :return: acceptance probability
+        """
         return math.exp(delta / t * (-1))
 
     def _get_random_neighbour(self, index):
+        """
+        Returns n random neighbour
+        :param index: neighbour count
+        :return: n random neighbour
+        """
         neighbour_index = np.zeros(len(index))
         i = 0
         while i < len(index):
