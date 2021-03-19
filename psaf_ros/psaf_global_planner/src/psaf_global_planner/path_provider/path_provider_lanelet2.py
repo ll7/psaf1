@@ -22,6 +22,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import numpy as np
 import math
 
+
 class PathProviderLanelet2:
 
     def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10,
@@ -85,7 +86,12 @@ class PathProviderLanelet2:
             bag_files.append(rosbag.Bag(str(dir_str + filename + suffix), "w"))
 
         return bag_files
+
     def _load_map(self, path):
+        """
+        Loads the map (Lanelet2 Framework)
+        :param path: file path to the map
+        """
         return lanelet2.io.load(path, self.projector)
 
     def _get_map_path(self, polling_rate: int, timeout_iter: int):

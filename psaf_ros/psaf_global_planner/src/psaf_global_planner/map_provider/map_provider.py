@@ -42,6 +42,7 @@ class MapProvider:
     def update_world(self, world_info: CarlaWorldInfo):
         """
         Check if a new map was sent and receive it
+        :param world_info: Carla world info data
         """
         self.map_ready = False
         rospy.loginfo("MapProvider: Received new map info")
@@ -71,12 +72,13 @@ class MapProvider:
             return ""
 
     """
-    Currently not in use since CommonRoad lanlets are not compatible with lanelet2
+    Currently not in use since CommonRoad lanelets are not compatible with lanelet2
     """
 
     def convert_od_to_lanelet(self) -> Scenario:
         """
         Create a CommonRoad scenario from the OpenDrive received OpenDrive map
+        :return: Scenario if the map is ready, None instead
         """
         lanelet: Scenario = None
         if self.map_ready:

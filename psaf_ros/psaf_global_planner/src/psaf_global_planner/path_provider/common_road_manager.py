@@ -32,6 +32,11 @@ class CommonRoadManager:
         rospy.loginfo("CommonRoadManager: Done!")
 
     def _handle_turnaround_town_03(self, map_name: string):
+        """
+        This function adds a hotfix solution for the roundabout of Town03
+        (Splitting lanelets and adding stop signs at incoming lanes)
+        :param map_name: Name of the loaded map
+        """
         if map_name == "Town03":
             rospy.loginfo("Handling turnaround")
             # coordinates for turnaround splits
@@ -76,6 +81,14 @@ class CommonRoadManager:
 
     def _add_sign_to_lanelet(self, lanelet_id: int, pos_index: int, typ: TrafficSignIDGermany, additional: list = [],
                              cur_mark_id = -1):
+        """
+
+        :param lanelet_id: id of the considered lanelet
+        :param pos_index: index position of the sign
+        :param typ: type of the sign (used for creating the TrafficSign object of CommonRoads)
+        :param additional: additional of the sign (used for creating the TrafficSign object of CommonRoads)
+        :param cur_mark_id: id of the sign (used for creating the TrafficSign object of CommonRoads), no further use
+        """
         pos = self.map.lanelet_network.find_lanelet_by_id(lanelet_id).center_vertices[pos_index]
         sign_element = TrafficSignElement(typ, additional)
         id_set = set()
@@ -85,6 +98,13 @@ class CommonRoadManager:
         self.map.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
 
     def _update_message_dict(self, matching_lanelet_id: int, lanelet_front: int, lanelet_back: int):
+        """
+        Updates the message dict after a split of the matching lanelet occurred
+        :param matching_lanelet_id: id of the lanelet that has been split
+        :param lanelet_front: new lanelet -> front part
+        :param lanelet_back:  new lanelet -> back part
+        :return:
+        """
         # add the new lanelets to the dict
         self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_front))
         self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back))
@@ -93,12 +113,22 @@ class CommonRoadManager:
         del self.message_by_lanelet[matching_lanelet_id]
 
     def _fill_message_dict(self):
+        """
+        Fills the message dict; Therefore creates a XLanelet Message for every Lanelet, currently in the network
+        """
         rospy.loginfo("CommonRoadManager: Message calculation started!")
         for lanelet in self.map.lanelet_network.lanelets:
             self._generate_xlanelet(lanelet)
         rospy.loginfo("CommonRoadManager: Message calculation done!")
 
     def _calculate_distance_and_duration(self, previous: list, current: list, prev_speed: float):
+        """
+        Calculates the distance and the time spent between two points based on the max. allowed speed
+        :param previous: starting point
+        :param current: end point
+        :param prev_speed: allowed speed between those two points
+        :return: the computed distance and time
+        """
         # calculate the distance between two waypoints
         distance = np.linalg.norm(np.array(current) - np.array(previous))
         # calculate time by distance [m] and speed [km/h] -> transform to [m/s]
@@ -107,6 +137,10 @@ class CommonRoadManager:
         return distance, time_spent
 
     def _generate_xlanelet(self, lanelet: Lanelet):
+        """
+        Generate the XLanelet message of the given lanelet and store it in the message_by_lanelet dict for later use
+        :param lanelet: the considered lanelet
+        """
         stop = False
         for sign_id in lanelet.traffic_signs:
             sign = self.map.lanelet_network.find_traffic_sign_by_id(sign_id)
@@ -125,9 +159,9 @@ class CommonRoadManager:
 
     def _generate_extended_centerline_by_lanelet(self, lanelet: Lanelet) -> List[CenterLineExtended]:
         """
-        Generate the extended centerline Message based on the given lanelet.
-        Therefore check the current speed limit for every waypoint.
-        :param lanelet: lanelet of which the given extended centerline should be generated
+        Generate the extended centerline Message based on the given lanelet
+        Therefore check the current speed limit for every waypoint
+        :param lanelet: lanelet of which the extended centerline should be generated
         :return: List of Waypoints and their corresponding speed. -> [[x,y,z, speed], ..]
         """
         from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads as pp
@@ -310,6 +344,12 @@ class CommonRoadManager:
                 return lane_id
 
     def _add_to_neighbourhood(self, lanelet_id: int, entry: list):
+        """
+        Sets the given entry as the neighbourhood of the given lanelet
+        :param lanelet_id: id of the given lanelet
+        :param entry: given entry of the neighbourhood dict
+        :return:
+        """
         if len(entry) != 2:
             rospy.logerr("PathSupervisor: invalid neighbourhood update!")
         self.neighbourhood[lanelet_id] = entry
@@ -338,6 +378,10 @@ class CommonRoadManager:
         return neighbourhood
 
     def _fast_reference_cleanup(self, lanelet_id: int):
+        """
+        Remove the all references of the given lanelet
+        :param lanelet_id: id of the given lanelet
+        """
         rospy.loginfo("PathSupervisor: Removing {} from references!".format(lanelet_id))
         # remove lanelet_id from all successors
         for succ in self.neighbourhood[lanelet_id][0]:

@@ -41,6 +41,10 @@ class LandMarkPoint:
         self.mark_id = id
 
     def pos_as_point(self) -> Point:
+        """
+        Returns the position of the Landmark point as a Point object
+        :return: Point object
+        """
         return Point(self.x, self.y, 0)
 
     def __eq__(self, other):
@@ -55,15 +59,28 @@ class LandMarkProvider:
         self.landmarks = self._get_markings()
 
     def available_categories(self):
+        """
+        All available categories of of the stored landmarks
+        :return: list of categories
+        """
         return list(self.landmarks.keys())
 
-    def get_marks_by_categorie(self, categorie: str):
-        if categorie in self.landmarks.keys():
-            return self.landmarks[categorie]
+    def get_marks_by_category(self, category: str):
+        """
+        Get all Landmarks of the given category
+        :param category: the given category
+        :return: landmarks
+        """
+        if category in self.landmarks.keys():
+            return self.landmarks[category]
         else:
             return None
 
     def _get_markings(self):
+        """
+        Get all Carla Landmarks
+        :return: dict of landmarks
+        """
         try:
             # First of all, we need to create the client that will send the requests
             # to the simulator. Here we'll assume the simulator is accepting

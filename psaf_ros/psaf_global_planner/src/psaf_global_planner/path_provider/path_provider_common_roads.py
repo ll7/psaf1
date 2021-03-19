@@ -26,7 +26,7 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, Pose
 import sys
 from copy import deepcopy
 import rospy
-from psaf_global_planner.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
+from psaf_global_planner.map_provider.map_supervisor_common_roads import MapSupervisorCommonRoads
 from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
 from enum import Enum
 from psaf_messages.msg import XRoute
@@ -64,7 +64,7 @@ class PathProviderCommonRoads:
         self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
         self.origin = Origin(0, 0)
         self.projector = UtmProjector(self.origin)
-        self.map_provider = CommonRoadMapProvider(debug=enable_debug)
+        self.map_provider = MapSupervisorCommonRoads(debug=enable_debug)
         self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
         self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
         self.status_pub.publish("PathProvider not ready")
@@ -335,6 +335,11 @@ class PathProviderCommonRoads:
             rospy.logerr("PathProvider: Invalid path, no path published")
 
     def _visualization(self, route, num):
+        """
+        Create a .png file, visualizing the given route (only used if enable_debug is True)
+        :param route: the route to be visualized
+        :param num: number of the route (only for identification purposes)
+        """
         plot_limits = get_plot_limits_from_reference_path(route)
         # option 2: plot limits from lanelets in the route
         # plot_limits = get_plot_limits_from_routes(route)
@@ -571,7 +576,8 @@ class PathProviderCommonRoads:
 
     def _serialize_message(self, x_route: XRoute):
         """
-        Serialize path message and write to bag file
+        Serialize XRoute message and write to bag file, for use in the scenario runner
+        :param x_route: XRoute to be serialized
         """
         # suffix set to be .debug
         suffix = ".debugpath"
@@ -641,16 +647,16 @@ class PathProviderCommonRoads:
         self.get_path_from_a_to_b(u_turn=data.planUTurn)
         self.status_pub.publish("PathProvider done")
 
-    def _trigger_move_base(self, target: PoseStamped):
+    def _trigger_move_base(self, trigger_pose: PoseStamped):
         """
-        This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
-        The last entry can be the goal if a path was found or the starting point if no path was found
+        This function triggers the move_base by publishing a PoseStamped
+        :param trigger_pose: Pose
         """
         client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         client.wait_for_server()
 
         goal = MoveBaseGoal()
-        goal.target_pose = target
+        goal.target_pose = trigger_pose
 
         client.send_goal(goal)
         rospy.loginfo("PathProvider: global planner plugin triggered")
@@ -684,6 +690,9 @@ class PathProviderCommonRoads:
         return p
 
     def _reset_map(self):
+        """
+        Reset the current knowledge to the unchanged originals
+        """
         # first reset map
         if self.manager is not None:
             # create clean slate
