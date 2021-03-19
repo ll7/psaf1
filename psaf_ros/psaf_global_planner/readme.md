@@ -6,7 +6,8 @@
 * [Übersicht](#bersicht)
     * [Kurzbeschreibung](#kurzbeschreibung)
     * [Topics](#topics)
-    + [Message Struktur](#message-struktur)
+    * [Message Struktur](#message-struktur)
+    * [Launch Files](#launch-files)
 * [Funktionalität](#funktionalitt)
     * [Map Provider](#map-provider)
         * [Map Converter](#map-converter-map_provider)
@@ -77,6 +78,17 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 - float32 obstacleDistanceForward
 - float32 obstacleDistanceLeft
 ```
+
+### Launch Files
+- **psaf_global_planner_path_common_roads.launch** startet den ```path_supervisor_common_roads``` 
+  und den ```planning_preprocessor```. Dies beinhaltet unter Verwendung der CommonRoads Bibliothek alle in 
+  diesem Package beschriebenen Funktionalitäten. Zur Generierung des o.g. globalen Plans muss dieses launch file
+  ausgeführt werden.
+
+- **psaf_global_planner_path_lanelet2.launch** startet den ```path_provider_lanelet2```, welcher auf Basis des Lanelet2
+  Frameworks einen einfachen globalen Plan generiert. Dieses launch file sollte nur zu Testzwecken der Fähigkeiten von
+  Lanelet2 ausgeführt werden.
+
 
 ## Funktionalität
 Die Funktionalität dieses Packages ist grundsätzlich in drei Schritte aufzuteilen. Der [Map Provider](#map-provider) ist
@@ -219,7 +231,7 @@ Die Idee des Common Road Managers ist es, dass er die Hauptschnittstelle zwische
 Kartendaten abbildet. Er besitzt hierfür zwei grundlegende Funktionalitäten:
 1. Er berechnet die vorgehaltenen Informationen, welche für die Planung im [Replanner](#replanner-path_supervisor) benötigt werden.
    Konkret handelt es sich hierbei um das Common Road Scenario und eine [XLanelet](#message-struktur) Repräsentation jeder Lanelet.
-   Letztere ist als vorgefertigte Nachricht jeder Lanelet anzusehen, sodass im [Planer](#planner-path_provider)
+   Letztere ist als vorgefertigte Nachricht jeder Lanelet anzusehen, sodass im [Planner](#planner-path_provider)
    nur noch diese Nachrichten (gesamt, oder in Teilen bei Spurwechseln) für alle Lanelets eines Pfades zusammengesetzt werden müssen.
    Diese Informationen werden im Konstruktor des Managers einmalig (bzw. einmalig für jede Lanelet) berechnet. 
    Im späteren Verlauf werden nur noch Änderungen, die zum Beispiel durch Lanelet-Splits (siehe Abschnitt 2.) hervorgerufen werden, vorgenommen.
