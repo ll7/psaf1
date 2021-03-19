@@ -36,6 +36,12 @@ Des Weiteren entscheidet der Local Planer auch auf Basis der Informationen ob ei
 
 
 ## Funktionalität
+Die Funktion des Local Planners lässt sich grundlegend in die vier Grundfunktionen Verarbeitung des GlobalPlans [TODO LINK zu Kapitel], Berechnung der Lenkwinkelvorgabe [TODO LINK zu Kapitel], Berechnung der Geschwindigkeitsvorgabe und Entscheidung zum Replanning [TODO Link zu Kapitel Replanning] unterteilen.
+Die Berechnung der Geschwindigkeitsvorgabe geschieht hierbei in Abhängigkeit folgender FUnktionen: 
+* Berechnung anhand des Abstandes zu etwaigen Hindernissen vor oder neben dem Fahrzeug [TODO Links zu Unterkapitel]
+* Berechnung anhand des Kurvenradiuses der aktuellen Trajektorie [TODO Links zu Unterkapitel]
+* Berechnung anhand der Verkehrszeichen Situation (Ampeln, Stoppschilder, ....) [TODO Links zu Unterkapitel]
+
 
 ### Global Plan Verarbeitung
 ###### [Source (.cpp)](src/psaf_local_planner/Main.cpp)  | [Header (.h)](include/psaf_local_planner/plugin_local_planner.h)
