@@ -79,18 +79,10 @@
   <build_export_depend>map_server</build_export_depend>
   <exec_depend>map_server</exec_depend>
   
-  <build_depend>teb_local_planner</build_depend>
-  <build_export_depend>teb_local_planner</build_export_depend>
-  <exec_depend>teb_local_planner</exec_depend>
-
   <exec_depend>ackermann_msgs</exec_depend>
   <build_depend>dynamic_reconfigure</build_depend>
   <exec_depend>dynamic_reconfigure</exec_depend>
 
-  <build_depend>costmap_converter</build_depend>
-  <build_export_depend>costmap_converter</build_export_depend>
-  <exec_depend>costmap_converter</exec_depend>
-  
   <build_depend>psaf_local_planner</build_depend>
   <build_export_depend>psaf_local_planner</build_export_depend>
   <exec_depend>psaf_local_planner</exec_depend>
