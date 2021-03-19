@@ -161,6 +161,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         :param car_lanelet: id of the lanelet where the car currently located on
         :param curr_pos: current position of the car (x, y)
         :param relevant: list of lanelets that are possible for obstacle insertion
+        :return: true if the insertion was successful additionally the lanelet_id of the lanelet the car currently resides on
         """
         rospy.loginfo("PathSupervisor: Add obstacle")
         success = False

@@ -17,19 +17,8 @@ import carla
 
 
 class LandMarkPoint:
-    """
-    Class that represents a LandMark Object and contains its absolute position, defined by x, y and its orientation,
-    and its designated id.
-    """
 
     def __init__(self, x: float, y: float, orientation: float, id: int):
-        """
-        LandMarkPointObject
-        :param x: x position [m]
-        :param y: y position [m]
-        :param orientation: for this specific purpose: yaw_angle as a rotation by the z-axis [degree]
-        :param id: landmark id, set by carla
-        """
         self.x = x
         self.y = y
         # get orientation without multiple rotations

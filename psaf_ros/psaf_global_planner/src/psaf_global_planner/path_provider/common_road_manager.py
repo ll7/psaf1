@@ -219,13 +219,14 @@ class CommonRoadManager:
             return False
 
     def _modify_lanelet(self, lanelet_id: int, modify_point: Point, start_point: Point) -> Tuple[int, int]:
-        from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads as pp
-        """Splits a lanelet at a certain point
-
+        """
+        Splits a lanelet at a certain point
         :param lanelet_id: lanelet to be split
         :param modify_point: point of split
+        :param start_point: starting point, normally position of the car
         :return: ids of the split lanelet
         """
+        from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads as pp
         # create new ids
         id_lane_1 = self._generate_lanelet_id(id_start=lanelet_id)
         id_lane_2 = self._generate_lanelet_id(id_start=lanelet_id, exclude=id_lane_1)
@@ -399,6 +400,7 @@ class CommonRoadManager:
 
         :param matching_lanelet_id: lanelet to be split
         :param modify_point: point of split
+        :param start_point: starting point, normally position of the car
         :param static_obstacle: obstacle to be added
         :return: ids of the split lanelet
         """

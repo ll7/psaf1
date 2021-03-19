@@ -361,6 +361,8 @@ class PathProviderCommonRoads:
         :param route: List of route points, which are eather of type [x][y] or xcenterline
         :param compare_point: Point to compare the route_point -> Type Point
         :param use_xcenterline:  route_point is a xcenterline entry
+        :param reversed:  if true reverse search order (route[-1]-> route[-2] ...)
+        :param prematured_stop:  if true stop search after a match was found, may produce a global minimum
         :return: index
         """
         min_distance = float("inf")
