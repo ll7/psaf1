@@ -1,4 +1,4 @@
-# PSAF Abstraction Layer
+# PSAF Perception
 
 ## Inhalt
 * [Inhalt](#inhalt)
@@ -20,8 +20,8 @@
 #### Publish
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
-| /psaf/perception/traffic_signs | TrafficSignInfo | DetectionService |
-| /psaf/perception/stop_lines | StopLineInfo | DetectionService |
+| /psaf/perception/traffic_signs | [TrafficSignInfo](../psaf_messages/msg/TrafficSignInfo.msg) | DetectionService |
+| /psaf/perception/stop_lines | [StopLineInfo](../psaf_messages/msg/StopLineInfo.msg) | DetectionService |
 
 #### Subscribe
 Die nachfolgenden Topics werden über die Abstraktionsschicht indirekt genutzt.
@@ -31,13 +31,12 @@ Die nachfolgenden Topics werden über die Abstraktionsschicht indirekt genutzt.
 | /carla/{role_name}/camera/rgb/{id}/image_color | Image | RGBCamera |
 | /carla/{role_name}/camera/depth/{id}/image_depth | Image | DepthCamera |
 | /carla/{role_name}/camera/semantic_segmentation/{id}/image_segmentation | Image | SegmentationCamera |
-| /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | CombinedCameraImage | FusionCamera |
-
+| /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | [CombinedCameraImage](../psaf_messages/msg/CombinedCameraImage.msg) | FusionCamera |
 
 ## Funktionalität
 ### Detection Service
 Der *Detection Service* startet die entsprechenden Detektoren und sammelt die gewonnen Wahrnehmungsdaten.
-Dabei konvertiert es die abstrakten detektieren Objekten anhand ihres Labels in das passenden Nachrichtenformat.
+Dabei konvertiert es die abstrakten detektieren Objekten anhand ihres Labels in das passende Nachrichtenformat.
 Derzeit werden folgende Detektoren gestartet:
 - StopLineDetector
 - TrafficLightDetector
@@ -76,6 +75,7 @@ Damit sich das Fahrzeug an den Kreuzungen mit einer Ampel korrekt verhält, müs
 
 #### Umsetzung
 ![Inputbild der Fusioncamera](doc/Fusion_screenshot.png)
+
 Das Bild der FusionCamera, also der Vereinigung der drei Kamera-Bilder von RGB-, Tiefen und Segmentation-Kamera, wird zunächst zu Erkennung der Ampeln genutzt.
 Auf Basis des Segmentation-Bildes werden die Objekte im Bild, welche als Ampeln markiert sind, mit *Bounding Boxes* beschrieben.
 
@@ -97,10 +97,11 @@ Die Aufgabe des Detektors ist die Erkennung der Schilder und deren Entsprechung.
 
 #### Ziel
 Damit sich das Fahrzeug an den Kreuzungen mit einer Ampel korrekt verhält, müssen die Zustände der Ampeln bekannt sein.
+
 ![Erkennung der Schilder](doc/Traffic_sign_detection.png)
 
 #### Umsetzung
-Das Bild der FusionCamera ([siehe Traffic Light Detector](#Traffic-Light-Detector) wird zunächst zu Erkennung der Schilder genutzt.
+Das Bild der FusionCamera ([siehe Traffic Light Detector](#Traffic-Light-Detector)) wird zunächst zu Erkennung der Schilder genutzt.
 Auf Basis des Segmentation-Bildes werden die Objekte im Bild, welche als Verkehrsschilder markiert sind, mit *Bounding Boxes* beschrieben.
 
 Daraufhin wird der entsprechende Ausschnitt des RGB-Bildes durch ein Klassifikationsnetzes (Resnet18) klassifiziert.

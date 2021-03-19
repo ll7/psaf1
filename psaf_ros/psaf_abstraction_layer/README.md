@@ -31,7 +31,7 @@ Dazu wird für folgende Sensoren eine Klassenrepräsentation angeboten, welche b
 | ----------- | ----------- |----------- |
 | /carla/{role_name}/ackermann_cmd | AckermannDrive | CarlaCar |
 | /carla/{role_name}/vehicle_control_cmd | CarlaEgoVehicleControl | CarlaCar |
-| /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | CombinedCameraImage | FusionCameraServicee |
+| /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | [CombinedCameraImage](../psaf_messages/msg/CombinedCameraImage.msg) | FusionCameraService |
 
 #### Subscribe
 | Topic | Datatype | Module|
@@ -41,7 +41,8 @@ Dazu wird für folgende Sensoren eine Klassenrepräsentation angeboten, welche b
 | /carla/{role_name}/camera/semantic_segmentation/{id}/image_segmentation | Image | SegmentationCamera |
 | /carla/{role_name}/gnss/gnss1/fix | NavSatFix | GPS |
 | /carla/{role_name}/vehicle_status | CarlaEgoVehicleStatus | VehicleStatus |
-| /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | CombinedCameraImage | FusionCamera |
+| /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | [CombinedCameraImage](../psaf_messages/msg/CombinedCameraImage.msg) | FusionCamera |
+
 
 
 ## Funktionalität
