@@ -28,11 +28,11 @@ angegebene Route abgefahren und die Position des Fahrzeugs, sowie die Laufzeit w
 | ----------- | ----------- |----------- |
 | /carla/ego_vehicle/odometry | Odometry |Scenario Runner |
 ### Launch Files
-- **psaf_scenario_run_scenario_path.launch** startet den ```scenario_runner_path.py```, welcher auf Basis einer 
+- **psaf_scenario_run_scenario_path.launch** startet ```scenario_runner_path.py```, welche auf Basis einer 
   Debugpath Datei (Bag Datei mit einem Path) ein Szenario startet. Zusätzlich können der Timeout, die Höhe des Spawns, 
   der Zielradius und der Sample Count für die Bewertung festgelegt werden.
 
-- **psaf_scenario_run_scenario_xroute.launch** startet den ```scenario_runner_xroute.py```, welcher auf Basis einer 
+- **psaf_scenario_run_scenario_xroute.launch** startet ```scenario_runner_xroute.py```, welche auf Basis einer 
   Debugpath Datei (Bag Datei mit einem XRoute) ein Szenario startet. Zusätzlich können der Timeout, die Höhe des Spawns, 
   der Zielradius und der Sample Count für die Bewertung festgelegt werden.
 
@@ -46,5 +46,5 @@ Zeitpunkt nicht am Ziel angekommen ist. Sollte das der Fall sein, war das Scenar
 dass das Szenario erfolgreich war, wird die dritte und letzte Phase ausgeführt. In der Evaluierungsphase wird 
 mithilfe des Cosinus Satzes die globale Abweichung von der Route bewertet.
 
-Der Scenario Runner bietet zwei Implementierungen. Die eine baut auf der XRoute auf, welche durch den [Global Planner](../psaf_global_planner/readme.md) berechnet
+Der Scenario Runner bietet zwei Implementierungen. Die eine baut auf der XRoute auf, welche durch den [Global Planner](../psaf_global_planner/README.md) berechnet
 wird und die andere setzt auf den Ros Datentyp Path.

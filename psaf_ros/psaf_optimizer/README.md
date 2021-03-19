@@ -13,11 +13,11 @@
 
 ### Kurzbeschreibung
 Die Hauptaufgabe des Optimizer Packages, ist die Ermöglichung einer Optimierung verschiedener Parameter anhand eines vom
-[Scenario Runner](../psaf_scenario/readme.md) bereitgestellten Szenarios.
+[Scenario Runner](../psaf_scenario/README.md) bereitgestellten Szenarios.
 
 ### Launch Files
-- **psaf_optimizer_run_optimizer.launch** startet den ```simulated_annealing_optimizer.py```; Dieser stellt eine Python
-  Implementierung eines Simulated Annealing Optimizers dar. Sämtliche Hyperparameter des Optimierers können über diese 
+- **psaf_optimizer_run_optimizer.launch** startet ```simulated_annealing_optimizer.py```; Diese stellt eine Python
+  Implementierung eines Simulated Annealing Optimizers dar. Sämtliche Hyperparameter des Optimierers können über die 
   Launch Datei gesetzt werden.
 
 ## Funktionalität
@@ -29,7 +29,7 @@ Das Parameterset mit dem besten erreichten Score wird nach jeder Iteration gesic
 In jeder Iteration werden die vom Optimierer gewählten Parameter zur Laufzeit gesetzt und vom Scenario Runner
 evaluiert. Der o.g. Score setzt sich aus einer anpassbaren Gewichtung aus der Routenqualität und der benötigten Zeit zusammen.
 Für eine detailliertere Beschreibung dieser Metriken ist auf den Ort der Generierung, 
-dem [Scenario Runner](../psaf_scenario/readme.md), zu verweisen.
+dem [Scenario Runner](../psaf_scenario/README.md), zu verweisen.
 
 In der aktuellen Fassung werden nur die PID Parameter der Geschwindigkeits- und Beschleunigungs-Regelung optimiert.
 Prinzipiell ist eine Erweiterung zur Optimierung anderer Parameter leicht möglich. Dazu müsste lediglich der Parameter-Typ
