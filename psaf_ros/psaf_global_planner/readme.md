@@ -10,6 +10,7 @@
 * [Funktionalität](#funktionalitt)
     * [Map Provider](#map-provider)
         * [Map Converter](#map-converter-map_provider)
+        * [Landmark Provider](#landmark-provider-landmark_provider)
         * [Map Supervisor](#map-supervisor-map_supervisor)
     * [Path Provider](#path-provider)
         * [Planner (path_provider)](#planner-path_provider)
@@ -38,6 +39,7 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 | ----------- | ----------- |----------- |
 | /psaf/goal/set_instruction | PlanningInstruction | Path Provider |
 | /psaf/planning/obstacle | Obstacle | Path Provider|
+| /carla/world_info | CarlaWorldInfo | Map Provider |
 
 
 ### Message Struktur
@@ -79,9 +81,29 @@ Letztere Information wird dann für die potenzielle Einplanung eines U-Turns im 
 ### Map Provider
 
 #### Map Converter (map_provider)
-Der Map Converter bildet die Basis für den [Map Supervisor](#map-supervisor-map_supervisor). In Ihm wird die Karte im OpenDrive Format
+Der Map Converter bildet die Basis für den [Map Supervisor](#map-supervisor-map_supervisor). In Ihm wird die Karte im 
+OpenDrive Format geladen. In einem zweiten Schritt wird die Karte in ein Common Road Scenario konvertiert, welches die Basis 
+für den [Path Provider](#path-provider) darstellt.
+
+Zusätzlich bietet er noch die Möglichkeiten die OpenDrive Karte als OpenStreetMap oder als Lanelet2 Karte zu exportieren.
+
+#### Landmark Provider (landmark_provider)
+Der Landmark Provider liest alle Ampel und Schilder Information aus der Carla Api aus und stellt sie dem 
+[Map Supervisor](#map-supervisor-map_supervisor) als strukturierte Information zur Verfügung. 
+Dieser reichert damit das Common Road Scenario an. 
 
 #### Map Supervisor (map_supervisor)
+Da der [Map Converter](#map-converter-map_provider) nur eine "leere" Karte generiert, also eine Karte ohne 
+Ample und Schilder Informationen, erweitert der Map Supervisor seine Basisklasse um Algorithmen welche die Informationen, 
+die vom [Landmark Provider](#landmark-provider-landmark_provider) bereitgestellt werden, in die Karte einfügen.
+Hierbei folgende Bereiche unterschieden:
+- **Schilder allgemein** (z.B Stoppschilder, Geschwindigkeitsschilder) werden der Lanelet hinzugefügt, welche
+  positionstechnisch am nächsten am Schild befinden und mit deren Orientierung des Schildes übereinstimmt.
+- **Kreuzungen**
+- **Ampeln**
+- **Stopplinien** werden zu Stoppschildern umgewandelt. Diese werden an das Ende der Lanelet gesetzt, welche den Stop beinhalten soll.
+  Die zutreffende Lanelet ist die Lanelet, die sich **vor** einer Kreuzung befindet und **nicht in** einer Kreuzung befindet.
+
 
 ### Path Provider
 
