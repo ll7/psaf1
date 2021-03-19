@@ -17,6 +17,7 @@
         * [Replanner (path_supervisor)](#replanner-path_supervisor)
         * [Map Manager (common_road_manager)](#map-manager-common_road_manager)
     * [Planning Preprocessor](#planning-preprocessor)    
+    * [Rviz Plugin](#rviz-plugin)
 
 ## Übersicht
 ### Kurzbeschreibung
@@ -86,6 +87,12 @@ Letztere Information wird dann für die potenzielle Einplanung eines U-Turns im 
 
 ### Map Provider
 
+Der Map Provider ist für die Bereitstellung der Karteninformationen verantwortlich. Der Kern dieser Informationen
+bildet dabei das Lanelet-Netzwerk. Eine Lanelet ist eine als Straßenabschnitt zu bezeichnende Darstellung, definiert
+durch die Grenzen der Fahrspur und ihrer Mittellinie. Das Lanelet-Netzwerk ergibt sich somit als Graph aus 
+Straßenabschnitten, wobei deren Verbindungen durch Kanten (Vor- und Nachfolger- Referenzen) representiert sind.
+Eine detailliertere Beschreibungen folgt in den Unterkapiteln.
+
 #### Map Converter (map_provider)
 Der Map Converter bildet die Basis für den [Map Supervisor](#map-supervisor-map_supervisor). In Ihm wird die Karte im 
 OpenDrive Format geladen. In einem zweiten Schritt wird die Karte in ein Common Road Scenario konvertiert, welches die Basis 
@@ -94,21 +101,33 @@ für den [Path Provider](#path-provider) darstellt.
 Zusätzlich bietet er noch die Möglichkeiten die OpenDrive Karte als OpenStreetMap oder als Lanelet2 Karte zu exportieren.
 
 #### Landmark Provider (landmark_provider)
-Der Landmark Provider liest alle Ampel und Schilder Information aus der Carla Api aus und stellt sie dem 
+Der Landmark Provider liest alle Ampel und Schilder Information aus der Carla API aus und stellt sie dem 
 [Map Supervisor](#map-supervisor-map_supervisor) als strukturierte Information zur Verfügung. 
 Dieser reichert damit das Common Road Scenario an. 
 
 #### Map Supervisor (map_supervisor)
 Da der [Map Converter](#map-converter-map_provider) nur eine "leere" Karte generiert, also eine Karte ohne 
-Ample und Schilder Informationen, erweitert der Map Supervisor seine Basisklasse um Algorithmen welche die Informationen, 
+Ampel und Schilder Informationen, erweitert der Map Supervisor seine Basisklasse um Algorithmen welche die Informationen, 
 die vom [Landmark Provider](#landmark-provider-landmark_provider) bereitgestellt werden, in die Karte einfügen.
-Hierbei folgende Bereiche unterschieden:
-- **Schilder allgemein** (z.B Stoppschilder, Geschwindigkeitsschilder) werden der Lanelet hinzugefügt, welche
+Hierbei werden folgende Bereiche unterschieden:
+- **Schilder allgemein** (z.B Stoppschilder, Geschwindigkeitsschilder) werden der Lanelet hinzugefügt, welche sich
   positionstechnisch am nächsten am Schild befinden und mit deren Orientierung des Schildes übereinstimmt.
-- **Kreuzungen**
-- **Ampeln**
+- **Kreuzungen** werden daran erkannt, dass der Nachfolger einer Lanelet mehrere Vorgänger besitzt. Genau dann qualifiziert 
+  sich diese Lanelet als Bestandteil einer Kreuzung. Um sämtliche Lanelets auf einer Kreuzung zu erkennen wird 
+  anschließend für jede Lanelet folgende Metrik angewandt.
+  Ist mein (rechter oder linker) Nachbar Teil einer Kreuzung, dann bin ich es auch. Lanelets welche nicht die
+  vordefinierte Nachbareigenschaft erfüllen, aber trotzdem nebeneinander liegen werden über ihre geografische Position
+  ebenso richtig zugeordnet.
+- **Ampeln** werden immer am Ende einer Lanelet positioniert. Eine Metrik zur Wahl jener Lanelet, für die die Ampel gilt
+  und die sowohl für europäische als auch amerikanische Ampelsysteme funktioniert ist die folgende.
+  Suche nach derjenigen Lanelet, deren Orientierung entsprechend zur Ampel ausgerichtet ist und 
+  welche sich am nähesten an der Ampel befindet, wobei der Anfang dieser Lanelet allerdings weiter von der Ampel
+  entfernt sein muss als ihr Ende. Dadurch wird im amerikanischen System die Ampel nicht fälschlicherweise auf eine Lanelet
+  hinter der Kreuzung gesetzt.
+  Ebenso wird allen (linken und rechten) Nachbarn der gefundenen Lanelet diese Ampel zugeordnet.
 - **Stopplinien** werden zu Stoppschildern umgewandelt. Diese werden an das Ende der Lanelet gesetzt, welche den Stop beinhalten soll.
-  Die zutreffende Lanelet ist die Lanelet, die sich **vor** einer Kreuzung befindet und **nicht in** einer Kreuzung befindet.
+  Die zutreffende Lanelet ist die nächstgelegene Lanelet, die sich **vor** und **nicht in** einer Kreuzung befindet
+  und deren Orientierung zum Stoppschild ausgerichtet ist.
 
 
 ### Path Provider
@@ -218,5 +237,8 @@ Kartendaten abbildet. Er besitzt hierfür zwei grundlegende Funktionalitäten:
 <Beschreibung der Func>
 TODO
 
+### Rviz Plugin
 
-[]: #
+Das Rviz Plugin stellt ein Panel in Rviz bereit, über das die XYZ Zielposition für die Navigationsaufgabe des Fahrzeugs
+gesetzt werden kann. Außerdem wird mittels einer Statusanzeige über den aktuellen Zustand der Planung
+informiert.
