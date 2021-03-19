@@ -100,7 +100,7 @@ Damit sich das Fahrzeug an den Kreuzungen mit einer Ampel korrekt verhält, müs
 ![Erkennung der Schilder](doc/Traffic_sign_detection.png)
 
 #### Umsetzung
-Das Bild der FusionCamera ([siehe Traffic Light Detector](Traffic-Light-Detector)) wird zunächst zu Erkennung der Schilder genutzt.
+Das Bild der FusionCamera ([siehe Traffic Light Detector](#Traffic-Light-Detector) wird zunächst zu Erkennung der Schilder genutzt.
 Auf Basis des Segmentation-Bildes werden die Objekte im Bild, welche als Verkehrsschilder markiert sind, mit *Bounding Boxes* beschrieben.
 
 Daraufhin wird der entsprechende Ausschnitt des RGB-Bildes durch ein Klassifikationsnetzes (Resnet18) klassifiziert.
