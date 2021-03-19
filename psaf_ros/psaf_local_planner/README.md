@@ -49,7 +49,7 @@ Die Berechnung der Geschwindigkeitsvorgabe geschieht hierbei in Abhängigkeit fo
 
 ### Global Plan Verarbeitung
 ###### [Source (.cpp)](src/psaf_local_planner/Main.cpp)  | [Header (.h)](include/psaf_local_planner/plugin_local_planner.h)
-Die vom GlobalPlanner [TODO Link zu GlobalPLanner readme] erstellte Global Route ([XRoute](../psaf_messages/msg/XRoute.msg)) wird zur weiteren Verarbeitung im LocalPlaner lokal gespeichert.
+Die vom [Global Planner](../psaf_global_planner)  erstellte Global Route ([XRoute](../psaf_messages/msg/XRoute.msg)) wird zur weiteren Verarbeitung im LocalPlaner lokal gespeichert.
 Dieser Lokale Plan wird an Spurwechseln durch lineare Interpolation der einzelnen Pfad Punkte so angepasst, dass sich abhängig von der erlaubten Geschwindigkeit ein weicher Spurwechsel ergibt.
 Handelt es sich beim gepublishten Globalen Plan um ein Replaning wird mithilfe einer Heuristik entschieden ob die neue Route doppelt so lang wie die aktuelle lokale XRoute ist.
 Dies wird abhängig von der Beachtung der Verkehrsregeln anhand der Duration in der XRoute(Beachtung der Verkehrsregeln) oder der Länge der Lanelets (keine Beachtung der Verkerhsregeln) entschieden.
