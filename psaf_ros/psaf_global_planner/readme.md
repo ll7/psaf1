@@ -9,11 +9,13 @@
     + [Message Struktur](#message-struktur)
 * [Funktionalität](#funktionalitt)
     * [Map Provider](#map-provider)
+        * [Map Converter](#map-converter-map_provider)
+        * [Map Supervisor](#map-supervisor-map_supervisor)
     * [Path Provider](#path-provider)
         * [Planner (path_provider)](#planner-path_provider)
         * [Replanner (path_supervisor)](#replanner-path_supervisor)
         * [Map Manager (common_road_manager)](#map-manager-common_road_manager)
-    * [Planning Preprocessor](#planning-preprocessor)
+    * [Planning Preprocessor](#planning-preprocessor)    
 
 ## Übersicht
 ### Kurzbeschreibung
@@ -76,8 +78,10 @@ Letztere Information wird dann für die potenzielle Einplanung eines U-Turns im 
 
 ### Map Provider
 
-<Beschreibung der Func>
-TODO
+#### Map Converter (map_provider)
+Der Map Converter bildet die Basis für den [Map Supervisor](#map-supervisor-map_supervisor). In Ihm wird die Karte im OpenDrive Format
+
+#### Map Supervisor (map_supervisor)
 
 ### Path Provider
 
@@ -185,3 +189,6 @@ Kartendaten abbildet. Er besitzt hierfür zwei grundlegende Funktionalitäten:
 
 <Beschreibung der Func>
 TODO
+
+
+[]: #
