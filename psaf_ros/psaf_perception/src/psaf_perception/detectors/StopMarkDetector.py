@@ -40,7 +40,7 @@ class SingleImage(Dataset):
 
 
 class StopMarkDetector(AbstractDetector):
-    def __init__(self, role_name: str = "ego_vehicle", use_gpu: bool = False):
+    def __init__(self, role_name: str = "ego_vehicle", use_gpu: bool = True):
         """
         Init the speed sign detector
         :param role_name: the name of the vehicle to access the cameras
