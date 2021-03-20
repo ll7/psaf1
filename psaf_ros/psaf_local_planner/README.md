@@ -29,7 +29,7 @@ Des Weiteren entscheidet der Local Planer auch auf Basis der Informationen, ob e
 | psaf_global_plan | Path | [Global Plan Verarbeitung](#global-plan-verarbeitung) |
 | /psaf/planning/obstacle | [Obstacle](../psaf_messages/msg/Obstacle.msg) |  [LocalPerception](#localperception) |
 | /psaf/debug/local_planner/state | String |  [State Machine](#state-machine) |
-| /psaf/local_planner/traffic_situation | [TrafficSituation](../psaf_messages/msg/TrafficSituation.msg)|  Local Perception Evaluation |
+| /psaf/local_planner/traffic_situation | [TrafficSituation](../psaf_messages/msg/TrafficSituation.msg)|  [Local Perception Evaluation](#Local-Perception-Evaluation) |
 
 
 #### Subscribe
@@ -123,7 +123,7 @@ _    ╲   │    ╱   _╱
 (-)min  ╰─╯  max(+)  └─┘
 ```
 
-Zur Überprüfung ob z.B. Stoppkreuzungen [TODO: Link zu Stopkreuzungen in Doku]() frei sind ist eine zeitliche Abhängigkeit nötig. Durch Abgleichen mit den Messungen zwei vorheriger Iterationen, kann festgestellt werden, ob Bewegungen auf der Costmap auftreten. Werden keine Veränderungen erkannt, wird der Bereich als passierbar freigegeben, um statische Hindernisse ignorieren zu können.
+Zur Überprüfung ob z.B. [Stoppkreuzungen](#state-machine) frei sind ist eine zeitliche Abhängigkeit nötig. Durch Abgleichen mit den Messungen zwei vorheriger Iterationen, kann festgestellt werden, ob Bewegungen auf der Costmap auftreten. Werden keine Veränderungen erkannt, wird der Bereich als passierbar freigegeben, um statische Hindernisse ignorieren zu können.
 
 ### Local Perception
 ###### [Source (.cpp)](src/psaf_local_planner/LocalPerception.cpp)  | [Header (.h)](include/psaf_local_planner/plugin_local_planner.h#L223)
@@ -139,7 +139,7 @@ Ist dies der Fall wird zunächst berechnet ob der Spurwechsel entlang der Fahrtr
 Im Fall dass sich in diesem bereich ein Hinderniss befindet wird die Geschwindigkeitsvorgabe entsprechend des [Anhaltewegs](https://www.bussgeldkatalog.org/anhalteweg/) angepasst.
 
 ### Local Perception Evaluation
-Das [Perception](../psaf_perception/README.md)-Modul sammelt alle Informationen zu allen sichtbaren Verkehrselementen.
+Das [Perception](../psaf_perception)-Modul sammelt alle Informationen zu allen sichtbaren Verkehrselementen.
 Dabei werden z.B. auch Ampeln der kreuzenden Fahrbahn erkannt. Damit die korrekte Ampel ausgewählt wird, werden die erkannten Objekte mit dem aktuellen Fahrzeugzustand (z.B. Lenkwinkel) verknüpft und entsprechend selektiert.
 Das Ergebnis wird dann als aktuelle Verkehrssituation an den Zustandsautomaten weitergegeben.
 
