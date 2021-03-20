@@ -22,17 +22,11 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import numpy as np
 import math
 
+
 class PathProviderLanelet2:
 
     def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 10,
                  role_name: str = "ego_vehicle", enable_debug: bool = False):
-        """
-        Class PathProvider provides a feasible path from a starting point A to a target Point B by computing
-        the nearest lanelets and performing a dijkstra graph search on a provided .osm map.
-        :param init_rospy: Initialize a rospy node?
-        :param polling_rate: Polling Rate in [Hz]
-        :param timeout_iter: Number of polling iterations until timeout occurs
-        """
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
@@ -68,6 +62,7 @@ class PathProviderLanelet2:
         """
         Creates a list of bag file objects
         :param filename: filename of bag file
+        :param debug: enable debug
         :return: list of bag file objects
         """
         bag_files = []
@@ -85,7 +80,12 @@ class PathProviderLanelet2:
             bag_files.append(rosbag.Bag(str(dir_str + filename + suffix), "w"))
 
         return bag_files
+
     def _load_map(self, path):
+        """
+        Loads the map (Lanelet2 Framework)
+        :param path: file path to the map
+        """
         return lanelet2.io.load(path, self.projector)
 
     def _get_map_path(self, polling_rate: int, timeout_iter: int):
@@ -156,6 +156,7 @@ class PathProviderLanelet2:
         """
         Creates the path message
         :param path_poses: List of PoseStamped poses
+        :param debug: enable debug
         """
         # clear potential previous messages, because it would be invalid now
         self.path_long = Path()
@@ -170,6 +171,8 @@ class PathProviderLanelet2:
     def _serialize_message(self, path: Path, debug=False):
         """
         Serialize path message and write to bag file
+        :param path: Path
+        :param debug: enable debug
         """
 
         bag_files = self._create_bag_files(filename="path", debug=debug)
@@ -310,6 +313,7 @@ class PathProviderLanelet2:
         """
         This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
         The last entry can be the goal if a path was found or the starting point if no path was found
+        :param target: position and orientation of the goal
         """
         client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         client.wait_for_server()
@@ -323,6 +327,7 @@ class PathProviderLanelet2:
         """
         Creates the path message
         :param path_poses: List of PoseStamped poses
+        :param debug: enable debug
         """
         # clear potential previous messages, because it would be invalid now
         self.path = Path()

@@ -79,5 +79,6 @@
         "typeindex": "cpp",
         "typeinfo": "cpp"
     },
-    "cmake.sourceDirectory": "${workspaceFolder}/psaf_local_planner"
+    "cmake.sourceDirectory": "${workspaceFolder}/psaf_local_planner",
+    "C_Cpp.clang_format_fallbackStyle": "Google"
 }

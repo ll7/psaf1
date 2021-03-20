@@ -32,6 +32,10 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.status_pub.publish("Init Done")
 
     def _callback_obstacle(self, obstacle: Obstacle):
+        """
+        Callback function of psaf planning obstacle subscriber
+        :param obstacle: the received obstacle data
+        """
         if not self.busy and self.manager.map is not None and self.path_message.id > 0:
             self.busy = True
             # check if an old
@@ -157,6 +161,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         :param car_lanelet: id of the lanelet where the car currently located on
         :param curr_pos: current position of the car (x, y)
         :param relevant: list of lanelets that are possible for obstacle insertion
+        :return: true if the insertion was successful additionally the lanelet_id of the lanelet the car currently resides on
         """
         rospy.loginfo("PathSupervisor: Add obstacle")
         success = False
@@ -228,6 +233,9 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         self.status_pub.publish("Replanning done")
 
     def _reset_map(self):
+        """
+        Reset the current knowledge to the unchanged originals
+        """
         # reset obstacle msg id
         self.last_id = -1
         # first reset map
@@ -238,6 +246,10 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             self.manager.message_by_lanelet = deepcopy(self.manager.original_message_by_lanelet)
 
     def _log_debug(self, msg):
+        """
+        Log the given message if enable_debug is set to True
+        :param msg: the message
+        """
         if self.enable_debug:
             rospy.loginfo(msg)
 

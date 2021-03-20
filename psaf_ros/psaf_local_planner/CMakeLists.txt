@@ -15,9 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   move_base
   costmap_2d
   map_server
-  teb_local_planner
   ackermann_msgs
-  costmap_converter
   psaf_abstraction_layer
   dynamic_reconfigure
   base_local_planner

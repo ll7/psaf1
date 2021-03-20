@@ -1,22 +1,3 @@
-rsband:
-  max_speed: 10.0
-  max_steering_angle: 0.7
-  wheelbase: 1.0
-
-
-
-
-EBandPlannerROS:
-  max_vel_lin: 10.0
-  max_vel_th: 2.0
-  max_acceleration: 3.0
-  max_translational_acceleration: 2
-  max_rotational_acceleration: 1.5
-  differential_drive: false
-
-
-
-
 TebLocalPlannerROS:
 
  odom_topic: /carla/ego_vehicle/odometry

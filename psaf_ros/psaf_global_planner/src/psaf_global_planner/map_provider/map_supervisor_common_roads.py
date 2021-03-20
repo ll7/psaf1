@@ -28,12 +28,12 @@ from opendrive2lanelet.network import Network
 from commonroad.scenario.scenario import Scenario, ScenarioID
 
 
-class CommonRoadMapProvider(MapProvider):
+class MapSupervisorCommonRoads(MapProvider):
 
     def __init__(self, init_rospy: bool = False, debug: bool = False):
         if init_rospy:
-            rospy.init_node('CommonRoadMapProvider', anonymous=True)
-        super(CommonRoadMapProvider, self).__init__()
+            rospy.init_node('MapSupervisorCommonRoads', anonymous=True)
+        super(MapSupervisorCommonRoads, self).__init__()
         self.intersection = {}
         self.map_cr: Scenario = None
         self.landmark_provider: LandMarkProvider = None
@@ -60,43 +60,48 @@ class CommonRoadMapProvider(MapProvider):
     def update_world(self, world_info: CarlaWorldInfo):
         """
         Check if a new map was sent and receive it
+        :param world_info: Carla world info data
         """
         self.opendrive_loaded = False
         self.map_ready = False
-        rospy.loginfo("CommonRoadMapProvider: Received new map info")
+        rospy.loginfo("MapSupervisorCommonRoads: Received new map info")
         if self.map_name == world_info.map_name:
-            rospy.loginfo("CommonRoadMapProvider: Map already loaded")
+            rospy.loginfo("MapSupervisorCommonRoads: Map already loaded")
         else:
             self.cur_mark_id = -1
             self.map_name = world_info.map_name
             self.map = world_info.opendrive
             self.opendrive_loaded = True
-            rospy.loginfo("CommonRoadMapProvider: Received: " + self.map_name)
+            rospy.loginfo("MapSupervisorCommonRoads: Received: " + self.map_name)
             self.map_cr = self._gen_raw_scenario()
-            rospy.loginfo("CommonRoadMapProvider: Getting landmarks")
+            rospy.loginfo("MapSupervisorCommonRoads: Getting landmarks")
             self.landmark_provider = LandMarkProvider()
-            rospy.loginfo("CommonRoadMapProvider: Detecting intersections")
+            rospy.loginfo("MapSupervisorCommonRoads: Detecting intersections")
             self._detect_intersections()
-            rospy.loginfo("CommonRoadMapProvider: Adding traffic lights")
-            self._traffic_lights_to_scenario(self.landmark_provider.get_marks_by_categorie('Signal_3Light_Post01'))
+            rospy.loginfo("MapSupervisorCommonRoads: Adding traffic lights")
+            self._traffic_lights_to_scenario(self.landmark_provider.get_marks_by_category('Signal_3Light_Post01'))
             for key in self.landmark_provider.available_categories():
                 if 'Speed' in key:
-                    rospy.loginfo("CommonRoadMapProvider: Adding " + key + " signs")
-                    self._speed_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key),
+                    rospy.loginfo("MapSupervisorCommonRoads: Adding " + key + " signs")
+                    self._speed_signs_to_scenario(self.landmark_provider.get_marks_by_category(key),
                                                   int(str(key).split("_", 1)[1]))
                 elif 'stencil_stop' in key.lower():
-                    rospy.loginfo("CommonRoadMapProvider: Adding stop marks")
-                    self._stop_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key), neighbouring=False)
+                    rospy.loginfo("MapSupervisorCommonRoads: Adding stop marks")
+                    self._stop_signs_to_scenario(self.landmark_provider.get_marks_by_category(key), neighbouring=False)
                 elif 'sign_stop' in key.lower():
-                    rospy.loginfo("CommonRoadMapProvider: Adding stop signs")
-                    self._stop_signs_to_scenario(self.landmark_provider.get_marks_by_categorie(key), neighbouring=True)
+                    rospy.loginfo("MapSupervisorCommonRoads: Adding stop signs")
+                    self._stop_signs_to_scenario(self.landmark_provider.get_marks_by_category(key), neighbouring=True)
             if self.debug:
                 self.planning_problem = self._generate_dummy_planning_problem()
                 self._visualize_scenario(self.map_cr, self.planning_problem)
-            rospy.loginfo("CommonRoadMapProvider: Conversion done!")
+            rospy.loginfo("MapSupervisorCommonRoads: Conversion done!")
             self.map_ready = True
 
     def convert_od_to_lanelet(self) -> Scenario:
+        """
+        Returns the generated Scenario Object (Overwrites map_provider function)
+        :return: Scenario if the map is ready, None instead
+        """
         if self.map_ready:
             return self.map_cr
         return None
@@ -107,7 +112,7 @@ class CommonRoadMapProvider(MapProvider):
         """
         lanelet: Scenario = None
         if self.opendrive_loaded:
-            rospy.loginfo("CommonRoadMapProvider: Start conversion...")
+            rospy.loginfo("MapSupervisorCommonRoads: Start conversion...")
             opendrive = parse_opendrive(etree.parse(BytesIO(self.map.encode('utf-8'))).getroot())
             roadNetwork = Network()
             roadNetwork.load_opendrive(opendrive)
@@ -144,13 +149,13 @@ class CommonRoadMapProvider(MapProvider):
         :param neighbouring: map every stop instruction to all neighbouring lanelets (false or marks, true for signs)
         """
         for stop in stops:
-            mapped_lanelets = self._find_traffic_rule_lanelet(stop, self.max_angle_diff_sign, neighbouring=neighbouring)
+            mapped_lanelets = self._find_traffic_light_lanelet(stop, self.max_angle_diff_sign, neighbouring=neighbouring)
             if len(mapped_lanelets) > 0:
                 for lanelet in mapped_lanelets:
                     index = self._find_vertex_index(lanelet, stop.pos_as_point())
                     self._add_sign_to_lanelet(lanelet.lanelet_id, index, TrafficSignIDGermany.STOP)
             else:
-                rospy.logerr("CommonRoadMapProvider: Stop ID - " +
+                rospy.logerr("MapSupervisorCommonRoads: Stop ID - " +
                              str(stop.mark_id) + " - did not match to any lanelet")
 
     def _speed_signs_to_scenario(self, signs: list, speed: int):
@@ -180,10 +185,10 @@ class CommonRoadMapProvider(MapProvider):
                                                       typ=TrafficSignIDGermany.MAX_SPEED, additional=[speed])
                         break
             else:
-                rospy.logerr("CommonRoadMapProvider: Sing ID - " +
+                rospy.logerr("MapSupervisorCommonRoads: Sing ID - " +
                              str(sign.mark_id) + " - did not match to any lanelet")
             if not sign_added:
-                rospy.logerr("CommonRoadMapProvider: Sing ID - " +
+                rospy.logerr("MapSupervisorCommonRoads: Sing ID - " +
                              str(sign.mark_id) + " - Orientation did not match")
 
     def _find_nearest_lanelet(self, goal: Point):
@@ -205,7 +210,7 @@ class CommonRoadMapProvider(MapProvider):
                 return nearest
         return None
 
-    def _find_traffic_rule_lanelet(self, light: LandMarkPoint, max_angle_diff: float, neighbouring: bool = True):
+    def _find_traffic_light_lanelet(self, light: LandMarkPoint, max_angle_diff: float, neighbouring: bool = True):
         """
         Given a traffic light -> find the lanelet to which the traffic light is effective
         :param light: trafficLight as a LandMarkPoint
@@ -253,14 +258,14 @@ class CommonRoadMapProvider(MapProvider):
         Detect all intersections on the map and store the results in an intersection hashmap with a lanelet_id as key
         """
         for lanelet in self.map_cr.lanelet_network.lanelets:
-            # get the successor of the successor of the given lanelet
+            # get the the successor of the given lanelet
             lane = lanelet
             if len(lane.successor) == 0:
                 return False
             succ = lanelet.successor[0]
             lane = self.map_cr.lanelet_network.find_lanelet_by_id(succ)
 
-            # check for the amount of predecessor
+            # check for the amount of predecessor, if there are more than 1 -> lanelet is on an intersection
             self.intersection[lanelet.lanelet_id] = len(lane.predecessor) > 1
 
         # now double check -> if my neighbour is at an intersection, i am too
@@ -320,15 +325,20 @@ class CommonRoadMapProvider(MapProvider):
         :param lights: list of trafficLights as LandMarkPoints
         """
         for light in lights:
-            mapped_lanelets = self._find_traffic_rule_lanelet(light, self.max_angle_diff_light)
+            mapped_lanelets = self._find_traffic_light_lanelet(light, self.max_angle_diff_light)
             if len(mapped_lanelets) > 0:
                 for lanelet in mapped_lanelets:
                     self._add_light_to_lanelet(lanelet.lanelet_id)
             else:
-                rospy.logerr("CommonRoadMapProvider: TrafficLight ID - " +
+                rospy.logerr("MapSupervisorCommonRoads: TrafficLight ID - " +
                              str(light.mark_id) + " - did not match to any lanelet")
 
     def _visualize_scenario(self, sce: Scenario, prob: PlanningProblem = None):
+        """
+        Visualize the scenario (map); Therefore creates a .png file.
+        :param sce: scenario to be visualized
+        :param prob: planning_problem
+        """
         plt.figure(figsize=(50, 50))
 
         draw_object(sce, draw_params={'time_begin': 0,
@@ -351,6 +361,10 @@ class CommonRoadMapProvider(MapProvider):
         plt.close()
 
     def _add_light_to_lanelet(self, lanelet_id: int):
+        """
+        Adds a traffic light to the end of the given lanelet
+        :param lanelet_id: id of the given lanelet
+        """
         self.cur_mark_id += 1
         pos = self.map_cr.lanelet_network.find_lanelet_by_id(lanelet_id).center_vertices[-1]
         traffic_light = TrafficLight(self.cur_mark_id, [], pos)
@@ -359,6 +373,13 @@ class CommonRoadMapProvider(MapProvider):
         self.map_cr.lanelet_network.add_traffic_light(traffic_light, lanelet_ids=deepcopy(id_set))
 
     def _add_sign_to_lanelet(self, lanelet_id: int, pos_index: int, typ: TrafficSignIDGermany, additional: list = []):
+        """
+        Adds a sign to given lanelet
+        :param lanelet_id: id of the given lanelet
+        :param pos_index: index of the position of the sign within the lanelet
+        :param typ: type of the sign (used for creating the TrafficSign object of CommonRoads)
+        :param additional: additional of the sign (used for creating the TrafficSign object of CommonRoads)
+        """
         self.cur_mark_id += 1
         pos = self.map_cr.lanelet_network.find_lanelet_by_id(lanelet_id).center_vertices[pos_index]
         sign_element = TrafficSignElement(typ, additional)
@@ -369,6 +390,12 @@ class CommonRoadMapProvider(MapProvider):
         self.map_cr.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
 
     def _get_lanelet_orientation_to_light(self, lanelet: Lanelet, use_end: bool = True):
+        """
+        Calculates the orientation of the lanelet in the direction of a supposed upcoming traffic light
+        :param lanelet: the given lanelet
+        :param use_end: if True -> orientation at the end of the lanelet, else -> at the lanelets beginning
+        :return: orientation (as yaw angle)
+        """
         index_1 = 0
         index_2 = 1
         if use_end:
@@ -392,6 +419,12 @@ class CommonRoadMapProvider(MapProvider):
         return euler_angle_yaw
 
     def _find_vertex_index(self, lanelet: Lanelet, pos: Point):
+        """
+        Get the index of the closest point of a lanelet to a given comparison point
+        :param lanelet: the given lanelet
+        :param pos: the given comparison point
+        :return: the closest index
+        """
         # compute distances (we are not using the sqrt for computational effort)
         point = [pos.x, pos.y]
         distance = (lanelet.center_vertices - point) ** 2.
@@ -399,6 +432,12 @@ class CommonRoadMapProvider(MapProvider):
         return np.argmin(distance).item()
 
     def get_lanelet_orientation_at_index(self, lanelet: Lanelet, index: int):
+        """
+        Get the orientatoin of the given lanelet at a certain index
+        :param lanelet: the given lanelet
+        :param index: index
+        :return: orientation (as yaw angle)
+        """
         angles = list()
         # check for bounds
         if index >= len(lanelet.center_vertices)-3:
@@ -454,7 +493,7 @@ class CommonRoadMapProvider(MapProvider):
 
 
 def main():
-    CommonRoadMapProvider(True)
+    MapSupervisorCommonRoads(True)
     rospy.spin()
 
 
