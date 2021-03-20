@@ -13,7 +13,8 @@
     * [Costmap Raytracer](#costmap-raytracer)
     * [LocalPerception](#localperception)
     * [Überholvorgang](#berholvorgang)
-    * [Statemachine](#statemachine)
+    * [Local Perception Evaluation](#Local-Perception-Evaluation) 
+    * [State Machine](#state-machine)
 
 ## Übersicht
 ### Kurzbeschreibung
@@ -27,14 +28,15 @@ Des Weiteren entscheidet der Local Planer auch auf Basis der Informationen ob ei
 | ----------- | ----------- |----------- |
 | psaf_global_plan | Path | [Global Plan Verarbeitung](#global-plan-verarbeitung) |
 | /psaf/planning/obstacle | [Obstacle](../psaf_messages/msg/Obstacle.msg) |  [LocalPerception](#localperception) |
-| /psaf/debug/local_planner/state | String |  [LocalPerception](#localperception) |
+| /psaf/debug/local_planner/state | String |  [State Machine](#state-machine) |
+| /psaf/local_planner/traffic_situation | [TrafficSituation](../psaf_messages/msg/TrafficSituation.msg)|  Local Perception Evaluation |
 
 
 #### Subscribe
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
 | /psaf/xroute | [XRoute](../psaf_messages/msg/XRoute.msg) | [Global Plan Verarbeitung](#global-plan-verarbeitung)|
-| /psaf/local_planner/traffic_situation | [TrafficSituation](../psaf_messages/msg/TrafficSituation.msg)|  Local Perception Evaluation |
+| /psaf/local_planner/traffic_situation | [TrafficSituation](../psaf_messages/msg/TrafficSituation.msg)|  [State Machine](#state-machine) |
 ### Message Struktur
 
 
@@ -44,7 +46,7 @@ Die Berechnung der Geschwindigkeitsvorgabe geschieht hierbei in Abhängigkeit fo
 * [Berechnung anhand des Kurvenradiuses der aktuellen Trajektorie](#Kurvenmaximalgeschwindigkeit)
 * [Berechnung anhand des Abstandes zu etwaigen Hindernissen vor dem Fahrzeug](#Local-Perception)
 * [Berechnung anhand des Abstandes zu Hindernissen neben dem Fahrzeug bei einem Überholvorgang](#berholvorgang)
-* [Berechnung anhand der Verkehrszeichen Situation (Ampeln, Stoppschilder, ....)](#statemachine)
+* [Berechnung anhand der Verkehrszeichen Situation (Ampeln, Stoppschilder, ....)](#state-machine)
 
 
 ### Global Plan Verarbeitung
@@ -118,7 +120,7 @@ _    ╲   │    ╱   _╱
 (-)min  ╰─╯  max(+)  └─┘
 ```
 
-Zur Überprüfung ob z.B. Stopkreuzungen [TODO: Link zu Stopkreuzungen in Doku]() frei sind ist eine zeitliche Abhängigkeit nötig. Durch Abgleichen mit den Messungen zwei vorheriger Iterationen, kann festgestellt werden, ob Bewegungen auf der Costmap auftreten. Werden keine Veränderungen erkannt, wird der Bereich als passierbar freigegeben, um statische Hindernisse ignorieren zu können.
+Zur Überprüfung ob z.B. Stoppkreuzungen [TODO: Link zu Stopkreuzungen in Doku]() frei sind ist eine zeitliche Abhängigkeit nötig. Durch Abgleichen mit den Messungen zwei vorheriger Iterationen, kann festgestellt werden, ob Bewegungen auf der Costmap auftreten. Werden keine Veränderungen erkannt, wird der Bereich als passierbar freigegeben, um statische Hindernisse ignorieren zu können.
 
 ### Local Perception
 ###### [Source (.cpp)](src/psaf_local_planner/LocalPerception.cpp)  | [Header (.h)](include/psaf_local_planner/plugin_local_planner.h#L223)
@@ -133,4 +135,35 @@ Um beim Überholvorgang keine Kollision mit einem anderen Fahrzeug zu provoziere
 Ist dies der Fall wird zunächst berechnet ob der Spurwechsel entlang der Fahrtrichtung links oder rechts vom eigenen Fahrzeug erfolgt. Entsprechend wird ein Teilkreis auf der Seite der Vorganges mittels des [Costmap Raytracers](#Costmap-Raytracer) auf Hindernisse überprüft. 
 Im Fall dass sich in diesem bereich ein Hinderniss befindet wird die Geschwindigkeitsvorgabe entsprechend des [Anhaltewegs](https://www.bussgeldkatalog.org/anhalteweg/) angepasst.
 
-### Statemachine
+### Local Perception Evaluation
+Das [Perception](../psaf_perception/README.md)-Modul sammelt alle Informationen zu allen sichtbaren Verkehrselementen.
+Dabei werden z.B. auch Ampeln der kreuzenden Fahrbahn erkannt. Damit die korrekte Ampel ausgewählt wird, werden die erkannten Objekte mit dem aktuellen Fahrzeugzustand (z.B. Lenkwinkel) verknüpft und entsprechend selektiert.
+Das Ergebnis wird dann als aktuelle Verkehrssituation an den Zustandsautomaten weitergegeben.
+
+### State Machine
+###### [Source (.cpp)](src/psaf_local_planner/StateMachine.cpp)  | [Header (.h)](include/psaf_local_planner/state_machine.h)
+Zur Steuerung des Verhaltens unter Beachtung der Verkehrsregeln wird anhand des Wissens über die aktuelle Verkehrssituation der Zustand eines Zustandsautomates aktualisiert. 
+Dazu werden die Kartendaten des globalen Plans und die Daten der *Perception* genutzt.
+Grundsätzlich wird zwischen drei Szenarien unterschieden: 
+- Das Auto fährt regulär auf der Straße: **Driving**
+- Das Auto kommt an eine Kreuzung mit einer Ampel: **Traffic_Light_***
+- Das Auto kommt an eine Kreuzung mit einer Stopp-Regelung: **STOP_*** 
+
+Im Falle des Fahrens ohne Verkehrsregeln werden Ampeln so behandelt als seien es reguläre Kreuzungen mit Stopp-Regelung.
+Somit ist der Automat nahezu identisch, nur werden die Ampelzustände nicht mehr betrachtet.
+
+![Zustandsautomat-Diagramm](doc/ZuständeFahrverhaltenKreuzungen.png)
+
+Das Verhalten in den jeweiligen Zuständen lässt sich wie folgt vereinfacht beschreiben:
+- **Driving**: Fahre mit der aktuell maximal erlaubten Geschwindigkeit
+- **Traffic_Light_Near**: Prüfe die Ampelphase
+- **Traffic_Light_Go**: Das Auto hat Vorfahrt und die Kreuzung kann mit der maximal erlaubten Geschwindigkeit überquert werden 
+- **Traffic_Light_Will_Stop**: Die Entfernung zur Kreuzung ist geringer als der Anhalteweg (zzg. extra Reaktionszeit) und 
+  die Geschwindigkeit wird zu reduziert, dass das Fahrzeug an der Haltelinie zum Stehen kommt.
+- **Traffic_Light_Slow_Down**: Bei der Annäherung an eine rote Ampel wird die Geschwindigkeit etwas reduziert (50%).
+- **Traffic_Light_Waiting**: Die Zielgeschwindigkeit wird auf 0 gesetzt, sodass das Auto an der Haltelinie wartet.
+- **STOP_NEAR**: Bei der Annäherung an eine Stopp-Kreuzung wird die Geschwindigkeit etwas reduziert (50%).
+- **STOP_Will_Stop**: Die Entfernung zur Kreuzung ist geringer als der Anhalteweg (zzg. extra Reaktionszeit) und 
+  die Geschwindigkeit wird zu reduziert, dass das Fahrzeug an der Haltelinie zum Stehen kommt.
+- **STOP_Waiting**: Die Zielgeschwindigkeit wird auf 0 gesetzt, sodass das Auto an der Haltelinie wartet bis der Kreuzungsbereich frei ist.
+- **STOP_GO**: Das Auto hat Vorfahrt und die Kreuzung kann mit der maximal erlaubten Geschwindigkeit überquert werden
