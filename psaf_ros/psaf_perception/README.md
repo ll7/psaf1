@@ -67,6 +67,7 @@ Unter Wiederverwendung des YOLO v3 Modells der Gruppe vom Wintersemester 2019 wu
 umgesetzt.
 #### Ziel
 Um Kreuzung mit einer Stopp-Regelung zu erkennen müssen die Beschriftungen am Boden mit "Stop" erkannt werden.
+
 ![Erkennung Stop](doc/stop_detector.png)
 #### Umsetzung
 Das trainierte Netz wird in PyTorch geladen und die nicht benötigten Klassen werden ignoriert.
