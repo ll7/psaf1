@@ -31,6 +31,9 @@ class VehicleStatus:
 
 
 class VehicleStatusProvider:
+    """
+    Offers the information about the carla ego vehicle
+    """
 
     def __init__(self, role_name: str):
         """
