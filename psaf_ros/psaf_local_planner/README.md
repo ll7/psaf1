@@ -39,6 +39,9 @@ Des Weiteren entscheidet der Local Planer auch auf Basis der Informationen ob ei
 | /psaf/local_planner/traffic_situation | [TrafficSituation](../psaf_messages/msg/TrafficSituation.msg)|  [State Machine](#state-machine) |
 ### Message Struktur
 
+### Launch Dateien
+- *psaf_local_perception_evaluation_service.launch*: Startet den Perception Evaluation Service zur Verarbeitung der Verkehrssituation.
+
 
 ## Funktionalität
 Die Funktion des Local Planners lässt sich grundlegend in die vier Grundfunktionen Verarbeitung des GlobalPlans [Global Plan Verarbeitung](#global-plan-verarbeitung), [Berechnung der Lenkwinkelvorgabe](#Lenkwinkelvorgabe), Berechnung der Geschwindigkeitsvorgabe und [Entscheidung zum Replanning](#Local-Perception)  unterteilen.

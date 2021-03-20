@@ -33,6 +33,12 @@ Die nachfolgenden Topics werden über die Abstraktionsschicht indirekt genutzt.
 | /carla/{role_name}/camera/semantic_segmentation/{id}/image_segmentation | Image | SegmentationCamera |
 | /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | [CombinedCameraImage](../psaf_messages/msg/CombinedCameraImage.msg) | FusionCamera |
 
+### Launch Dateien
+- *psaf_perception_detection_service.launch*: Startet den Detection service
+  - *use_gpu*: Soll die GPU für die Verarbeitung der Klassifizierung genutzt werden. Dies setzt ausreichend Grafispeicher voraus.
+  - *role_name*: Der Rollenname des Carla-Fahrzeugs um auf die Kameras zuzugreifen.
+  - *activate_traffic_light_detector*: Ob der Detektor für die Ampeln aktiviert werden soll. 
+
 ## Funktionalität
 ### Detection Service
 Der *Detection Service* startet die entsprechenden Detektoren und sammelt die gewonnen Wahrnehmungsdaten.

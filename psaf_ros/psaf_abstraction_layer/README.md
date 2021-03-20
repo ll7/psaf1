@@ -43,7 +43,12 @@ Dazu wird für folgende Sensoren eine Klassenrepräsentation angeboten, welche b
 | /carla/{role_name}/vehicle_status | CarlaEgoVehicleStatus | VehicleStatus |
 | /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | [CombinedCameraImage](../psaf_messages/msg/CombinedCameraImage.msg) | FusionCamera |
 
-
+### Launch Dateien
+- *psaf_fusion_camera_service.launch*: Startet den Perception Evaluation Service zur Verarbeitung der Verkehrssituation.
+  - *role_name*: Der Rollenname des Carla-Fahrzeugs um auf die Kameras zuzugreifen.
+  - *camera_group*: Der Name der Kameragruppe. Die Topics der Kameras beinhalten eine id, welche den Namen Kamera darstellen.
+    Die zu gruppierenden Kameras müssen den gleichen Namen tragen. Der angegeben Name entspricht auch dem Namen der Fusion-Kamera.
+  - *threshold_diff*: Der Schwellwert zur Bregenzung der zeitlichen Abweichung der verknüpften Kamerabilder zueinander.
 
 ## Funktionalität
 ### CameraFusionService
