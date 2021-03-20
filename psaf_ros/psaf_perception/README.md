@@ -35,7 +35,7 @@ Die nachfolgenden Topics werden über die Abstraktionsschicht indirekt genutzt.
 
 ### Launch Dateien
 - *psaf_perception_detection_service.launch*: Startet den Detection service
-  - *use_gpu*: Soll die GPU für die Verarbeitung der Klassifizierung genutzt werden. Dies setzt ausreichend Grafispeicher voraus.
+  - *use_gpu*: Soll die GPU für die Verarbeitung der Klassifizierung genutzt werden. Dies setzt ausreichend Grafikspeicher voraus.
   - *role_name*: Der Rollenname des Carla-Fahrzeugs um auf die Kameras zuzugreifen.
   - *activate_traffic_light_detector*: Ob der Detektor für die Ampeln aktiviert werden soll. 
 
@@ -114,9 +114,9 @@ Auf Basis des Segmentation-Bildes werden die Objekte im Bild, welche als Verkehr
 Daraufhin wird der entsprechende Ausschnitt des RGB-Bildes durch ein Klassifikationsnetzes (Resnet18) klassifiziert.
 Dabei stehen folgende Klassen zur Wahl:
 - **back**: Die Rückseite eines Schilder
-- **speed_30**: Ein europäisches Geschwindigkeitsbeschränkungsschild auf 30km/h
-- **speed_60**: Ein europäisches Geschwindigkeitsbeschränkungsschild auf 60km/h
-- **speed_90**: Ein europäisches Geschwindigkeitsbeschränkungsschild auf 90km/h
+- **speed_30**: Ein europäisches Geschwindigkeitsbeschränkungsschild auf 30 km/h
+- **speed_60**: Ein europäisches Geschwindigkeitsbeschränkungsschild auf 60 km/h
+- **speed_90**: Ein europäisches Geschwindigkeitsbeschränkungsschild auf 90 km/h
 - **speed_limit_30**: Ein amerikanisches Geschwindigkeitsbeschränkungsschild auf 30mp/h
 - **speed_limit_40**: Ein amerikanisches Geschwindigkeitsbeschränkungsschild auf 40mp/h
 - **speed_limit_60**: Ein amerikanisches Geschwindigkeitsbeschränkungsschild auf 60mp/h
