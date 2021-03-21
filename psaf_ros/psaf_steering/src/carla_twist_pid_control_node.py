@@ -355,16 +355,23 @@ class CarlaAckermannControl(object):
         """
         fully breaks or fully stops when the diff is greater than x
         """
-        diff_accel = 3
-        diff_break = 3
+        diff_accel = 0.1
+        diff_break = 0.1
+        diff_factor_throttle = 16
+        diff_factor_break = 50
 
-        if self.info.current.speed - diff_break > self.info.target.speed:
-            self.info.output.brake = 1.0
-            self.info.output.throttle = 0.0
-        
-        if self.info.current.speed  < self.info.target.speed - diff_accel:
-            self.info.output.throttle = 1.0
+        diff = self.info.target.speed - self.info.current.speed
+
+        rospy.loginfo("diff: " + str(diff))
+        rospy.loginfo("accel: " +  str(min(diff / (diff_accel * diff_factor_throttle), 1.0)))
+
+        if (diff > diff_accel):
+            self.info.output.throttle = min(diff / (diff_accel * diff_factor_throttle), 1.0)
             self.info.output.brake = 0.0
+
+        if (-diff > diff_break):
+            self.info.output.brake = min(-diff / (diff_break * diff_factor_break), 1.0)
+            self.info.output.throttle = 0.0
 
     def vehicle_control_cycle(self):
         """

@@ -8,7 +8,7 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
                                             initialized(false), closest_point_local_plan(2),
-                                            lookahead_factor(3.5), target_velocity(15), min_velocity(5),
+                                            lookahead_factor(3), lookahead_factor_exp(1.3), target_velocity(15), min_velocity(5),
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
                                             slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), 
                                             duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true), max_points_smoothing(10), 

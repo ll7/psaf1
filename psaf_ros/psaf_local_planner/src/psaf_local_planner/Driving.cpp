@@ -235,7 +235,7 @@ namespace psaf_local_planner
 
         double vel_x = std::ceil(std::abs(vel.pose.position.x));
 
-        double desired_distance = std::pow(vel_x / lookahead_factor, 1.1) + lookahead_factor_const_additive;
+        double desired_distance = std::pow(vel_x / lookahead_factor, lookahead_factor_exp) + lookahead_factor_const_additive;
         double sum_distance = 0;
 
         // count up to the given distance and return the new pose
