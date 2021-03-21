@@ -54,18 +54,20 @@ namespace psaf_local_planner
         }else{
             this->stop_distance_at_intersection = this->computeDistanceToStoppingPointWithoutStopLine();
         }
+        ROS_WARN("Stop distance %f",this->stop_distance_at_intersection);
     }
 
     double PsafLocalPlanner::computeDistanceToStoppingPointWithoutStopLine() {
         if (state_machine->isInTrafficLightStates()){ // Use traffic light data only when in correct state
             // Use the traffic light distance if the perception already knows something
             if(this->traffic_light_state.state!=psaf_messages::TrafficLight::STATE_UNKNOWN){
-                // if the traffic_light is on the right hand side we want to stop 4 meters in front of it
-                if(this->traffic_light_state.x>0.5 && this->traffic_light_state.y>0.32){
-                    return this->traffic_light_state.distance-8;
-                }else{ // else the traffic light is on the other side of the intersection (american style)
+                // if the traffic light is on the other side of the intersection (american style)
+                if(this->traffic_light_state.x<0.8 && this->traffic_light_state.y<0.32 && traffic_light_state.distance>15.){
                     // we keep 20 meters as distance
                     return this->traffic_light_state.distance-20;
+                }else{
+                    // else the traffic_light is on the right hand side we want to stop 8 meters in front of it
+                    return this->traffic_light_state.distance-8;
                 }
             } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
                     double distance_to_traffic_light = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
