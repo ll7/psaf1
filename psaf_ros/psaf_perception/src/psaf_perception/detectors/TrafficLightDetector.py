@@ -150,10 +150,11 @@ class TrafficLightDetector(AbstractDetector):
                 # get cropped depth image
                 crop_depth = depth_image[y1:y2, x1:x2]
                 masked_crop_depth=crop_depth[mask[:, :, 1]]
+                # TODO: reevaluate this decision: flickering reduces the value
                 # use mask to extract the traffic sign distances
-                distance = np.average(masked_crop_depth)
-                # use the distance and repeat the computation to drop distance values that are two big
-                distance = np.average(np.clip(masked_crop_depth,a_min=0,a_max=distance))
+                distance = np.min(masked_crop_depth)
+                # # use the distance and repeat the computation to drop distance values that are two big
+                # distance = np.average(np.clip(masked_crop_depth,a_min=0,a_max=distance))
                 label = classes[i]
                 confidence = confidences[i]
 
