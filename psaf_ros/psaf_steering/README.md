@@ -46,4 +46,4 @@ Für unser Projekt wurde der Controller so verändert, dass er statt AckermannDr
 Eine weitere Änderung ist, dass bei einer starken Änderung der Stellgröße über einem bestimmten Threshold nun vollständig die Bremse oder das Gaspedal betätigt wird. Dies ist vor allem hilfreich, um zuverlässig vor Hindernissen abzubremsen.
 
 ### Carla Control Physics
-Diese Datei wird für die Funktion des Carla_Twist_PID_Controller notwendig und wurde direkt aus der offiziellen Implementierung übernommen.
+Diese Datei ist für die Funktion des Carla_Twist_PID_Controller notwendig und wurde direkt aus der offiziellen Implementierung übernommen.
