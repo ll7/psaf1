@@ -258,10 +258,11 @@ class PathProviderCommonRoads:
             if start_index > end_index:
                 # split lanelet in between those two points to fix that issue for a further iteration
                 # which is triggered after a BadLanelet status is received by the compute_route algorithm
-                split_point = Point(start_lanelet.center_vertices[start_index][0],
-                                    start_lanelet.center_vertices[start_index][0], 0)
+                split_index = end_index + (start_index - end_index)//2
+                split_point = Point(start_lanelet.center_vertices[split_index][0],
+                                    start_lanelet.center_vertices[split_index][1], 0)
 
-                self.manager.update_network(matching_lanelet_id=goal_lanelet.lanelet_id, modify_point=split_point,
+                self.manager.update_network(matching_lanelet_id=start_lanelet.lanelet_id, modify_point=split_point,
                                             start_point=start.position, static_obstacle=None)
 
                 self.planning_problem = None
@@ -610,7 +611,7 @@ class PathProviderCommonRoads:
         # its last entry is the closest.
         # In any other case, where the last entry of the first lanelet is indeed the closest point, we only lose one
         # waypoint in our waypoint list. The loss of these few centimeters of information at the start is no problem.
-        if len(path.route[0].route_portion) <= 1:
+        if len(path.route[0].route_portion) <= 1 and len(path.route) >= 2:
             # delete first lanelet from message
             del path.route[0]
             # search nearest point in second lanelet, which is now at the index 0
