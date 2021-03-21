@@ -264,6 +264,8 @@ Bei Bedarf prüft der Prepocessor noch wie viel Platz neben dem Fahrzeug für ei
 U-Turn zur Verfügung steht und fügt diese Information der ausgehenden Nachricht hinzu. Die Erkennung des freien 
 Bereichs links/vorne neben dem Auto funktioniert dabei analog zum semantic_lidar_processor mit den Daten von zwei
 LIDAR-Sensoren, die auf Hindernisse wie Gebäude, Mauern und Zäune regieren. 
+
+![uturn-lidar](https://github.com/ll7/psaf1/tree/develop/psaf_ros/psaf_global_planner/doc/uturn_lidar.png)
  
 Ob ein U-Turn eingeplant wird, hängt von den *rosparam*-Parametern **obeyRules** und 
 **alwaysUTurn** ab. Diese Parameter werden wie in [psaf_starter](https://github.com/ll7/psaf1/tree/develop/psaf_ros/psaf_steering) beschrieben, über 
