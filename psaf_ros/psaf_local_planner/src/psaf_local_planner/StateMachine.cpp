@@ -8,6 +8,7 @@ namespace psaf_local_planner {
 
         this->start_time_stop_waiting = 0.;
         this->start_time_waiting_without_tl_state = std::numeric_limits<double>::infinity();
+        this->start_time_stop_go = std::numeric_limits<double>::infinity();
     }
 
     LocalPlannerStateMachine::~LocalPlannerStateMachine() = default;
@@ -139,10 +140,11 @@ namespace psaf_local_planner {
                 // Wait until intersection is clear and wait at least 3 seconds
                 if (isIntersectionClear && (currentTimeSec-this->start_time_stop_waiting)>3.) {
                     this->state = LocalPlannerState::STOP_GO;
+                    this->start_time_stop_go = currentTimeSec;
                 }
                 break;
             case LocalPlannerState::STOP_GO:
-                if (currentSpeed > 15 / 3.6) {
+                if (currentSpeed > 15 / 3.6 && (currentTimeSec-this->start_time_stop_go)>=3.) {
                     this->state = LocalPlannerState::DRIVING;
                 }
                 break;
@@ -228,10 +230,11 @@ namespace psaf_local_planner {
             case LocalPlannerState::STOP_WAITING:
                 if (isIntersectionClear) {
                     this->state = LocalPlannerState::STOP_GO;
+                    this->start_time_stop_go = curTimeSec;
                 }
                 break;
             case LocalPlannerState::STOP_GO:
-                if (currentSpeed > 15 / 3.6) {
+                if (currentSpeed > 15 / 3.6 && (curTimeSec-this->start_time_stop_go)>=3.) {
                     this->state = LocalPlannerState::DRIVING;
                 }
                 break;

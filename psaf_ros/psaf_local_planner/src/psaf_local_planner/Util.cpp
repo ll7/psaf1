@@ -75,7 +75,7 @@ namespace psaf_local_planner
                     // No success go to fallback return
                 }
         }else if (state_machine->isInStopStates()) {
-            // because we don't have any other information we use the map data minus 10 meters as safety distance guess
+            // because we don't have any other information we use the map data
             double distance_to_stop = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop);
             if(distance_to_stop < 1e6){
                 return std::max((distance_to_stop),0.0);

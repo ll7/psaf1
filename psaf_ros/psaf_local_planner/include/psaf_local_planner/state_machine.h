@@ -113,6 +113,12 @@ namespace psaf_local_planner {
 
     protected:
         LocalPlannerState state;
+        /**
+          * Ros time in sec when we entered the state STOP_GO
+          * infinity represents that no value was set
+          */
+        double start_time_stop_go;
+
     private:
         /**
          * Ros time in sec when we entered the state STOP_WAITING
