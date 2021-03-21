@@ -265,7 +265,7 @@ U-Turn zur Verfügung steht und fügt diese Information der ausgehenden Nachrich
 Bereichs links/vorne neben dem Auto funktioniert dabei analog zum semantic_lidar_processor mit den Daten von zwei
 LIDAR-Sensoren, die auf Hindernisse wie Gebäude, Mauern und Zäune regieren. 
 
-![uturn-lidar](https://github.com/ll7/psaf1/tree/develop/psaf_ros/psaf_global_planner/doc/uturn_lidar.png)
+![uturn-lidar](doc/uturn_lidar.png)
  
 Ob ein U-Turn eingeplant wird, hängt von den *rosparam*-Parametern **obeyRules** und 
 **alwaysUTurn** ab. Diese Parameter werden wie in [psaf_starter](https://github.com/ll7/psaf1/tree/develop/psaf_ros/psaf_steering) beschrieben, über 
@@ -282,4 +282,4 @@ Das Rviz Plugin stellt ein Panel in Rviz bereit, über das die XYZ Zielposition 
 gesetzt werden kann. Außerdem wird mittels einer Statusanzeige über den aktuellen Zustand der Planung
 informiert.
  
-![rviz-panel](https://github.com/ll7/psaf1/tree/develop/psaf_ros/psaf_global_planner/doc/rviz-panel.png)
+![rviz-panel](doc/rviz-panel.png)
