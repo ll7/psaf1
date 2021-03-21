@@ -63,10 +63,10 @@ namespace psaf_local_planner
                 // if the traffic light is on the other side of the intersection (american style)
                 if(this->traffic_light_state.x<0.8 && this->traffic_light_state.y<0.32 && traffic_light_state.distance>15.){
                     // we keep 20 meters as distance
-                    return this->traffic_light_state.distance-20;
+                    return std::max(this->traffic_light_state.distance-20.,0.);
                 }else{
                     // else the traffic_light is on the right hand side we want to stop 8 meters in front of it
-                    return this->traffic_light_state.distance-8;
+                    return std::max(this->traffic_light_state.distance-8.,0.);
                 }
             } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
                     double distance_to_traffic_light = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
