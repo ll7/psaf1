@@ -144,7 +144,7 @@ Hierbei werden folgende Bereiche unterschieden:
   Die zutreffende Lanelet ist die nächstgelegene Lanelet, die sich **vor** und **nicht in** einer Kreuzung befindet
   und deren Orientierung zum Stoppschild ausgerichtet ist.
 
-
+![Town03](doc/Town03.png)
 ### Path Provider
 
 Die Aufgabe des Path Providers, ist wie der Name schon vermuten lässt, einen Pfad von einem Startpunkt zu einem Zielpunkt bereitzustellen. 
@@ -191,6 +191,8 @@ wird. Die Message des Pfads mit den geringeren Kosten wird zurückgegeben.
 Kurz gesagt wird also, falls ein U-Turn berücksichtigt werden soll, genau dann ein U-Turn ausgeführt, wenn dieser von 
 Vorteil ist.
 
+![Route](doc/planned_route.png)
+
 #### Replanner (path_supervisor)
 
 Der Path Supervisor erweitert die Funktionalität des Planners um die Möglichkeit dynamisch, während der Laufzeit, eine
@@ -227,6 +229,8 @@ vorausfahrenden Fahrzeug zu folgen, da es sich trotz Hindernis weiterhin um die,
 
 Ein weiterer wichtiger Punkt ist es, dass eine Neuplanung immer auf den Originalkartendaten, 
 also auf Kartendaten ohne Hindernisse und ohne modifiziertes Lanelet-Netzwerk ausgeführt wird.
+
+![Überholvorgang](doc/obstacle.png)
 
 #### Map Manager (common_road_manager)
 
