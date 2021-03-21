@@ -62,7 +62,7 @@ namespace psaf_local_planner
             if(this->traffic_light_state.state!=psaf_messages::TrafficLight::STATE_UNKNOWN){
                 // if the traffic_light is on the right hand side we want to stop 4 meters in front of it
                 if(this->traffic_light_state.x>0.5 && this->traffic_light_state.y>0.32){
-                    return this->traffic_light_state.distance-4;
+                    return this->traffic_light_state.distance-8;
                 }else{ // else the traffic light is on the other side of the intersection (american style)
                     // we keep 20 meters as distance
                     return this->traffic_light_state.distance-20;
