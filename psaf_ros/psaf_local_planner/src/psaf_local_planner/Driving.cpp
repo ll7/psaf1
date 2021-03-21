@@ -217,7 +217,7 @@ namespace psaf_local_planner
         // max speed in curves: v <= sqrt(µ_haft * r * g)
         // µ_haft ~= 0.8 - 1.0
         double target_vel = std::min(getMaxVelocity(), std::sqrt(0.8 * min_radius * 9.81));
-        ROS_INFO("radius: %f, target vel: %f", min_radius, target_vel);
+        // ROS_INFO("radius: %f, target vel: %f", min_radius, target_vel);
         return target_vel;
     }
 

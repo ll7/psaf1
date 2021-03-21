@@ -18,7 +18,7 @@ namespace psaf_local_planner
             slow_car_ahead_counter = std::max(0, slow_car_ahead_counter - 2);
         }
 
-        ROS_INFO("slow car counter: %d", slow_car_ahead_counter);
+        // ROS_INFO("slow car counter: %d", slow_car_ahead_counter);
         // publish obstacle if counter is reached
         if (slow_car_ahead_counter > NUM_SLOW_CAR_PUB
             // if not published obstacle recently

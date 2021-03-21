@@ -362,9 +362,6 @@ class CarlaAckermannControl(object):
 
         diff = self.info.target.speed - self.info.current.speed
 
-        rospy.loginfo("diff: " + str(diff))
-        rospy.loginfo("accel: " +  str(min(diff / (diff_accel * diff_factor_throttle), 1.0)))
-
         if (diff > diff_accel):
             self.info.output.throttle = min(diff / (diff_accel * diff_factor_throttle), 1.0)
             self.info.output.brake = 0.0
