@@ -40,7 +40,7 @@ class CommonRoadManager:
         if map_name == "Town03":
             rospy.loginfo("Handling turnaround and gas station")
             # coordinates for turnaround splits
-            split_point: list = [[-49, -187], [6, -30], [-6, -30], [50, -6]]
+            split_point: list = [[-49, -187], [6, -30], [99, 202], [-6, -30], [50, -6]]
             # handling split to optimize the turnaround
             for listpos, point in enumerate(split_point):
                 matching_lanelet_id = self.map.lanelet_network.lanelets_in_proximity(np.array(point), 10)
@@ -71,6 +71,28 @@ class CommonRoadManager:
                                               pos_index=len(self.map.lanelet_network.find_lanelet_by_id(split_1).center_vertices)-1,
                                               typ=TrafficSignIDGermany.STOP, cur_mark_id=split_1)
                     self.message_by_lanelet[split_1].hasStop = True
+
+                # add useless traffic signs (for third point)
+                if listpos == 2:
+                    if self.map.lanelet_network.find_lanelet_by_id(
+                            split_1).adj_right_same_direction and self.map.lanelet_network.find_lanelet_by_id(
+                            split_1).adj_right is not None:
+                        self._add_light_to_lanelet(
+                            lanelet_id=self.map.lanelet_network.find_lanelet_by_id(split_1).adj_right,
+                            cur_mark_id=split_1 + 1)
+                        self.message_by_lanelet[
+                            self.map.lanelet_network.find_lanelet_by_id(split_1).adj_right].hasLight = True
+                    if self.map.lanelet_network.find_lanelet_by_id(
+                            split_1).adj_left_same_direction and self.map.lanelet_network.find_lanelet_by_id(
+                            split_1).adj_left is not None:
+                        self._add_light_to_lanelet(
+                            lanelet_id=self.map.lanelet_network.find_lanelet_by_id(split_1).adj_left,
+                            cur_mark_id=split_1 - 1)
+                        self.message_by_lanelet[
+                            self.map.lanelet_network.find_lanelet_by_id(split_1).adj_left].hasLight = True
+                    self._add_light_to_lanelet(lanelet_id=split_1, cur_mark_id=split_1)
+                    self.message_by_lanelet[split_1].hasLight = True
+
             # add stop signs to not split lanes
             not_split: list = [347, 281, 277, 181, 184]
             for _id in not_split:
@@ -78,6 +100,17 @@ class CommonRoadManager:
                                           pos_index=len(self.map.lanelet_network.find_lanelet_by_id(_id).center_vertices)-1,
                                           typ=TrafficSignIDGermany.STOP, cur_mark_id=_id)
                 self.message_by_lanelet[_id].hasStop = True
+
+    def _add_light_to_lanelet(self, lanelet_id: int, cur_mark_id=-1):
+        """
+        Adds a traffic light to the end of the given lanelet
+        :param lanelet_id: id of the given lanelet
+        """
+        pos = self.map.lanelet_network.find_lanelet_by_id(lanelet_id).center_vertices[-1]
+        traffic_light = TrafficLight(cur_mark_id, [], pos)
+        id_set = set()
+        id_set.add(lanelet_id)
+        self.map.lanelet_network.add_traffic_light(traffic_light, lanelet_ids=deepcopy(id_set))
 
     def _add_sign_to_lanelet(self, lanelet_id: int, pos_index: int, typ: TrafficSignIDGermany, additional: list = [],
                              cur_mark_id=-1):
