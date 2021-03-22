@@ -23,6 +23,8 @@ Die Aufgabe umfasst folgende Punkte:
 
 ## Übersicht der Ergebnisse
 
+![Module](docs/main.png)
+
 ## Setup des Projektes
 
 ### Setup ROS Noetic and CARLA 0.9.10
