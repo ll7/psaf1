@@ -44,7 +44,7 @@ Falls im Pfad Hindernisse wie langsamere Verkehrsteilnehmer auftreten kann der L
 Genauere Informationen sind dem Readme [Local Planner](psaf_ros/psaf_local_planner) zu entnehmen. 
 
 ### Perception
-Das Paket Perception ermöglicht es, Ampeln und ihren Zustand sowie Haltelinien zu erkennen. Hierzu werden kombinierte Kamerainformationen aus dem Paket Sensor Preprocessing verwendet. Um aus diesen Informationen Objekte zu Detektieren kommt das System [YOLO v3] zum Einsatz.
+Das Paket Perception ermöglicht es, Ampeln und ihren Zustand sowie Haltelinien zu erkennen. Hierzu werden kombinierte Kamerainformationen aus dem Paket Sensor Preprocessing verwendet. Um aus diesen Informationen Objekte zu Detektieren kommt das System [YOLO v3](https://pjreddie.com/darknet/yolo/) zum Einsatz.
  
 Genauere Informationen sind dem Readme [Perception](psaf_ros/psaf_perception) zu entnehmen. 
 
