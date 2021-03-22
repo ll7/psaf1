@@ -225,7 +225,7 @@ namespace psaf_local_planner
      * */
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
-        ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
+        ROS_INFO("RECEIVED MESSAGE: %d with lanes %lu", msg.id, msg.route.size());
 
         // validate duration of routes only if a global route already exists
         if (global_route.size() > 0 && !goal_reached && respect_traffic_rules) {
@@ -278,19 +278,28 @@ namespace psaf_local_planner
 
         }
 
+        ROS_INFO("LOCAL_PLANNER: validated new plan.");
+
 
         global_route = msg.route;
         goal_reached = false;
-
+        
         // this block uses linear interpolation to smooth the curves of lanechanges
         // takes the last/first 10 points in both directions and distributes the points along linear line between them
         int size = global_route.size();
+        
         for (int i = 0; i < size; i++) {
             auto &lanelet = global_route[i];
+
+            ROS_INFO("size: %i; i+1: %i", size, i+1);
             
             if (lanelet.isLaneChange && i + 1 < size) {
                 auto &next_lanelet = global_route[i + 1];
                 int lanelet_route_size = lanelet.route_portion.size();
+                int next_lanelet_route_size = next_lanelet.route_portion.size();
+
+                if (lanelet_route_size == 0 || next_lanelet_route_size == 0) continue;
+
                 // smoothing should be dependent on max velocity
                 float speed_factor = lanelet.route_portion[0].speed / 3.6 / 5;
                 // number of points on current lanelet
@@ -323,6 +332,8 @@ namespace psaf_local_planner
                 }
             }
         }
+
+        ROS_INFO("LOCAL_PLANNER: interpolated lanechanges.");
 
         const int lookahead_left_turn = 20;
         const float lookahead_left_turn_angle_threshhold = 45 * M_PI/180;
@@ -364,6 +375,8 @@ namespace psaf_local_planner
             }
         }
 
+        ROS_INFO("LOCAL_PLANNER: fake stop check done.");
+
         // Publish stop signs as markers 
         auto markers = visualization_msgs::MarkerArray();
         auto marker1 = visualization_msgs::Marker();
@@ -395,6 +408,7 @@ namespace psaf_local_planner
         markers.markers.push_back(marker1);
         debug_marker_pub.publish(markers);
         
+        ROS_INFO("LOCAL_PLANNER: done publishing stop signs.");
 
         // Convert xroute back into normal pose stamp list
         std::vector<geometry_msgs::PoseStamped> points = {};
@@ -420,6 +434,8 @@ namespace psaf_local_planner
         global_plan = points;
         planner_util.setPlan(global_plan);
         publishGlobalPlan(global_plan);
+
+        ROS_INFO("PREPROCESSING XROUTE DONE!");
     }
 
 }
