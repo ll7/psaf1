@@ -298,7 +298,7 @@ namespace psaf_local_planner
                 // number of points on next lanelet
                 unsigned long num_points_next = std::min(next_lanelet.route_portion.size(), (long unsigned int)(max_points_smoothing * speed_factor));
                 // total number of points for smoothing
-                unsigned long num_points_total = num_points_next + num_points_current;
+                double num_points_total = num_points_next + num_points_current;
                 // first point of smoothing
                 double x1 = lanelet.route_portion[lanelet_route_size - num_points_current].x;
                 double y1 = lanelet.route_portion[lanelet_route_size - num_points_current].y;
