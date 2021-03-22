@@ -3,7 +3,6 @@ import os
 
 import lanelet2
 import rosbag
-from lanelet2 import traffic_rules, routing, core, geometry
 from lanelet2.projection import UtmProjector
 from lanelet2.core import GPSPoint
 from lanelet2.io import Origin
@@ -14,7 +13,7 @@ from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from nav_msgs.msg import Path
 
 from psaf_global_planner.map_provider.map_provider import MapProvider
-from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
+from psaf_ros.psaf_abstraction_layer.src.psaf_abstraction_layer.sensors.GPS import GPS_Sensor
 from std_msgs.msg import String
 import actionlib
 import pathlib

@@ -27,7 +27,7 @@ import sys
 from copy import deepcopy
 import rospy
 from psaf_global_planner.map_provider.map_supervisor_common_roads import MapSupervisorCommonRoads
-from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
+from psaf_ros.psaf_abstraction_layer.src.psaf_abstraction_layer.sensors.GPS import GPS_Sensor
 from enum import Enum
 from psaf_messages.msg import XRoute
 from lanelet2.projection import UtmProjector
