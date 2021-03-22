@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(psaf_sensor_prepocessing)
+project(psaf_sensor_preprocessing)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -54,17 +54,17 @@ set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/psaf_sensor_prepocessing.cpp
+#   src/${PROJECT_NAME}/psaf_sensor_preprocessing.cpp
 # )
 
 add_library(sensor_fusion_service_lib
-        src/cpp/psaf_sensor_prepocessing/HelperAlgorithms.cpp
+        src/cpp/psaf_sensor_preprocessing/HelperAlgorithms.cpp
         )
 add_dependencies(sensor_fusion_service_lib  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(sensor_fusion_service
-        src/cpp/psaf_sensor_prepocessing/CameraFusionService.cpp
-        src/cpp/psaf_sensor_prepocessing/HelperAlgorithms.cpp
+        src/cpp/psaf_sensor_preprocessing/CameraFusionService.cpp
+        src/cpp/psaf_sensor_preprocessing/HelperAlgorithms.cpp
 )
 
 add_dependencies(sensor_fusion_service  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} sensor_fusion_service_lib)

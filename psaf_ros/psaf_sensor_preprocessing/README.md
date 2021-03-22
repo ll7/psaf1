@@ -1,4 +1,4 @@
-# psaf_sensor_prepocessing
+# psaf_sensor_preprocessing
 
 ## Inhalt
 * [Inhalt](#inhalt)

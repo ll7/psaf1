@@ -46,11 +46,6 @@ catkin_package(
 ###########
 
 
-## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/psaf_sensor_prepocessing.cpp
-# )
-
 
 #############
 ## Install ##

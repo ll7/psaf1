@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   rosbuild
   std_msgs
   psaf_abstraction_layer
-  psaf_sensor_prepocessing
+  psaf_sensor_preprocessing
   psaf_messages
   cv_bridge
 )
