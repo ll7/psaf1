@@ -26,21 +26,21 @@ class CommonRoadManager:
         self.message_by_lanelet = {}
         self.intersections = deepcopy(intersections)
         self._fill_message_dict()
-        self._handle_turnaround_town_03(map_name)
+        self._handle_town_03(map_name)
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
         rospy.loginfo("CommonRoadManager: Done!")
 
-    def _handle_turnaround_town_03(self, map_name: string):
+    def _handle_town_03(self, map_name: string):
         """
         This function adds a hotfix solution for the roundabout of Town03
         (Splitting lanelets and adding stop signs at incoming lanes)
         :param map_name: Name of the loaded map
         """
         if map_name == "Town03":
-            rospy.loginfo("Handling turnaround")
+            rospy.loginfo("Handling turnaround and gas station")
             # coordinates for turnaround splits
-            split_point: list = [[6, -30], [-6, -30], [50, -6]]
+            split_point: list = [[-49, -187], [6, -30], [-6, -30], [50, -6]]
             # handling split to optimize the turnaround
             for listpos, point in enumerate(split_point):
                 matching_lanelet_id = self.map.lanelet_network.lanelets_in_proximity(np.array(point), 10)
@@ -53,8 +53,8 @@ class CommonRoadManager:
                 # add the new lanelet to the intersections dict
                 self.intersections[split_1] = False
                 self.intersections[split_2] = True
-                # add traffic signs
-                if listpos == 0:
+                # add traffic signs (for first two points)
+                if listpos <= 1:
                     if self.map.lanelet_network.find_lanelet_by_id(split_1).adj_right_same_direction and self.map.lanelet_network.find_lanelet_by_id(split_1).adj_right is not None:
                         self._add_sign_to_lanelet(lanelet_id=self.map.lanelet_network.find_lanelet_by_id(split_1).adj_right,
                                                   pos_index=len(self.map.lanelet_network.find_lanelet_by_id(
@@ -69,20 +69,19 @@ class CommonRoadManager:
                         self.message_by_lanelet[self.map.lanelet_network.find_lanelet_by_id(split_1).adj_left].hasStop = True
                     self._add_sign_to_lanelet(lanelet_id=split_1,
                                               pos_index=len(self.map.lanelet_network.find_lanelet_by_id(split_1).center_vertices)-1,
-                                              typ=TrafficSignIDGermany.STOP, cur_mark_id =split_1)
+                                              typ=TrafficSignIDGermany.STOP, cur_mark_id=split_1)
                     self.message_by_lanelet[split_1].hasStop = True
             # add stop signs to not split lanes
             not_split: list = [347, 281, 277, 181, 184]
             for _id in not_split:
                 self._add_sign_to_lanelet(lanelet_id=_id,
                                           pos_index=len(self.map.lanelet_network.find_lanelet_by_id(_id).center_vertices)-1,
-                                          typ=TrafficSignIDGermany.STOP, cur_mark_id =_id)
+                                          typ=TrafficSignIDGermany.STOP, cur_mark_id=_id)
                 self.message_by_lanelet[_id].hasStop = True
 
     def _add_sign_to_lanelet(self, lanelet_id: int, pos_index: int, typ: TrafficSignIDGermany, additional: list = [],
-                             cur_mark_id = -1):
+                             cur_mark_id=-1):
         """
-
         :param lanelet_id: id of the considered lanelet
         :param pos_index: index position of the sign
         :param typ: type of the sign (used for creating the TrafficSign object of CommonRoads)
