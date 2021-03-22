@@ -105,11 +105,6 @@ namespace psaf_local_planner {
                 target_vel = target_velocity / 2;
                 break;
             case LocalPlannerState::STOP_NEAR:
-//              // Just for now do nothing TODO: reevaluate this decision
-// Only reduce the speed if the stopping sign is closer than 1.5 stopping away
-//                if(this->stop_distance_at_intersection<1.5*this->getCurrentStoppingDistance()) {
-//                    target_vel = target_velocity / 2;
-//                }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
             case LocalPlannerState::STOP_WAITING:
