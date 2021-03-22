@@ -641,7 +641,7 @@ class PathProviderCommonRoads:
         real_end_index = PathProviderCommonRoads.find_nearest_path_index(path.route[-1].route_portion,
                                                                          target, prematured_stop=False,
                                                                          use_xcenterline=True)
-        path.route[-1].route_portion = path.route[-1].route_portion[:real_end_index]
+        path.route[-1].route_portion = path.route[-1].route_portion[:real_end_index+1]
 
         return path
 
