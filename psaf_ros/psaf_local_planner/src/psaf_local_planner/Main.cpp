@@ -293,28 +293,33 @@ namespace psaf_local_planner
                 int lanelet_route_size = lanelet.route_portion.size();
                 // smoothing should be dependent on max velocity
                 float speed_factor = lanelet.route_portion[0].speed / 3.6 / 5;
-                unsigned long num_points = std::min(std::min(next_lanelet.route_portion.size(), lanelet.route_portion.size()), (long unsigned int)(max_points_smoothing * speed_factor));
+                // number of points on current lanelet
+                unsigned long num_points_current = std::min(lanelet.route_portion.size(), (long unsigned int)(max_points_smoothing * speed_factor));
+                // number of points on next lanelet
+                unsigned long num_points_next = std::min(next_lanelet.route_portion.size(), (long unsigned int)(max_points_smoothing * speed_factor));
+                // total number of points for smoothing
+                unsigned long num_points_total = num_points_next + num_points_current;
                 // first point of smoothing
-                double x1 = lanelet.route_portion[lanelet_route_size - num_points].x;
-                double y1 = lanelet.route_portion[lanelet_route_size - num_points].y;
+                double x1 = lanelet.route_portion[lanelet_route_size - num_points_current].x;
+                double y1 = lanelet.route_portion[lanelet_route_size - num_points_current].y;
                 // last point of smoothing
-                double x2 = next_lanelet.route_portion[num_points - 1].x;
-                double y2 = next_lanelet.route_portion[num_points - 1].y;
+                double x2 = next_lanelet.route_portion[num_points_next - 1].x;
+                double y2 = next_lanelet.route_portion[num_points_next - 1].y;
 
                 // whole lerp is between 0 to 1.0 where 1.0 is at num_points * 2.0
-                for (int j = 0; j < num_points; j++) {
+                for (int j = 0; j < num_points_current; j++) {
                     // half the lerp, between points of the last lanelet
                     // indexing example: 20 - 10 + 9
                     // num points * 2.0 -> num_points at end of current lanelet + num_points at beginning of next lanelet
-                    lanelet.route_portion[lanelet_route_size - num_points + j].x = lerp(x1, x2, (j + 1) / (num_points * 2.0));
-                    lanelet.route_portion[lanelet_route_size - num_points + j].y = lerp(y1, y2, (j + 1) / (num_points * 2.0));
+                    lanelet.route_portion[lanelet_route_size - num_points_current + j].x = lerp(x1, x2, (j + 1) / (num_points_total));
+                    lanelet.route_portion[lanelet_route_size - num_points_current + j].y = lerp(y1, y2, (j + 1) / (num_points_total));
                 }
 
-                for (int j = 0; j < num_points; j++) {
+                for (int j = 0; j < num_points_next; j++) {
                     // half the lerp, between points of the last lanelet
                     // indexing example: 20 - 10 + 9
-                    next_lanelet.route_portion[j].x = lerp(x1, x2, (num_points + j + 1) / (num_points * 2.0));
-                    next_lanelet.route_portion[j].y = lerp(y1, y2, (num_points + j + 1) / (num_points * 2.0));
+                    next_lanelet.route_portion[j].x = lerp(x1, x2, (num_points_current + j + 1) / (num_points_total));
+                    next_lanelet.route_portion[j].y = lerp(y1, y2, (num_points_current + j + 1) / (num_points_total));
                 }
             }
         }
