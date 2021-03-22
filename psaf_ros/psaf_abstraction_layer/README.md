@@ -6,7 +6,8 @@
   * [Beschreibung](#Beschreibung)
   * [Topics](#Topics)
 * [Funktionalität](#func)
-  * [Abstraktionen](#Abstraktionen)
+  * [Kameras](#Kameras)
+  * [Auto-Steuerung und Zustände](#Auto-Steuerung-und-Zustände)
 
 ## Übersicht
 ### Beschreibung
@@ -28,7 +29,6 @@ Dazu wird für folgende Sensoren eine Klassenrepräsentation angeboten, welche b
 | ----------- | ----------- |----------- |
 | /carla/{role_name}/ackermann_cmd | AckermannDrive | CarlaCar |
 | /carla/{role_name}/vehicle_control_cmd | CarlaEgoVehicleControl | CarlaCar |
-| /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | [CombinedCameraImage](../psaf_messages/msg/CombinedCameraImage.msg) | FusionCameraService |
 
 #### Subscribe
 | Topic | Datatype | Module|
@@ -38,10 +38,10 @@ Dazu wird für folgende Sensoren eine Klassenrepräsentation angeboten, welche b
 | /carla/{role_name}/camera/semantic_segmentation/{id}/image_segmentation | Image | SegmentationCamera |
 | /carla/{role_name}/gnss/gnss1/fix | NavSatFix | GPS |
 | /carla/{role_name}/vehicle_status | CarlaEgoVehicleStatus | VehicleStatus |
+| /psaf/sensors/{role_name}/fusionCamera/{camera_name}/fusion_image | [CombinedCameraImage](../psaf_messages/msg/CombinedCameraImage.msg) | FusionCamera |
 
 ## Funktionalität
-### Abstraktionen
-#### Kameras
+### Kameras
 Die Kamera-Abstraktionen empfangen den uncodierten Bild-Daten und wandeln die mit dem ROS-Modul *cv_bridge* in das 
 Bildformat von OpenCV um. Daraufhin wird der registrierte Listener über das neu empfangene Bild informiert.
 

@@ -17,7 +17,7 @@
     <!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
     <arg name="sensor_definition_file" default='$(find psaf_starter)/config/sensors.json'/>
     <!-- Map to load on startup (either a predefined CARLA town (e.g. 'Town01'), or a OpenDRIVE map file) -->
-    <arg name="town" default='Town05'/>
+    <arg name="town" default='Town03'/>
     <!-- Synchronous mode-->
     <arg name='synchronous_mode' default=''/>
     <arg name='synchronous_mode_wait_for_vehicle_control_command' default=''/>
@@ -57,8 +57,7 @@
         <arg name='fixed_delta_seconds' value='$(arg fixed_delta_seconds)'/>
     </include>
 
-    <include file="$(find psaf_steering)/launch/move_base.launch"/>-->
-    <include file="$(find psaf_sensor_preprocessing)/launch/psaf_semantic_processing.launch" />
+    <include file="$(find psaf_steering)/launch/move_base.launch"/>
 
     <include file="$(find psaf_global_planner)/launch/psaf_global_planner_path_common_roads.launch"/>
 

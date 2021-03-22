@@ -3,7 +3,7 @@
 import rospy
 from carla_msgs.msg import CarlaEgoVehicleControl
 from ackermann_msgs.msg import AckermannDrive
-from psaf_ros.psaf_abstraction_layer.src.psaf_abstraction_layer.sensors.GPS import GPS_Sensor
+from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
 from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 
 
