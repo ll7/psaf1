@@ -27,11 +27,13 @@ Die Aufgabe umfasst folgende Punkte:
 ![Module](docs/main.png)
 
 ### Abstraction Layer
+TODO
+
 ### Global Planner
 Die Hauptaufgabe des Global Planner besteht darin, einen Pfad vom der aktuellen Position zu einem Zielpunkt zu planen. Um dies zu bewerstelligen, müssen entsprechende Karteninformationen generiert, bzw. konvertiert und aufbereitet werden. Neben einer einfachen Abfolge von Wegpunkten enthält der Plan auch Informationen wie Geschwindigkeitsbeschränkungen oder Stoppschilder.
 Nach der initialen Planung steht der Planer bereit, um dynamisch Neuzplanen, wenn beispielweise Hindernisse umfahren werden sollen.
  
-Genauere Informationen sind dem [Global Planner](psaf_ros/psaf_global_planner) zu entnehmen.
+Genauere Informationen sind dem Readme [Global Planner](psaf_ros/psaf_global_planner) zu entnehmen.
 
 ### Local Planner
 Die Hauptaufgabe des Local Planner ist das Berechnen einer Geschwindigkeits- und einer Lenkwinkelvorgabe für das Fahrzeug. Hierbei werden Informationen aus dem 
@@ -39,8 +41,13 @@ Global Planner (Globaler Pfad, Geschwindigkeit auf Streckenabschnitten) oder der
 globalem Pfad zum Ziel folgen und dabei Verkehrsregeln beachten. Zudem werden andere Fahrzeuge in der näheren Umgebung des eigenen Fahrzeugs auch in die Planung einbezogen.
 Falls im Pfad Hindernisse wie langsamere Verkehrsteilnehmer auftreten kann der Local Planner eine Neuplanung beim Global Planner auslösen.
  
-Genauere Informationen sind dem [Local Planner](psaf_ros/psaf_local_planner) zu entnehmen. 
+Genauere Informationen sind dem Readme [Local Planner](psaf_ros/psaf_local_planner) zu entnehmen. 
+
 ### Perception
+Das Paket Perception ermöglicht es, Ampeln und ihren Zustand sowie Haltelinien zu erkennen. Hierzu werden kombinierte Kamerainformationen aus dem Paket Sensor Preprocessing verwendet. Um aus diesen Informationen Objekte zu Detektieren kommt das System [YOLO v3] zum Einsatz.
+ 
+Genauere Informationen sind dem Readme [Perception](psaf_ros/psaf_perception) zu entnehmen. 
+
 ### Steering
 ### Starter
 
