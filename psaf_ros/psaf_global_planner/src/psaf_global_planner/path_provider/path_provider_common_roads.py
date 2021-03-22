@@ -272,7 +272,6 @@ class PathProviderCommonRoads:
             # which thus are in the right order
 
         # create start and goal state for planning problem
-        start_position = []
         index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start.position,
                                                                 prematured_stop=False, use_xcenterline=False)
         start_position = [start_lanelet.center_vertices[index][0], start_lanelet.center_vertices[index][1]]
@@ -606,20 +605,33 @@ class PathProviderCommonRoads:
                                                                            use_xcenterline=True)
         path.route[0].route_portion = path.route[0].route_portion[real_start_index:]
 
-        # If there is a laneChange on the first lanelet, a point on the second lanelet might be nearer.
+        # If there is a laneChange on the first lanelet, a point on the second lanelet might be nearer, because
+        # we are already past the laneChange..
         # That is only the case exactly when the length of the route_portion of the first lanelet is one, because
-        # its last entry is the closest.
-        # In any other case, where the last entry of the first lanelet is indeed the closest point, we only lose one
-        # waypoint in our waypoint list. The loss of these few centimeters of information at the start is no problem.
-        if len(path.route[0].route_portion) <= 1 and len(path.route) >= 2:
-            # delete first lanelet from message
-            del path.route[0]
-            # search nearest point in second lanelet, which is now at the index 0
-            real_start_index = PathProviderCommonRoads.find_nearest_path_index(path.route[0].route_portion,
+        # its last entry is the closest. --> objective: put laneChange after our current position
+        if len(path.route[0].route_portion) == 1 and path.route[0].isLaneChange:
+            # get the portion of the whole lanelet
+            real_route_portion = self.manager.message_by_lanelet[path.route[0].id].route_portion
+            # get its corresponding true start_index
+            real_start_index = PathProviderCommonRoads.find_nearest_path_index(real_route_portion,
                                                                                start,
                                                                                prematured_stop=False,
                                                                                use_xcenterline=True)
-            path.route[0].route_portion = path.route[0].route_portion[real_start_index:]
+            # add the two previous points
+            path.route[0].route_portion[0] = real_route_portion[real_start_index - 1]
+            path.route[0].route_portion.append(real_route_portion[real_start_index])
+
+            # get the true point on the following lanelet (after lane changing)
+            real_start_index = PathProviderCommonRoads.find_nearest_path_index(path.route[1].route_portion,
+                                                                               start,
+                                                                               prematured_stop=False,
+                                                                               use_xcenterline=True)
+            path.route[1].route_portion = path.route[1].route_portion[real_start_index:]
+
+            # adjust duration and distance of the following lanelet (see below)
+            for waypoint in reversed(path.route[1].route_portion):
+                waypoint.duration = waypoint.duration - path.route[1].route_portion[0].duration
+                waypoint.distance = waypoint.distance - path.route[1].route_portion[0].distance
 
         # adjust duration and distance of start lanelet to match the criteria of a cumulative sum, starting by zero
         for waypoint in reversed(path.route[0].route_portion):
