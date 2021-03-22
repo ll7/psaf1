@@ -13,7 +13,7 @@ from psaf_abstraction_layer.VehicleStatus import VehicleStatusProvider
 from nav_msgs.msg import Path
 
 from psaf_global_planner.map_provider.map_provider import MapProvider
-from psaf_ros.psaf_abstraction_layer.src.psaf_abstraction_layer.sensors.GPS import GPS_Sensor
+from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
 from std_msgs.msg import String
 import actionlib
 import pathlib
