@@ -3,7 +3,7 @@
 ## Inhalt
 
 * [Inhalt](#inhalt)
-* [Übersicht](#bersicht)
+* [Übersicht](#%c3%9cbersicht)
     * [Kurzbeschreibung](#kurzbeschreibung)
     * [Topics](#topics)
     * [Message Struktur](#message-struktur)
@@ -253,11 +253,37 @@ Kartendaten abbildet. Er besitzt hierfür zwei grundlegende Funktionalitäten:
    
 ### Planning Preprocessor
 
-<Beschreibung der Func>
-TODO
+Der Planning Preprocessor steht im Zeitlichen Ablauf unserer Implementierung ganz am 
+Anfang. Er stellt die Schnittstelle zwischen dem vorgegebenem [Competition Manager](https://github.com/ll7/psaf20/tree/main/psaf20_competition_manager) und 
+unserem Projekt dar.
+ 
+Für den Wettbewerb wird der Start- und Zielpunkt der aktuellen Fahrt durch den 
+[Competition Manager](https://github.com/ll7/psaf20/tree/main/psaf20_competition_manager) vorgegeben. Für diesen Fall achtet der Planning Preprocessor 
+darauf, ob das Fahrzeugt mit dem [set_position_client](https://github.com/ll7/psaf20/blob/main/psaf20_competition_manager/src/set_position_client.py) des Competition Managers neu 
+gespawnt wurde. Tritt dies ein, liest der Preprocessor die Zielkoordinaten aus dem 
+*ROS-Parameter-Server* und gibt sie mit einer [PlanningInstruction](#message-struktur)-Message an den 
+[Global Planner](#path-provider) weiter. 
+ 
+Bei Bedarf prüft der Prepocessor noch wie viel Platz neben dem Fahrzeug für einen 
+U-Turn zur Verfügung steht und fügt diese Information der ausgehenden Nachricht hinzu. Die Erkennung des freien 
+Bereichs links/vorne neben dem Auto funktioniert dabei analog zum semantic_lidar_processor mit den Daten von zwei
+LIDAR-Sensoren, die auf Hindernisse wie Gebäude, Mauern und Zäune regieren. 
+
+![uturn-lidar](doc/uturn_lidar.png)
+ 
+Ob ein U-Turn eingeplant wird, hängt von den *rosparam*-Parametern **obeyRules** und 
+**alwaysUTurn** ab. Diese Parameter werden wie in [psaf_starter](https://github.com/ll7/psaf1/tree/develop/psaf_ros/psaf_steering) beschrieben, über 
+verschiedene launch-Dateien voreingestellt.
+ 
+Für einen Betrieb ohne den Competition Manager steht ein RVIZ-Panel zu Verfügung, 
+mit dem ein Zielpunkt manuell vorgegeben werden kann. Als Startpunkt wird dann die 
+aktuelle Position des Fahrzeuges verwendet.
+
 
 ### Rviz Plugin
 
 Das Rviz Plugin stellt ein Panel in Rviz bereit, über das die XYZ Zielposition für die Navigationsaufgabe des Fahrzeugs
 gesetzt werden kann. Außerdem wird mittels einer Statusanzeige über den aktuellen Zustand der Planung
 informiert.
+ 
+![rviz-panel](doc/rviz-panel.png)
