@@ -1,12 +1,12 @@
 <!-- -->
 <launch>
-  <node pkg="psaf_steering" type="semantic_lidar_processor.py" name="semantic_lidar_processor_inner" output="screen" >
+  <node pkg="psaf_sensor_preprocessing" type="semantic_lidar_processor.py" name="semantic_lidar_processor_inner" output="screen" >
     <param name="odom_topic" value="/carla/ego_vehicle/odometry"/>
     <param name="lidar_topic" value="/carla/ego_vehicle/semantic_lidar/lidar_inner/point_cloud"/>
     <param name="marking_topic" value="/carla/ego_vehicle/processed_semantic_lidar_inner/marking/point_cloud"/>
     <param name="clearing_topic" value="/carla/ego_vehicle/processed_semantic_lidar_inner/clearing/point_cloud"/>
   </node>
-  <node pkg="psaf_steering" type="semantic_lidar_processor.py" name="semantic_lidar_processor_outer" output="screen" >
+  <node pkg="psaf_sensor_preprocessing" type="semantic_lidar_processor.py" name="semantic_lidar_processor_outer" output="screen" >
     <param name="odom_topic" value="/carla/ego_vehicle/odometry"/>
     <param name="lidar_topic" value="/carla/ego_vehicle/semantic_lidar/lidar_outer/point_cloud"/>
     <param name="marking_topic" value="/carla/ego_vehicle/processed_semantic_lidar_outer/marking/point_cloud"/>
