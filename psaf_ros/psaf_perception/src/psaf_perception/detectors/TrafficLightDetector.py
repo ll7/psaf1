@@ -1,4 +1,5 @@
 import json
+import math
 import os
 from datetime import datetime
 from typing import Tuple
@@ -103,7 +104,10 @@ class TrafficLightDetector(AbstractDetector):
         :param time: time stamp when the images where taken
         :return: none
         """
-        (H, W) = segmentation_image.shape[:2]
+        if (rospy.Time.now()-time).to_sec()>0.6:
+            return 
+        (height_seg, width_seg) = segmentation_image.shape[:2]
+        (height_rgb, width_rgb) = rgb_image.shape[:2]
 
         # List oif detected elements
         detected = []
@@ -114,23 +118,36 @@ class TrafficLightDetector(AbstractDetector):
         boxes = []
         classes = []
         confidences = []
+        distances = []
 
         for i, c in enumerate(contours):
             contours_poly = cv2.approxPolyDP(c, 3, True)
             x1, y1, w, h = cv2.boundingRect(contours_poly)
             x2 = x1 + w
             y2 = y1 + h
-            if w < h and w > 3 and h * H > 10:
+            if w < h and w > 1 and h > 2:
                 mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
-                # get cropped rgb image
-                crop_rgb = rgb_image[y1:y2, x1:x2, :]
-                # use inverted mask to clear the background
-                crop_rgb[np.logical_not(mask)] = 0
-                label, confidence = self.__extract_label(crop_rgb)
-                if label is not None:
-                    boxes.append(np.array([x1, y1, w, h]) / np.array([W, H, W, H]))
-                    classes.append(label)
-                    confidences.append(confidence)
+
+                # get cropped depth image
+                crop_depth = depth_image[y1:y2, x1:x2]
+                masked_crop_depth = crop_depth[mask[:, :, 1]]
+
+                # use mask to extract the traffic sign distances
+                distance = np.min(masked_crop_depth)
+
+                if distance <= 100:
+                    distances.append(distance)
+                    h_scale = width_rgb/width_seg
+                    v_scale = height_rgb/height_seg
+                    # get cropped rgb image
+                    crop_rgb = rgb_image[int(y1*v_scale):int(y2*v_scale+1), int(x1*h_scale):int(x2*h_scale+1), :]
+                    # use inverted mask to clear the background
+                    # crop_rgb[np.logical_not(mask)] = 0
+                    label, confidence = self.__extract_label(crop_rgb)
+                    if label is not None:
+                        boxes.append(np.array([x1, y1, w, h]) / np.array([width_seg, height_seg, width_seg, height_seg]))
+                        classes.append(label)
+                        confidences.append(confidence)
 
         # apply non-maxima suppression to suppress weak, overlapping bounding boxes
         idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_min, self.threshold)
@@ -139,21 +156,12 @@ class TrafficLightDetector(AbstractDetector):
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                x1 = int(boxes[i][0] * W)
-                x2 = int((boxes[i][0] + boxes[i][2]) * W)
-                y1 = int(boxes[i][1] * H)
-                y2 = int((boxes[i][1] + boxes[i][3]) * H)
+                x1 = int(boxes[i][0] * width_seg)
+                x2 = int((boxes[i][0] + boxes[i][2]) * width_seg)
+                y1 = int(boxes[i][1] * height_seg)
+                y2 = int((boxes[i][1] + boxes[i][3]) * height_seg)
 
-                # Use segmentation data to create a mask to delete the background
-                mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
-
-                # get cropped depth image
-                crop_depth = depth_image[y1:y2, x1:x2]
-                masked_crop_depth=crop_depth[mask[:, :, 1]]
-
-                # use mask to extract the traffic sign distances
-                distance = np.min(masked_crop_depth)
-
+                distance = distances[i]
                 label = classes[i]
                 confidence = confidences[i]
 
@@ -226,7 +234,7 @@ if __name__ == "__main__":
                 text = "{}-{:.1f}m: {:.4f}".format(element.label.label_text, element.distance, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
-            print(f"Age {(rospy.Time.now()-time).to_nsec()/1e9}")
+            print(f"Age {(rospy.Time.now()-time).to_sec()}")
         show_image("Traffic light detection", image)
 
 
