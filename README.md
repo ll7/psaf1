@@ -129,7 +129,7 @@ wird das Fahrzeug an die vorgegebene Startposition gesetzt und startet eine Fahr
  
 Andere Verkehrsteilnehmer können mit folgendem Befehl in der Welt plaziert werden:
 ``` bash
-cd ~/carla-ros-bridge/PythonAPI/examples
+cd ~/carla_0.9.10.1/PythonAPI/examples
 python3 spawn_npc.py -n 200 -w 0
 ```
 
