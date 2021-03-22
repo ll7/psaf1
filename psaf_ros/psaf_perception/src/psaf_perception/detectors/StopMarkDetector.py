@@ -79,7 +79,7 @@ class StopMarkDetector(AbstractDetector):
         torch.no_grad()
         self.net = model
 
-        self.rgb_camera = RGBCamera(role_name, id="street")
+        self.rgb_camera = RGBCamera(role_name, id="front")
         self.rgb_camera.set_on_image_listener(self.__on_image_update)
 
     def __on_image_update(self, image, time):
