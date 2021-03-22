@@ -23,7 +23,16 @@ Die Aufgabe umfasst folgende Punkte:
 
 ## Übersicht der Ergebnisse
 
+### Übersicht
 ![Module](docs/main.png)
+
+### Abstraction Layer
+### Global Planner
+Der Global Planner plant 
+### Local Planner
+### Perception
+### Steering
+### Starter
 
 ## Setup des Projektes
 
