@@ -57,7 +57,7 @@
         <arg name='fixed_delta_seconds' value='$(arg fixed_delta_seconds)'/>
     </include>
 
-   <include file="$(find psaf_steering)/launch/move_base.launch"/>
+    <include file="$(find psaf_steering)/launch/move_base.launch"/>
 
     <include file="$(find psaf_global_planner)/launch/psaf_global_planner_path_common_roads.launch"/>
 
