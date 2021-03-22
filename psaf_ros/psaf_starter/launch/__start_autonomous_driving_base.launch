@@ -63,10 +63,10 @@
 
     <include file="$(find psaf_local_planner)/launch/psaf_local_perception_evaluation_service.launch"/>
 
-<!--     <include file="$(find psaf_perception)/launch/psaf_perception_detection_service.launch"> -->
-<!--         <arg name='use_gpu' value='$(arg use_gpu)'/> -->
-<!--         <arg name='activate_traffic_light_detector' value='$(arg respect_traffic_rules)'/> -->
-<!--         <arg name='role_name' value='$(arg role_name)'/> -->
-<!--     </include> -->
+    <include file="$(find psaf_perception)/launch/psaf_perception_detection_service.launch">
+        <arg name='use_gpu' value='$(arg use_gpu)'/>
+        <arg name='activate_traffic_light_detector' value='$(arg respect_traffic_rules)'/>
+        <arg name='role_name' value='$(arg role_name)'/>
+    </include>
 
 </launch> 
