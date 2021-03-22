@@ -11,7 +11,7 @@
 
 ## Übersicht
 ### Beschreibung
-Ebenso erlaubt es der Service *CameraFusionService*
+Dieses Paket stellt einen Service *CameraFusionService* bereit, welcher
 aus den drei getrennten Bild-Daten der RGB-, der Tiefen- und der Segmentation-Kamera ein gesammeltes Bild zu erzeugen.
   
 ### Topics
