@@ -26,7 +26,7 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion, Pose
 import sys
 from copy import deepcopy
 import rospy
-from psaf_global_planner.map_provider.common_roads_map_provider_plus import CommonRoadMapProvider
+from psaf_global_planner.map_provider.map_supervisor_common_roads import MapSupervisorCommonRoads
 from psaf_abstraction_layer.sensors.GPS import GPS_Sensor
 from enum import Enum
 from psaf_messages.msg import XRoute
@@ -53,7 +53,8 @@ class PathProviderCommonRoads:
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
                  cost_stop_sign: int = 5, respect_traffic_rules: bool = False, turning_circle: float = 10.0,
-                 export_path: bool = False, cost_lane_change: int = 5):
+                 export_path: bool = False, cost_lane_change: int = 5, line_crossing_penalty: int = 30,
+                 cost_line_crossing: int = 15):
         if init_rospy:
             # initialize node
             rospy.init_node('pathProvider', anonymous=True)
@@ -63,21 +64,31 @@ class PathProviderCommonRoads:
         self.GPS_Sensor = GPS_Sensor(role_name=self.role_name)
         self.origin = Origin(0, 0)
         self.projector = UtmProjector(self.origin)
-        self.map_provider = CommonRoadMapProvider(debug=enable_debug)
+        self.map_provider = MapSupervisorCommonRoads(debug=enable_debug)
         self.vehicle_status = VehicleStatusProvider(role_name=self.role_name)
         self.status_pub = rospy.Publisher('/psaf/status', String, queue_size=10)
         self.status_pub.publish("PathProvider not ready")
+
+        # search parameters for finding a nearest lanelet
         self.radius = initial_search_radius
         self.step_size = step_size
         self.max_radius = max_radius
+
+        # define heuristic costs, considered in the path selection process
         self.cost_traffic_light = cost_traffic_light
         self.cost_stop_sign = cost_stop_sign
         self.cost_lane_change = cost_lane_change
+        # total cost for line crossing is the heuristic cost and the penalty if traffic rules should be obeyed
+        if self.respect_traffic_rules:
+            self.cost_line_crossing = line_crossing_penalty + cost_line_crossing
+        else:
+            self.cost_line_crossing = cost_line_crossing
+
         self.path_message = XRoute()
         self.planning_problem = None
         self.manager = None
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter),
-                                         intersections=self.map_provider.intersection)
+                                         intersections=self.map_provider.intersection, map_name=self.map_provider.map_name)
         self.route_id = 1  # 1 is the first valid id, 0 is reserved as invalid
         rospy.Subscriber("/psaf/goal/set_instruction", PlanningInstruction, self._callback_goal)
         self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
@@ -247,10 +258,11 @@ class PathProviderCommonRoads:
             if start_index > end_index:
                 # split lanelet in between those two points to fix that issue for a further iteration
                 # which is triggered after a BadLanelet status is received by the compute_route algorithm
-                split_point = Point(start_lanelet.center_vertices[start_index][0],
-                                    start_lanelet.center_vertices[start_index][0], 0)
+                split_index = end_index + (start_index - end_index)//2
+                split_point = Point(start_lanelet.center_vertices[split_index][0],
+                                    start_lanelet.center_vertices[split_index][1], 0)
 
-                self.manager.update_network(matching_lanelet_id=goal_lanelet.lanelet_id, modify_point=split_point,
+                self.manager.update_network(matching_lanelet_id=start_lanelet.lanelet_id, modify_point=split_point,
                                             start_point=start.position, static_obstacle=None)
 
                 self.planning_problem = None
@@ -260,7 +272,6 @@ class PathProviderCommonRoads:
             # which thus are in the right order
 
         # create start and goal state for planning problem
-        start_position = []
         index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start.position,
                                                                 prematured_stop=False, use_xcenterline=False)
         start_position = [start_lanelet.center_vertices[index][0], start_lanelet.center_vertices[index][1]]
@@ -299,6 +310,8 @@ class PathProviderCommonRoads:
 
         if u_turn:
             x_route_u, best_value_u = self._compute_route(start, goal, u_turn=True)
+            # add line crossing cost to the value of the u_turn path
+            best_value_u += self.cost_line_crossing
             x_route_no_u, best_value_no_u = self._compute_route(start, goal, u_turn=False)
             # compare distance based on obey_traffic_rules param and save best
             if best_value_u < best_value_no_u:
@@ -322,10 +335,15 @@ class PathProviderCommonRoads:
             rospy.logerr("PathProvider: Invalid path, no path published")
 
     def _visualization(self, route, num):
+        """
+        Create a .png file, visualizing the given route (only used if enable_debug is True)
+        :param route: the route to be visualized
+        :param num: number of the route (only for identification purposes)
+        """
         plot_limits = get_plot_limits_from_reference_path(route)
         # option 2: plot limits from lanelets in the route
         # plot_limits = get_plot_limits_from_routes(route)
-
+        rospy.loginfo("Visualize")
         # determine the figure size for better visualization
         size_x = 10
         ratio_x_y = (plot_limits[1] - plot_limits[0]) / (plot_limits[3] - plot_limits[2])
@@ -343,6 +361,8 @@ class PathProviderCommonRoads:
         :param route: List of route points, which are eather of type [x][y] or xcenterline
         :param compare_point: Point to compare the route_point -> Type Point
         :param use_xcenterline:  route_point is a xcenterline entry
+        :param reversed:  if true reverse search order (route[-1]-> route[-2] ...)
+        :param prematured_stop:  if true stop search after a match was found, may produce a global minimum
         :return: index
         """
         min_distance = float("inf")
@@ -558,7 +578,8 @@ class PathProviderCommonRoads:
 
     def _serialize_message(self, x_route: XRoute):
         """
-        Serialize path message and write to bag file
+        Serialize XRoute message and write to bag file, for use in the scenario runner
+        :param x_route: XRoute to be serialized
         """
         # suffix set to be .debug
         suffix = ".debugpath"
@@ -584,20 +605,33 @@ class PathProviderCommonRoads:
                                                                            use_xcenterline=True)
         path.route[0].route_portion = path.route[0].route_portion[real_start_index:]
 
-        # If there is a laneChange on the first lanelet, a point on the second lanelet might be nearer.
+        # If there is a laneChange on the first lanelet, a point on the second lanelet might be nearer, because
+        # we are already past the laneChange..
         # That is only the case exactly when the length of the route_portion of the first lanelet is one, because
-        # its last entry is the closest.
-        # In any other case, where the last entry of the first lanelet is indeed the closest point, we only lose one
-        # waypoint in our waypoint list. The loss of these few centimeters of information at the start is no problem.
-        if len(path.route[0].route_portion) <= 1:
-            # delete first lanelet from message
-            del path.route[0]
-            # search nearest point in second lanelet, which is now at the index 0
-            real_start_index = PathProviderCommonRoads.find_nearest_path_index(path.route[0].route_portion,
+        # its last entry is the closest. --> objective: put laneChange after our current position
+        if len(path.route[0].route_portion) == 1 and path.route[0].isLaneChange:
+            # get the portion of the whole lanelet
+            real_route_portion = self.manager.message_by_lanelet[path.route[0].id].route_portion
+            # get its corresponding true start_index
+            real_start_index = PathProviderCommonRoads.find_nearest_path_index(real_route_portion,
                                                                                start,
                                                                                prematured_stop=False,
                                                                                use_xcenterline=True)
-            path.route[0].route_portion = path.route[0].route_portion[real_start_index:]
+            # add the two previous points
+            path.route[0].route_portion[0] = real_route_portion[real_start_index - 1]
+            path.route[0].route_portion.append(real_route_portion[real_start_index])
+
+            # get the true point on the following lanelet (after lane changing)
+            real_start_index = PathProviderCommonRoads.find_nearest_path_index(path.route[1].route_portion,
+                                                                               start,
+                                                                               prematured_stop=False,
+                                                                               use_xcenterline=True)
+            path.route[1].route_portion = path.route[1].route_portion[real_start_index:]
+
+            # adjust duration and distance of the following lanelet (see below)
+            for waypoint in reversed(path.route[1].route_portion):
+                waypoint.duration = waypoint.duration - path.route[1].route_portion[0].duration
+                waypoint.distance = waypoint.distance - path.route[1].route_portion[0].distance
 
         # adjust duration and distance of start lanelet to match the criteria of a cumulative sum, starting by zero
         for waypoint in reversed(path.route[0].route_portion):
@@ -607,7 +641,7 @@ class PathProviderCommonRoads:
         real_end_index = PathProviderCommonRoads.find_nearest_path_index(path.route[-1].route_portion,
                                                                          target, prematured_stop=False,
                                                                          use_xcenterline=True)
-        path.route[-1].route_portion = path.route[-1].route_portion[:real_end_index]
+        path.route[-1].route_portion = path.route[-1].route_portion[:real_end_index+1]
 
         return path
 
@@ -628,16 +662,16 @@ class PathProviderCommonRoads:
         self.get_path_from_a_to_b(u_turn=data.planUTurn)
         self.status_pub.publish("PathProvider done")
 
-    def _trigger_move_base(self, target: PoseStamped):
+    def _trigger_move_base(self, trigger_pose: PoseStamped):
         """
-        This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
-        The last entry can be the goal if a path was found or the starting point if no path was found
+        This function triggers the move_base by publishing a PoseStamped
+        :param trigger_pose: Pose
         """
         client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         client.wait_for_server()
 
         goal = MoveBaseGoal()
-        goal.target_pose = target
+        goal.target_pose = trigger_pose
 
         client.send_goal(goal)
         rospy.loginfo("PathProvider: global planner plugin triggered")
@@ -671,6 +705,9 @@ class PathProviderCommonRoads:
         return p
 
     def _reset_map(self):
+        """
+        Reset the current knowledge to the unchanged originals
+        """
         # first reset map
         if self.manager is not None:
             # create clean slate

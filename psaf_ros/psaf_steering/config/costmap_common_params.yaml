@@ -6,7 +6,6 @@ inflation_radius: 0.50
 
 plugins:
  - {name: obstacle, type: "psaf_obstacle_layer::PsafObstacleLayer"}
- #- {name: obstacle, type: "costmap_2d::ObstacleLayer"}
  - {name: inflation, type: "costmap_2d::InflationLayer"}
 
 
@@ -20,9 +19,3 @@ obstacle:
   lidar_marking_outer: {sensor_frame: "", data_type: PointCloud2, topic: /carla/ego_vehicle/processed_semantic_lidar_outer/marking/point_cloud, marking: true, clearing: true, min_obstacle_height: 0, observation_persistence: 0.1, max_obstacle_height: 20.0}
   lidar_clearing_inner: {sensor_frame: "", data_type: PointCloud2, topic: /carla/ego_vehicle/processed_semantic_lidar_inner/clearing/point_cloud, marking: false, clearing: true, min_obstacle_height: 20.0, observation_persistence: 0.1, max_obstacle_height: 20.0}
   lidar_clearing_outer: {sensor_frame: "", data_type: PointCloud2, topic: /carla/ego_vehicle/processed_semantic_lidar_outer/clearing/point_cloud, marking: false, clearing: true, min_obstacle_height: 20.0, observation_persistence: 0.1, max_obstacle_height: 20.0}
-  #radar: {sensor_frame: "", data_type: PointCloud2, topic: /carla/ego_vehicle/radar/front/radar_points, marking: false, clearing: true, min_obstacle_height: 0}
-
-
-
-
-#laser_scan_sensor: {sensor_frame: frame_name, data_type: LaserScan, topic: topic_name, marking: true, clearing: true}

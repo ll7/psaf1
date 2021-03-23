@@ -39,6 +39,8 @@ class ScenarioRunnerPath(ScenarioRunner):
         """
         This function triggers the move_base by publishing the last entry in path, which is later used for sanity checking
         The last entry can be the goal if a path was found or the starting point if no path was found
+        :param target: position and orientation of the goal
+        :return:
         """
         client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         client.wait_for_server()

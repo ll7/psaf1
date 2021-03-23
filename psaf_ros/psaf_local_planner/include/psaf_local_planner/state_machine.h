@@ -11,17 +11,47 @@ namespace psaf_local_planner {
          * Car is driving on road
          */
         DRIVING,
+        /**
+         * There is upcoming traffic light
+         */
         TRAFFIC_LIGHT_NEAR,
+        /**
+         * Traffic light is green and we can pass the intersection
+         */
         TRAFFIC_LIGHT_GO,
+        /**
+         * Approaching to the intersection but have to stop
+         */
         TRAFFIC_LIGHT_WILL_STOP,
+        /**
+         * The traffic light is red, so reduce the speed and hope it will turn green
+         */
         TRAFFIC_LIGHT_SLOW_DOWN,
+        /**
+         * Waiting at the traffic light
+         */
         TRAFFIC_LIGHT_WAITING,
+        /**
+         * The stop sign/mark is close
+         */
         STOP_NEAR,
+        /**
+         * The stop sign/mark is visible ->  stop at the stop line
+         */
         STOP_WILL_STOP,
+        /**
+         * Waiting at the stop line until the intersection is clear
+         */
         STOP_WAITING,
+        /**
+         * Intersection is clear. Let's go
+         */
         STOP_GO
     };
 
+    /**
+     * The local planner state machine when driving with traffic rules
+     */
     class LocalPlannerStateMachine {
     public:
         /**
@@ -83,6 +113,12 @@ namespace psaf_local_planner {
 
     protected:
         LocalPlannerState state;
+        /**
+          * Ros time in sec when we entered the state STOP_GO
+          * infinity represents that no value was set
+          */
+        double start_time_stop_go;
+
     private:
         /**
          * Ros time in sec when we entered the state STOP_WAITING
@@ -98,7 +134,7 @@ namespace psaf_local_planner {
     };
 
     /**
-     * Statemachine when driving without traffic rules
+     * State machine when driving without traffic rules
      * -> Handles the traffic lights as stop signs
      */
     class LocalPlannerStateMachineWithoutTrafficRules: public LocalPlannerStateMachine{

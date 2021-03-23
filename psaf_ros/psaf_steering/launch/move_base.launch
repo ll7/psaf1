@@ -1,12 +1,6 @@
 <launch>
 
     <master auto="start"/>
-    <!-- Run the map server -->
-    <!--<node name="map_server" pkg="map_server" type="map_server" args="$(find my_map_package)/my_map.pgm my_map_resolution"/>-->
-
-    <!--- Run AMCL -->
-    <!--<include file="$(find amcl)/examples/amcl_omni.launch" />-->
-
     <remap from="/cmd_vel" to="/carla/ego_vehicle/twist_pid"/>
 
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
@@ -14,25 +8,12 @@
         <rosparam file="$(find psaf_steering)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
         <rosparam file="$(find psaf_steering)/config/local_costmap_params.yaml" command="load" />
         <rosparam file="$(find psaf_steering)/config/global_costmap_params.yaml" command="load" />
-        <rosparam file="$(find psaf_steering)/config/base_local_planner_params.yaml" command="load" />
 
         <param name="base_local_planner" value="psaf_local_planner/PsafLocalPlanner"/>
-
-        <!--<param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />-->
-        <!--<param name="base_local_planner" value="eband_local_planner/EBandPlannerROS"/>-->
-        <!--<param name="base_local_planner" value="rsband_local_planner/RSBandPlannerROS"/>-->
         <param name="base_global_planner" value="psaf_global_planner/GlobalPlanner" />
-        <!--<rosparam file="$(find psaf_steering)/config/costmap_converter_params.yaml" command="load" />-->
         <param name="controller_frequency" value="20.0" />
     </node>
 
-    <!-- <node pkg="costmap_converter" type="standalone_converter" respawn="false" name="standalone_converter" output="screen">
-        <rosparam file="$(find psaf_steering)/config/costmap_converter_params.yaml" command="load" />
-    </node> -->
-
-
-    <!--<include file="$(find psaf_steering)/launch/trajectory_follower.launch" />-->
     <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch" />
     <include file="$(find psaf_steering)/launch/psaf_semantic_processing.launch" />
-
 </launch> 

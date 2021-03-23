@@ -293,24 +293,16 @@ namespace psaf_local_planner {
              * Returns the distance within the car checks for traffic light and stop signs/marks.
              * @return the distance within the car checks for traffic light and stop signs/marks.
              */
-            double computeCheckDistance();
+            double getCheckDistanceForLanelets();
 
 
             /**
-             * Computes the distance to traffic light on lanelet if the lanelet before the upcoming intersection
-             * has a traffic light that affects the car.
-             * Checks the current lanelet and the next lanelet if the current one is too short
-             * @return the distance to the traffic light. Infinity if the is none.
-             */
-            double computeDistanceToUpcomingTrafficLight();
-
-            /**
-            * Computes the distance to stop mark/sign on lanelet if the lanelet before the upcoming intersection
-             * has a stop sign or a stop mark that affects the car.
+            * Computes the distance to attribute on a lanelet if the lanelet before the upcoming intersection
+            * fulfills the attribute check.
             * Checks the current lanelet and the next lanelet if the current one is too short
-            * @return the distance to the stop. Infinity if the is none.
+            * @return the distance to the attribute. Infinity if there is none.
             */
-            double computeDistanceToUpcomingStop();
+            double computeDistanceToUpcomingLaneletAttribute(bool (*attributeCheck)(psaf_messages::XLanelet));
 
             /**
              * Helper function to compute the distance to a stop line if no stop line is detected
@@ -337,6 +329,8 @@ namespace psaf_local_planner {
             /**
              * Finds the next target point along the global plan using the lookahead_factor and lookahead distance
              *
+             * @param lanelet_out: Lanelet where the target point is on
+             * @param center_point_out: target point in the XRoute format
              * @return pose of the target point
              */
             geometry_msgs::Pose findLookaheadTarget(psaf_messages::XLanelet &lanelet_out, psaf_messages::CenterLineExtended &center_point_out);
@@ -349,7 +343,20 @@ namespace psaf_local_planner {
              */
             double getDistanceToLaneChange(double compute_direction_threshold);
 
+            /**
+             * Checks if area of the lane change is free and return speed accordingly
+             * 
+             * @return new max target velocity
+             */ 
             double checkLaneChangeFree();
+
+            /**
+             * Calculates how fast we should drive to be able to stop in time at before the given distance
+             * 
+             * uses formula for Anhalteweg (solved for velocity instead of distance)
+             * https://www.bussgeldkatalog.org/anhalteweg/
+             */
+            double getTargetVelocityForDistance(double distance);
 
 
             /** Helper object for raytracing */
@@ -416,6 +423,9 @@ namespace psaf_local_planner {
             
             /** floor (target_velocity / lookahead_factor) == index of the point to the use in the local planner list; lower is more points */
             double lookahead_factor;
+
+            /** Exponential factor for the lookahead */
+            double lookahead_factor_exp;
             
             /** Additive lookahead factor not depending on the speed*/
             double lookahead_factor_const_additive;
@@ -482,5 +492,26 @@ namespace psaf_local_planner {
             /**variable to determine whether the direction of the lext lane change was already calcualted  */
             bool lane_change_direction_calculated;
 
+            /**
+             * "View" radius that defines the distance within the lanelets will be checked for stops and traffics lights.
+             */
+            const double LANELET_CHECK_RADIUS = 100;
+
     };
+
+    /**
+     * Checks whether the given lanelet contains a stop at its end.
+     * This is used to be passed as a function pointer to reduce duplicate code in computeDistanceToUpcomingLaneletAttribute
+     * @param lanelet the lanelet that will be check
+     * @return whether the lanelet has a stop sign/mark
+     */
+    bool hasLaneletStop(psaf_messages::XLanelet lanelet);
+
+    /**
+    * Checks whether the given lanelet contains a stop at its end.
+    * This is used to be passed as a function pointer to reduce duplicate code in computeDistanceToUpcomingLaneletAttribute
+    * @param lanelet the lanelet that will be check
+    * @return whether the lanelet has a stop sign/mark
+    */
+    bool hasLaneletTrafficLight(psaf_messages::XLanelet lanelet);
 };

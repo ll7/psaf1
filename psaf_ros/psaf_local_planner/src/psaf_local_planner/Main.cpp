@@ -8,11 +8,11 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
                                             initialized(false), closest_point_local_plan(2),
-                                            lookahead_factor(3.5), target_velocity(15), min_velocity(5),
+                                            lookahead_factor(0.25), lookahead_factor_exp(1.4), lookahead_factor_const_additive(1.5), 
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
                                             slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), 
                                             duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true), max_points_smoothing(10), 
-                                            lane_change_direction(0), lane_change_direction_calculated(false), lookahead_factor_const_additive(1)
+                                            lane_change_direction(0), lane_change_direction_calculated(false), target_velocity(15), min_velocity(5)
     {
         std::cout << "Hi";
         this->state_machine = new LocalPlannerStateMachine();
@@ -103,6 +103,10 @@ namespace psaf_local_planner
                     }
                 }
 
+                if (!respect_traffic_rules) {
+                    max_velocity *= 1.5;
+                }
+
                 double angle = computeSteeringAngle(target_point, current_pose.pose);
 
                 updateStateMachine();
@@ -130,6 +134,11 @@ namespace psaf_local_planner
 
     /**
      * Deletes the points in the local plan that have been driven over
+     * 
+     * 
+     * Finds the closest point to the car with a lookahead of MAX_DELETE_OLD_POINTS_LOOKAHEAD points.
+     * This means if the closest point is more than MAX_DELETE_OLD_POINTS_LOOKAHEAD up until the car position 
+     * while the first point is closer it will not find the closest point
      */
     void PsafLocalPlanner::deleteOldPoints()
     {
@@ -155,6 +164,7 @@ namespace psaf_local_planner
                 closest_it = it;
                 last_dist  = distance_sq;
                 to_delete++;
+                break_counter = 0;
             } else {
                 // ensure that the closest point is ahead of the car when it is inside the bounds of the car
                 if (distance_sq < closest_point_local_plan_sq) {
@@ -162,6 +172,7 @@ namespace psaf_local_planner
                     to_delete++;
                 } else {
                     break_counter++;
+                    // prevent checking the whole list, as it is very unlikely that we will find anything after a few hundret points of increasing distance
                     if (break_counter > MAX_DELETE_OLD_POINTS_LOOKAHEAD) 
                         break;
                 }
@@ -170,7 +181,6 @@ namespace psaf_local_planner
             it++;
         }
 
-        // TODO: convert to meter once distance has been added to distance
         deleted_points += to_delete;
 
         // actually delete the points now
@@ -191,14 +201,6 @@ namespace psaf_local_planner
                 }
             }
         }
-
-        // validate whether the plans are the same length; TODO: Remove when sufficiently validated 
-        int route_len = 0;
-        for (auto lanelet : global_route) {
-            route_len += lanelet.route_portion.size();
-        }
-        
-        assert(route_len == global_plan.size());
     }
 
     // linear interpolation function returns point of fraction t between v0 and v1
@@ -207,9 +209,13 @@ namespace psaf_local_planner
         return (1 - t) * v0 + t * v1;
     }
 
+    
+    /**
+     * Callback for new Global Plan
+     * */
     void PsafLocalPlanner::globalPlanExtendedCallback(const psaf_messages::XRoute &msg)
     {
-        ROS_INFO("RECEIVED MESSAGE: %d", msg.id);
+        ROS_INFO("RECEIVED MESSAGE: %d with lanes %lu", msg.id, msg.route.size());
 
         if (!ros::param::get("respect_traffic_rules",respect_traffic_rules)) {
                 respect_traffic_rules = true;
@@ -277,46 +283,136 @@ namespace psaf_local_planner
 
         }
 
+        ROS_INFO("LOCAL_PLANNER: validated new plan.");
+
 
         global_route = msg.route;
         goal_reached = false;
-
+        
         // this block uses linear interpolation to smooth the curves of lanechanges
         // takes the last/first 10 points in both directions and distributes the points along linear line between them
         int size = global_route.size();
+        
         for (int i = 0; i < size; i++) {
             auto &lanelet = global_route[i];
+
             
             if (lanelet.isLaneChange && i + 1 < size) {
                 auto &next_lanelet = global_route[i + 1];
                 int lanelet_route_size = lanelet.route_portion.size();
-                unsigned long num_points = std::min(std::min(next_lanelet.route_portion.size(), lanelet.route_portion.size()), max_points_smoothing);
+                int next_lanelet_route_size = next_lanelet.route_portion.size();
+
+                if (lanelet_route_size == 0 || next_lanelet_route_size == 0) continue;
+
+                // smoothing should be dependent on max velocity
+                float speed_factor = lanelet.route_portion[0].speed / 3.6 / 5;
+                // number of points on current lanelet
+                unsigned long num_points_current = std::min(lanelet.route_portion.size(), (long unsigned int)(max_points_smoothing * speed_factor));
+                // number of points on next lanelet
+                unsigned long num_points_next = std::min(next_lanelet.route_portion.size(), (long unsigned int)(max_points_smoothing * speed_factor));
+                // total number of points for smoothing
+                double num_points_total = num_points_next + num_points_current;
                 // first point of smoothing
-                double x1 = lanelet.route_portion[lanelet_route_size - num_points].x;
-                double y1 = lanelet.route_portion[lanelet_route_size - num_points].y;
+                double x1 = lanelet.route_portion[lanelet_route_size - num_points_current].x;
+                double y1 = lanelet.route_portion[lanelet_route_size - num_points_current].y;
                 // last point of smoothing
-                double x2 = next_lanelet.route_portion[num_points - 1].x;
-                double y2 = next_lanelet.route_portion[num_points - 1].y;
+                double x2 = next_lanelet.route_portion[num_points_next - 1].x;
+                double y2 = next_lanelet.route_portion[num_points_next - 1].y;
 
                 // whole lerp is between 0 to 1.0 where 1.0 is at num_points * 2.0
-                for (int j = 0; j < num_points; j++) {
+                for (int j = 0; j < num_points_current; j++) {
                     // half the lerp, between points of the last lanelet
                     // indexing example: 20 - 10 + 9
                     // num points * 2.0 -> num_points at end of current lanelet + num_points at beginning of next lanelet
-                    lanelet.route_portion[lanelet_route_size - num_points + j].x = lerp(x1, x2, (j + 1) / (num_points * 2.0));
-                    lanelet.route_portion[lanelet_route_size - num_points + j].y = lerp(y1, y2, (j + 1) / (num_points * 2.0));
+                    lanelet.route_portion[lanelet_route_size - num_points_current + j].x = lerp(x1, x2, (j + 1) / (num_points_total));
+                    lanelet.route_portion[lanelet_route_size - num_points_current + j].y = lerp(y1, y2, (j + 1) / (num_points_total));
                 }
 
-                for (int j = 0; j < num_points; j++) {
+                for (int j = 0; j < num_points_next; j++) {
                     // half the lerp, between points of the last lanelet
                     // indexing example: 20 - 10 + 9
-                    next_lanelet.route_portion[j].x = lerp(x1, x2, (num_points + j + 1) / (num_points * 2.0));
-                    next_lanelet.route_portion[j].y = lerp(y1, y2, (num_points + j + 1) / (num_points * 2.0));
+                    next_lanelet.route_portion[j].x = lerp(x1, x2, (num_points_current + j + 1) / (num_points_total));
+                    next_lanelet.route_portion[j].y = lerp(y1, y2, (num_points_current + j + 1) / (num_points_total));
                 }
             }
         }
 
+        ROS_INFO("LOCAL_PLANNER: interpolated lanechanges.");
 
+        const int lookahead_left_turn = 20;
+        const float lookahead_left_turn_angle_threshhold = 45 * M_PI/180;
+
+        // When at an intersection and turning left --> inserting a fake stop sign to check for collision
+        for (int i = 0; i < size; i++) {
+            auto &lanelet = global_route[i];
+            if (i + 1 < size) {
+                auto &next_lanelet = global_route[i + 1];
+                int lanelet_route_size = lanelet.route_portion.size();
+                int next_lanelet_route_size = next_lanelet.route_portion.size();
+
+                if (next_lanelet.isAtIntersection && !lanelet.isAtIntersection && !lanelet.hasStop && !lanelet.hasLight) {
+                    if (lanelet_route_size > 2 && next_lanelet_route_size > lookahead_left_turn) {
+                        // calculate angle between three points
+                        auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
+                        auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
+                        auto &next = next_lanelet.route_portion[lookahead_left_turn];
+
+                        auto v_last = tf2::Vector3(last.x, last.y, last.z);
+                        auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
+                        auto v_next = tf2::Vector3(next.x, next.y, next.z);
+
+                        auto v1 = v_last - v_second_last;
+                        auto v2 = v_next - v_last;
+
+                        double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
+
+                        // check if we are changing direction to left:
+                        ROS_WARN("Angle: %f", angle);
+                        if (angle > lookahead_left_turn_angle_threshhold) {
+                            ROS_WARN("Adding a fake stop sign at due left turn at lanechange %i -> %i, at [%f %f]", lanelet.id, next_lanelet.id, next_lanelet.route_portion[0].x, next_lanelet.route_portion[0].y);
+                            lanelet.hasStop = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        ROS_INFO("LOCAL_PLANNER: fake stop check done.");
+
+        // Publish stop signs as markers 
+        auto markers = visualization_msgs::MarkerArray();
+        auto marker1 = visualization_msgs::Marker();
+
+        marker1.type = visualization_msgs::Marker::SPHERE_LIST;
+        marker1.action = visualization_msgs::Marker::ADD;
+        marker1.ns = "stop";
+        marker1.header.frame_id = "map";
+        marker1.header.stamp = ros::Time::now();
+        marker1.color.a = 1.0;
+        marker1.color.r = 1.0;
+        marker1.color.g = 1.0;
+        marker1.scale.x = 2;
+        marker1.scale.y = 2;
+        marker1.scale.z = 4;
+
+        for (auto &lanelet : global_route) {
+            if (lanelet.hasStop) {
+                geometry_msgs::Point point;
+                point.x = lanelet.route_portion[lanelet.route_portion.size() - 1].x;
+                point.y = lanelet.route_portion[lanelet.route_portion.size() - 1].y;
+                point.z = 0;
+                marker1.points.push_back(point);
+                ROS_INFO("collision at %f, %f", point.x, point.y);
+
+            }
+        }
+
+        markers.markers.push_back(marker1);
+        debug_marker_pub.publish(markers);
+        
+        ROS_INFO("LOCAL_PLANNER: done publishing stop signs.");
+
+        // Convert xroute back into normal pose stamp list
         std::vector<geometry_msgs::PoseStamped> points = {};
 
         unsigned int counter = 0;
@@ -340,6 +436,8 @@ namespace psaf_local_planner
         global_plan = points;
         planner_util.setPlan(global_plan);
         publishGlobalPlan(global_plan);
+
+        ROS_INFO("PREPROCESSING XROUTE DONE!");
     }
 
 }
