@@ -27,7 +27,7 @@ In diesem Projekt soll ein autonomes Fahrzeug konzeptioniert und implementiert w
       - [Download PSAF Machine Learning Modelle](#download-psaf-machine-learning-modelle)
       - [Install PSAF Dependencies](#install-psaf-dependencies)
   * [Ausführung des PSAF1 Projekts](#ausf%C3%BChrung-des-psaf1-projekts)
-  * [Hinweise & häufige Fehler](#hinweise-&-h%C3%A4ufige-fehler)
+  * [Hinweise & häufige Fehler](#hinweise--häufige-fehler)
   * [Ausblick](#ausblick)
   * [Quellen](#quellen)
 
