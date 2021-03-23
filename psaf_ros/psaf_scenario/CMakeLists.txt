@@ -107,10 +107,7 @@ catkin_package()
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES psaf_abstraction_layer
-#  CATKIN_DEPENDS roscpp rospy std_msgs
-#  DEPENDS system_lib
+
 )
 
 ###########
@@ -124,10 +121,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/psaf_abstraction_layer.cpp
-# )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

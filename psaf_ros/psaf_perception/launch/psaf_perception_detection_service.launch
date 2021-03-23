@@ -10,7 +10,7 @@
     <!-- Camera Fusion is only required when we need to detect traffic lights-->
     <group if="$(arg activate_traffic_light_detector)">
         <!--  Start the camera fusion service for the detector-->
-        <include file="$(find psaf_abstraction_layer)/launch/psaf_fusion_camera_service.launch">
+        <include file="$(find psaf_sensor_preprocessing)/launch/psaf_fusion_camera_service.launch">
             <arg name='role_name' value="$(arg role_name)"/>
             <arg name='camera_group' value="front"/>
             <arg name='threshold_diff' value="0.1"/>

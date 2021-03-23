@@ -3,7 +3,6 @@ import os
 
 import lanelet2
 import rosbag
-from lanelet2 import traffic_rules, routing, core, geometry
 from lanelet2.projection import UtmProjector
 from lanelet2.core import GPSPoint
 from lanelet2.io import Origin

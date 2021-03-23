@@ -54,6 +54,7 @@ namespace psaf_local_planner
         }else{
             this->stop_distance_at_intersection = this->computeDistanceToStoppingPointWithoutStopLine();
         }
+//        ROS_WARN("Stop distance %f",this->stop_distance_at_intersection);
     }
 
     double PsafLocalPlanner::computeDistanceToStoppingPointWithoutStopLine() {
