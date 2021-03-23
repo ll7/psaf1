@@ -23,8 +23,8 @@ Die Aufgabe umfasst folgende Punkte:
 
 ## Übersicht der Ergebnisse
 
-### Übersicht
-![Module](docs/main.png)
+### Abhängigkeiten zwischen Modulen
+![Module](docs/modules_diagram.png)
 
 ### [Abstraction Layer](psaf_ros/psaf_abstraction_layer)
 Dieses Paket stellt eine Abstraktionsschicht zu den Sensoren des Fahrzeugs dar. Für Sensoren wie das GPS-Modul oder die Semantic Camera wird von diesem Paket eine Klassenresentation angeboten, die von anderen Modulen eingebunden werden kann.
