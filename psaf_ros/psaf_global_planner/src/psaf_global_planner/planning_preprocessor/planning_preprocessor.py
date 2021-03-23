@@ -96,7 +96,7 @@ class PlanningPreprocessor:
         for p in pc2.read_points(data, skip_nans=True):  # iteratre through all points in pointcloud from lidar
             # p[0]: x, p[1]: y, p[2]: z, p[3]: cos, p[4]: index, p[5]: tag
             if p[5] not in [0, 3, 6, 7, 13, 21]:  # check if point is of type wall, car, ...
-                if (2 < p[0] < self.perception_area[0]) and (
+                if (-2 < p[0] < self.perception_area[0]) and (
                         1 < p[1] < self.perception_area[1]):  # only consider points on the left side and forward
                     self.points.append([abs(p[0]), abs(p[1])])  # save point
         self.outer_sub.unregister()  # we only want data from one callback
@@ -114,7 +114,7 @@ class PlanningPreprocessor:
         rospy.loginfo('Planning Preprocessor: Inner Lidar Data received')
         for p in pc2.read_points(data, skip_nans=True):
             if p[5] not in [0, 3, 6, 7, 13, 21]:
-                if (2 < p[0] < self.perception_area[0]) and (1 < p[1] < self.perception_area[1]):
+                if (-2 < p[0] < self.perception_area[0]) and (1 < p[1] < self.perception_area[1]):
                     self.points.append([abs(p[0]), abs(p[1])])
         self.inner_sub.unregister()
         self.inner_sub = None
