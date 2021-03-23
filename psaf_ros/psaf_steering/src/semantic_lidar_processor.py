@@ -13,11 +13,6 @@ from std_msgs.msg import Header
 from nav_msgs.msg import Odometry
 
 
-zPos = 0
-def odo_callback(data: Odometry):
-    global zPos
-    zPos = data.pose.pose.position.z + 3
-
 
 def cmd_callback(data: PointCloud2):
     # field_names=("x", "y", "z", "cos", "index", "tag")
@@ -45,8 +40,6 @@ def cmd_callback(data: PointCloud2):
     fields = [PointField('x', 0, PointField.FLOAT32, 1),
           PointField('y', 4, PointField.FLOAT32, 1),
           PointField('z', 8, PointField.FLOAT32, 1),
-          # PointField('rgb', 12, PointField.UINT32, 1),
-          # PointField('rgba', 12, PointField.UINT32, 1),
           ]
 
 
@@ -58,20 +51,12 @@ def cmd_callback(data: PointCloud2):
 
 if __name__ == '__main__':
     try:
-        
-
         rospy.init_node('semantic_lidar_processor')
-        # print(rospy.get_name())
-        # rospy.init_node(rospy.get_name())        
-
         rospy.Subscriber(rospy.get_param("~lidar_topic"), PointCloud2, cmd_callback, queue_size=1)
-        rospy.Subscriber(rospy.get_param("~odom_topic"), Odometry, odo_callback, queue_size=1)
+
         pub_marking = rospy.Publisher(rospy.get_param("~marking_topic"), PointCloud2, queue_size=1)
         pub_clearing = rospy.Publisher(rospy.get_param("~clearing_topic"), PointCloud2, queue_size=1)
 
-        # rospy.loginfo("Node 'semantic_lidar_processor' started.\nListening to %s, publishing to %s. Frame id: %s, wheelbase: %f", "/cmd_vel", ackermann_cmd_topic, frame_id, wheelbase)
-
         rospy.spin()
-
     except rospy.ROSInterruptException:
         pass

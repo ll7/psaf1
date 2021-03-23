@@ -9,7 +9,9 @@
 ##  Kurzbeschreibung
 Der PsafObstacleLayer ist eine Erweiterung des [Obstacle Layers](https://docs.ros.org/en/noetic/api/costmap_2d/html/classcostmap__2d_1_1ObstacleLayer.html) der [costmap_2d](https://wiki.ros.org/costmap_2d) Library. Diese wird von [move_base](https://wiki.ros.org/move_base) zum Erstellen der Costmap verwendet. Durch die Verwendung dieses ObstacleLayers wird die vollständige Costmap nach jeder Iteration komplett geleert.
 
-
+## Verwendung
+Der psaf_obstacle_layer wird als Plugin von [costmap_2d](https://wiki.ros.org/costmap_2d) verwendet.
+Er wird in der [Config-Datei der move_base](../psaf_steering/config/costmap_common_params.yaml#L8) gesetzt und überschreibt so den Default Obstacle Layer.
 
 
 ## Artefaktverhinderung
