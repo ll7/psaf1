@@ -26,16 +26,18 @@ Die Aufgabe umfasst folgende Punkte:
 ### Übersicht
 ![Module](docs/main.png)
 
-### Abstraction Layer
-TODO
+### [Abstraction Layer](psaf_ros/psaf_abstraction_layer)
+Dieses Paket stellt eine Abstraktionsschicht zu den Sensoren des Fahrzeugs dar. Für Sensoren wie das GPS-Modul oder die Semantic Camera wird von diesem Paket eine Klassenresentation angeboten, die von anderen Modulen eingebunden werden kann.
+ 
+Genauere Informationen sind dem Readme [Abstraction Layer](psaf_ros/psaf_abstraction_layer) zu entnehmen.
 
-### Global Planner
+### [Global Planner](psaf_ros/psaf_global_planner)
 Die Hauptaufgabe des Global Planner besteht darin, einen Pfad vom der aktuellen Position zu einem Zielpunkt zu planen. Um dies zu bewerstelligen, müssen entsprechende Karteninformationen generiert, bzw. konvertiert und aufbereitet werden. Neben einer einfachen Abfolge von Wegpunkten enthält der Plan auch Informationen wie Geschwindigkeitsbeschränkungen oder Stoppschilder.
 Nach der initialen Planung steht der Planer bereit, um dynamisch Neuzplanen, wenn beispielweise Hindernisse umfahren werden sollen.
  
 Genauere Informationen sind dem Readme [Global Planner](psaf_ros/psaf_global_planner) zu entnehmen.
 
-### Local Planner
+### [Local Planner](psaf_ros/psaf_local_planner)
 Die Hauptaufgabe des Local Planner ist das Berechnen einer Geschwindigkeits- und einer Lenkwinkelvorgabe für das Fahrzeug. Hierbei werden Informationen aus dem 
 Global Planner (Globaler Pfad, Geschwindigkeit auf Streckenabschnitten) oder der Perception (Ampeln, Stoppschilder) verwendet. Dadurch kann der Local Planner dem
 globalem Pfad zum Ziel folgen und dabei Verkehrsregeln beachten. Zudem werden andere Fahrzeuge in der näheren Umgebung des eigenen Fahrzeugs auch in die Planung einbezogen.
@@ -43,43 +45,46 @@ Falls im Pfad Hindernisse wie langsamere Verkehrsteilnehmer auftreten kann der L
  
 Genauere Informationen sind dem Readme [Local Planner](psaf_ros/psaf_local_planner) zu entnehmen. 
 
-### Sensor Preprocessing
+### [Sensor Preprocessing](psaf_ros/psaf_sensor_preprocessing)
 Dieses Paket kombiniert einerseits Bild-Daten der RGB-, der Tiefen- und der Segmentation-Kamera zu einem gesammelten Bild und stellt dies der Perception zur Verfügung.
 Anderseits werden hier Informationen eines LIDAR-Sensors auf bestimmte Hindernisse untersucht. Diese Informationen werden beispielsweise vom Local Planner verwendet.
 
 Genauere Informationen sind dem Readme [Sensor Preprocessing](psaf_ros/psaf_sensor_preprocessing) zu entnehmen. 
 
-### Perception
+### [Perception](psaf_ros/psaf_perception)
 Das Paket Perception ermöglicht es, Ampeln und ihren Zustand sowie Haltelinien zu erkennen. Hierzu werden kombinierte Kamerainformationen aus dem Paket Sensor Preprocessing verwendet. Um aus diesen Informationen Objekte zu Detektieren kommt das System [YOLO v3](https://pjreddie.com/darknet/yolo/) zum Einsatz.
  
 Genauere Informationen sind dem Readme [Perception](psaf_ros/psaf_perception) zu entnehmen. 
 
-### Steering
+### [Steering](psaf_ros/psaf_steering)
 Dieses Paket ist für die kontrollierte Steuerung des Fahrzeuges zuständig. Es erhält hierzu vom Local Planner Geschwindigkeits- und einer Lenkwinkelvorgaben, die über
 einen PID-Regler eingestellt und als Kontrollbefehle an das Fahrzeug weitergegeben werden.
  
 Genauere Informationen sind dem Readme [Steering](psaf_ros/psaf_steering) zu entnehmen. 
 
-### Starter
+### [Starter](psaf_ros/psaf_starter)
 Dieses Paket ermöglicht das komfortable Starten unseres Projektes. Dafür stehen launch-Dateien zur Verfügung, die eine Fahrt mit oder ohne Verkehrsregeln ermöglichen.
  
 Genauere Informationen sind dem Readme [Starter](psaf_ros/psaf_starter) zu entnehmen. 
 
-### Obstacle Layer
+### [Obstacle Layer](psaf_ros/psaf_obstacle_layer)
 TODO
+ 
+Genauere Informationen sind dem Readme [Obstacle Layer](psaf_ros/psaf_obstacle_layer) zu entnehmen. 
 
-### Scenario
+
+### [Scenario](psaf_ros/psaf_scenario)
 Dieses Paket dient nur als Hilfe für die Entwicklung des Projekts. Es wird ermöglicht, den aktuellen Stand der Entwlicklung in einem Szenario zu Testen und zu Bewerten.
 Ein Szenario enthält dabei eine bestimmte Route, die das Fahrzeug abfahren soll. Als Ergebnis wird eine Bewertung bereitgestellt, die angibt wie gut dem Weg gefolgt wurde.
  
 Genauere Informationen sind dem Readme [Scenario](psaf_ros/psaf_scenario) zu entnehmen. 
 
-### Optimizer
+### [Optimizer](psaf_ros/psaf_optimizero)
 Auch dieses Paket dient als Hilfe für die Entwicklung des Projekts. Der Optimizer kann dazu verwendet werden, verschiedene Parameter der vorhandenen Implementierung zu optimieren. Hierzu werden mithilfe des Scenario Runner verschiedene Parametrierungen evaluiert und so ein Optimum gefunden.
  
 Genauere Informationen sind dem Readme [Optimizer](psaf_ros/psaf_optimizero) zu entnehmen. 
 
-### Messages
+### [Messages](psaf_ros/psaf_messages)
 Dieses Paket definiert lediglich eigene Nachrichten, die von den anderen Paketen verwendet werden.
 
 
