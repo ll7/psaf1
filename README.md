@@ -187,7 +187,7 @@ roslaunch psaf_starter start_autonomous_driving_without_traffic_rules.launch
 Nun wird ein Fahrzeug in der CARLA-Simulation gespawn und es öffnet sich ein RVIZ Fenster, mit der Zustand des Fahrzeuges überwacht werden kann.
 Sobald in RVIZ im Abschnitt **GoalPanel** der Status *'Init Done'* angezeigt wird, kann eine Zielkoordinate eingegeben werden und die Fahrt gestartet werden. 
 
-![goal_panel](doc/goal_panel.png)
+![goal_panel](docs/goal_panel.png)
 
 Alternativ kann eine Fahrt auch über den Competition Manager gestartet werden. Sobald der Wettbewerb mit dem set_position_client gestartet wird, 
 wird das Fahrzeug an die vorgegebene Startposition gesetzt und startet eine Fahrt zu gegebenen Zielposition.
@@ -198,6 +198,9 @@ cd ~/carla_0.9.10.1/PythonAPI/examples
 python3 spawn_npc.py -n 200 -w 0
 ```
 
+## Hinweise & häufige Fehler
+
+## Ausblick
 
 ## Quellen
 
