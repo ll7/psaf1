@@ -9,7 +9,7 @@
 import rospy
 from psaf_messages.msg import PlanningInstruction
 from sensor_msgs.msg import PointCloud2
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseWithCovarianceStamped
 import sensor_msgs.point_cloud2 as pc2
 import matplotlib.pyplot as plt
 from matplotlib import patches
@@ -24,7 +24,7 @@ class PlanningPreprocessor:
         self.outer_sub = None
         self.instruction_pub = None
         self.plan_u_turn = False
-        self.perception_area = [15, 15]  # Area we want to check to see if uTurn is possible
+        self.perception_area = [25, 15]  # Area we want to check to see if uTurn is possible (forward, right)
         self.min_forward = 0
         self.min_left = 0
 
@@ -38,8 +38,8 @@ class PlanningPreprocessor:
         area = [0.0, 0.0]
         # slowly increase area and check if obstacles are found within
         while area[0] <= self.perception_area[0] and area[1] <= self.perception_area[1]:
-            area[0] += 0.1
-            area[1] += 0.1
+            area[0] += (bound_x/100)
+            area[1] += (bound_y/100)
 
             for point in self.points:
                 # check if obstacle is within area
@@ -47,7 +47,7 @@ class PlanningPreprocessor:
                     # check if more left or in front of car
                     if point[0] > point[1]:
                         # if it is more in front of car, we have found forward_boundary (x)
-                        bound_x = point[0] - 0.1
+                        bound_x = point[0] - 2.1
                         # search for nearest obstacle in left-direction that also satisfies found forward_boundary
                         # y-coordinate of that obstacle is used for left_boundary (y)
                         points_y = sorted(list(filter(lambda p: p[0] < bound_x, self.points)), key=lambda p: p[1])
@@ -56,7 +56,7 @@ class PlanningPreprocessor:
                         return bound_x, bound_y
                     else:
                         # if it is more left of the car, we have found left_boundary (y)
-                        bound_y = point[1] - 0.1
+                        bound_y = point[1] - 1.1
                         # search for nearest obstacle in forward-direction that also satisfies found left_boundary
                         # x-coordinate of that obstacle is used for forward_boundary (y)
                         points_x = sorted(list(filter(lambda p: p[1] < bound_y, self.points)), key=lambda p: p[0])
@@ -85,8 +85,7 @@ class PlanningPreprocessor:
 
         self.instruction_pub.publish(out_data)
         rospy.loginfo('Planning Preprocessor: Message sent!')
-        rospy.loginfo(['Planning Preprocessor: uTurn-Area: ', "{:.2f}".format(self.min_left), 'x',
-                      "{:.2f}".format(self.min_forward)])
+        rospy.loginfo(f"Planning Preprocessor: uTurn-Area: %.2f x %.2f" % (self.min_left, self.min_forward))
 
     def lidar_callback_outer(self, data: PointCloud2):
         """
@@ -97,7 +96,7 @@ class PlanningPreprocessor:
         for p in pc2.read_points(data, skip_nans=True):  # iteratre through all points in pointcloud from lidar
             # p[0]: x, p[1]: y, p[2]: z, p[3]: cos, p[4]: index, p[5]: tag
             if p[5] not in [0, 3, 6, 7, 13, 21]:  # check if point is of type wall, car, ...
-                if (2 < p[0] < self.perception_area[0]) and (
+                if (-2 < p[0] < self.perception_area[0]) and (
                         1 < p[1] < self.perception_area[1]):  # only consider points on the left side and forward
                     self.points.append([abs(p[0]), abs(p[1])])  # save point
         self.outer_sub.unregister()  # we only want data from one callback
@@ -115,7 +114,7 @@ class PlanningPreprocessor:
         rospy.loginfo('Planning Preprocessor: Inner Lidar Data received')
         for p in pc2.read_points(data, skip_nans=True):
             if p[5] not in [0, 3, 6, 7, 13, 21]:
-                if (2 < p[0] < self.perception_area[0]) and (1 < p[1] < self.perception_area[1]):
+                if (-2 < p[0] < self.perception_area[0]) and (1 < p[1] < self.perception_area[1]):
                     self.points.append([abs(p[0]), abs(p[1])])
         self.inner_sub.unregister()
         self.inner_sub = None
@@ -140,24 +139,50 @@ class PlanningPreprocessor:
         """
         self.goal = data  # goal Pose from RVIZ
         # if uturn should be planned, acquire data from lidars
-        # otherwise dont cehck lidar, just relay goal to global planner
+        # otherwise dont check lidar, just relay goal to global planner
         if self.plan_u_turn:
             self.subscribe_lidar()
         else:
             self.publish_instruction()
+
+    def start_callback(self, data: PoseWithCovarianceStamped):
+        """
+        Callback if vehicle position was changed (e.g. by Competition Manager)
+        """
+        try:
+            goal = Pose()
+            # get goal position from Paramater Server
+            goal.position.x = rospy.get_param('competition/goal/position/x')
+            goal.position.y = rospy.get_param('competition/goal/position/y')
+            goal.position.z = rospy.get_param('competition/goal/position/z')
+
+            # continue like goal position was received by RVIZ goal panel
+            self.goal_callback(goal)
+        except KeyError:
+            rospy.logerr('Could not find Competition Managers Goal Position in Paramter Server')
 
     def main(self):
         try:
             rospy.init_node('planning_preprocessor')
 
             # rosparam determining if traffic rules should be obeyed, if false uTurn is always considered
-            obey_rules = rospy.get_param('respect_traffic_rules', False)
+            if rospy.has_param('competition/traffic_rules'):
+                obey_rules = rospy.get_param('competition/traffic_rules', True)  # get from competition_manager
+                rospy.set_param('respect_traffic_rules', obey_rules)
+                rospy.loginfo(f"Planning Preprocessor: Competition Manager Traffic Rules: %r" % obey_rules)
+            else:  # if competition manager params are not existent, use our own param
+                obey_rules = rospy.get_param('respect_traffic_rules', True)
+                rospy.loginfo(f"Planning Preprocessor: Traffic Rules: %r" % obey_rules)
+
             # rosparam determining if uTurn should be considered even when obeying traffic rules
             always_turn = rospy.get_param('always_u_turn', False)
             self.plan_u_turn = (not obey_rules) or always_turn
-            rospy.loginfo(['Planning Preprocessor: Plan Turn: ', self.plan_u_turn])
+            rospy.loginfo(f"Planning Preprocessor: Plan Turn: %r" % self.plan_u_turn)
 
             rospy.Subscriber('/psaf/goal/set', Pose, self.goal_callback, queue_size=1)
+            rospy.Subscriber('/carla/ego_vehicle/initialpose', PoseWithCovarianceStamped, self.start_callback,
+                             queue_size=1)
+
             self.instruction_pub = rospy.Publisher('/psaf/goal/set_instruction', PlanningInstruction,
                                                    queue_size=1)
 
