@@ -60,13 +60,13 @@ Genauere Informationen sind dem Readme [Abstraction Layer](psaf_ros/psaf_abstrac
 
 #### [Global Planner](psaf_ros/psaf_global_planner)
 Die Hauptaufgabe des Global Planner besteht darin, einen Pfad vom der aktuellen Position zu einem Zielpunkt zu planen. Um dies zu bewerstelligen, müssen entsprechende Karteninformationen generiert, bzw. konvertiert und aufbereitet werden. Neben einer einfachen Abfolge von Wegpunkten enthält der Plan auch Informationen wie Geschwindigkeitsbeschränkungen oder Stoppschilder.
-Nach der initialen Planung steht der Planer bereit, um dynamisch Neuzplanen, wenn beispielweise Hindernisse umfahren werden sollen.
+Nach der initialen Planung steht der Planner bereit, um dynamisch neu zu planen, wenn beispielweise Hindernisse umfahren werden sollen.
  
 Genauere Informationen sind dem Readme [Global Planner](psaf_ros/psaf_global_planner) zu entnehmen.
 
 #### [Local Planner](psaf_ros/psaf_local_planner)
 Die Hauptaufgabe des Local Planner ist das Berechnen einer Geschwindigkeits- und einer Lenkwinkelvorgabe für das Fahrzeug. Hierbei werden Informationen aus dem 
-Global Planner (Globaler Pfad, Geschwindigkeit auf Streckenabschnitten) oder der Perception (Ampeln, Stoppschilder) verwendet. Dadurch kann der Local Planner dem
+[Global Planner](psaf_ros/psaf_global_planner) (Globaler Pfad, Geschwindigkeit auf Streckenabschnitten) oder der [Perception](psaf_ros/psaf_perception) (Ampeln, Stoppschilder) verwendet. Dadurch kann der Local Planner dem
 globalem Pfad zum Ziel folgen und dabei Verkehrsregeln beachten. Zudem werden andere Fahrzeuge in der näheren Umgebung des eigenen Fahrzeugs auch in die Planung einbezogen.
 Falls im Pfad Hindernisse wie langsamere Verkehrsteilnehmer auftreten kann der Local Planner eine Neuplanung beim Global Planner auslösen.
  
