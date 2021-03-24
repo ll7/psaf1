@@ -300,7 +300,15 @@ namespace psaf_local_planner
                 if (lanelet_route_size == 0 || next_lanelet_route_size == 0) continue;
 
                 // smoothing should be dependent on max velocity
-                float speed_factor = lanelet.route_portion[0].speed / 3.6 / 5;
+                float speed_factor;
+                // speed > 50 -> out of town (e.g. Highway) higher factor needed
+                if (lanelet.route_portion[0].speed > 50) {
+                    speed_factor = lanelet.route_portion[0].speed / 3.6 / 5;
+                }
+                // speed =< 50 -> inside of town smaller factor for not cutting other lanelets
+                else {
+                    speed_factor = lanelet.route_portion[0].speed / 3.6 / 10;
+                }
                 // number of points on current lanelet
                 unsigned long num_points_current = std::min(lanelet.route_portion.size(), (long unsigned int)(max_points_smoothing * speed_factor));
                 // number of points on next lanelet
