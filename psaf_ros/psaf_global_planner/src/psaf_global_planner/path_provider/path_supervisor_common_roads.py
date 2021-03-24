@@ -98,9 +98,12 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                     relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
                 # generate new plan
                 if len(real_obstacles) != 0:
+                    self._replan()
+                    self.status_pub.publish("PathSupervisor: finished")
+                    rospy.loginfo("PathSupervisor: finished!!")
+                else:
                     rospy.logerr("PathSupervisor: Replanning aborted, no matched obstacle !!")
                     self.status_pub.publish("Replanning aborted, no matched obstacle")
-                    self._replan()
             self.busy = False
         elif self.busy:
             rospy.logerr("PathSupervisor: Replanning aborted, still busy !!")
@@ -111,7 +114,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         else:
             rospy.logerr("PathSupervisor: Replanning aborted, contact support !!")
             self.status_pub.publish("Replanning aborted, contact support")
-        self.status_pub.publish("Replanning done")
 
     def _determine_relevant_lanelets(self, car_lanelet: int) -> List[int]:
         """

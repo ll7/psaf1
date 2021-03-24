@@ -308,7 +308,6 @@ class PathProviderCommonRoads:
         # create start and goal state for planning problem
         index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start.position,
                                                                 prematured_stop=False, use_xcenterline=False)
-        start_position = [start_lanelet.center_vertices[index][0], start_lanelet.center_vertices[index][1]]
 
         # yaw in third entry ([2]) of euler notation
         start_yaw = euler_from_quaternion((start.orientation.x, start.orientation.y,
