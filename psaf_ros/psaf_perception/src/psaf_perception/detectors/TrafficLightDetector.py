@@ -105,6 +105,8 @@ class TrafficLightDetector(AbstractDetector):
         :return: none
         """
         if (rospy.Time.now()-time).to_sec()>0.6:
+            # Ignore the new image data if its older than 600ms
+            # -> Reduce message aging
             return 
         (height_seg, width_seg) = segmentation_image.shape[:2]
         (height_rgb, width_rgb) = rgb_image.shape[:2]
@@ -136,18 +138,20 @@ class TrafficLightDetector(AbstractDetector):
                 distance = np.min(masked_crop_depth)
 
                 if distance <= 100:
-                    distances.append(distance)
                     h_scale = width_rgb/width_seg
                     v_scale = height_rgb/height_seg
                     # get cropped rgb image
-                    crop_rgb = rgb_image[int(y1*v_scale):int(y2*v_scale+1), int(x1*h_scale):int(x2*h_scale+1), :]
-                    # use inverted mask to clear the background
-                    # crop_rgb[np.logical_not(mask)] = 0
+                    crop_rgb = rgb_image[
+                               int(y1 * v_scale):min([height_rgb, int(y2 * v_scale + 1)]),
+                               int(x1 * h_scale):min([width_rgb, int(x2 * h_scale + 1)]),
+                               :]
+                    # Classify the cropped image
                     label, confidence = self.__extract_label(crop_rgb)
                     if label is not None:
                         boxes.append(np.array([x1, y1, w, h]) / np.array([width_seg, height_seg, width_seg, height_seg]))
                         classes.append(label)
                         confidences.append(confidence)
+                        distances.append(distance)
 
         # apply non-maxima suppression to suppress weak, overlapping bounding boxes
         idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_min, self.threshold)
@@ -156,11 +160,6 @@ class TrafficLightDetector(AbstractDetector):
         if len(idxs) > 0:
             # loop over the indexes we are keeping
             for i in idxs.flatten():
-                x1 = int(boxes[i][0] * width_seg)
-                x2 = int((boxes[i][0] + boxes[i][2]) * width_seg)
-                y1 = int(boxes[i][1] * height_seg)
-                y2 = int((boxes[i][1] + boxes[i][3]) * height_seg)
-
                 distance = distances[i]
                 label = classes[i]
                 confidence = confidences[i]
@@ -176,6 +175,11 @@ class TrafficLightDetector(AbstractDetector):
                                    confidence=confidence))
                 # Store traffic light data in folder to train a better network
                 if self.data_collect_path is not None and distance < 25:
+                    x1, y1, w, h = boxes[i]
+                    x1 = int(x1 * h_scale)
+                    y1 = int(y1 * v_scale)
+                    x2 = min([width_rgb, int((x1 + w) * h_scale + 1)])
+                    y2 = min([height_rgb, int((y1 + h) * v_scale + 1)])
                     # get cropped rgb image
                     crop_rgb = rgb_image[y1:y2, x1:x2, :]
                     # use inverted mask to clear the background
@@ -191,23 +195,10 @@ class TrafficLightDetector(AbstractDetector):
 
 
 # Show case code
-def show_image(title, image):
-    max_width, max_height = 1200, 800
-
-    limit = (max_height, max_width)
-    fac = 1.0
-    if image.shape[0] > limit[0]:
-        fac = limit[0] / image.shape[0]
-    if image.shape[1] > limit[1]:
-        fac = limit[1] / image.shape[1]
-    image = cv2.resize(image, (int(image.shape[1] * fac), int(image.shape[0] * fac)))
-    # show the output image
-    cv2.imshow(title, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-    cv2.waitKey(1)
-
-
 if __name__ == "__main__":
     from psaf_abstraction_layer.sensors.RGBCamera import RGBCamera
+    from psaf_perception.perception_util import show_image
+
 
     rospy.init_node("DetectionTest")
 
