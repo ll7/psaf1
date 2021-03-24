@@ -72,7 +72,7 @@ namespace psaf_local_planner {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN;
                 } else if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_YELLOW) {
                     this->state = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
-                }else if(stopDetected){ // Seems to be in the wrong state -> go back to driving
+                }else if(stopDetected && trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_UNKNOWN){ // Seems to be in the wrong state -> go back to driving
                     this->state = LocalPlannerState::DRIVING;
                 }
                 break;
@@ -138,7 +138,7 @@ namespace psaf_local_planner {
                 break;
             case LocalPlannerState::STOP_WAITING:
                 // Wait until intersection is clear and wait at least 3 seconds
-                if (isIntersectionClear && (currentTimeSec-this->start_time_stop_waiting)>3.) {
+                if (isIntersectionClear && (currentTimeSec-this->start_time_stop_waiting)>1.) {
                     this->state = LocalPlannerState::STOP_GO;
                     this->start_time_stop_go = currentTimeSec;
                 }
