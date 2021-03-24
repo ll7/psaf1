@@ -389,7 +389,8 @@ class MapSupervisorCommonRoads(MapProvider):
                            traffic_sign_elements=[sign_element])
         self.map_cr.lanelet_network.add_traffic_sign(sign, lanelet_ids=deepcopy(id_set))
 
-    def _get_lanelet_orientation_to_light(self, lanelet: Lanelet, use_end: bool = True):
+    @staticmethod
+    def _get_lanelet_orientation_to_light(lanelet: Lanelet, use_end: bool = True):
         """
         Calculates the orientation of the lanelet in the direction of a supposed upcoming traffic light
         :param lanelet: the given lanelet
@@ -418,7 +419,8 @@ class MapSupervisorCommonRoads(MapProvider):
 
         return euler_angle_yaw
 
-    def _find_vertex_index(self, lanelet: Lanelet, pos: Point):
+    @staticmethod
+    def _find_vertex_index(lanelet: Lanelet, pos: Point):
         """
         Get the index of the closest point of a lanelet to a given comparison point
         :param lanelet: the given lanelet
@@ -431,9 +433,10 @@ class MapSupervisorCommonRoads(MapProvider):
         distance = (distance[:, 0] + distance[:, 1])
         return np.argmin(distance).item()
 
-    def get_lanelet_orientation_at_index(self, lanelet: Lanelet, index: int):
+    @staticmethod
+    def get_lanelet_orientation_at_index(lanelet: Lanelet, index: int):
         """
-        Get the orientatoin of the given lanelet at a certain index
+        Get the orientation of the given lanelet at a certain index
         :param lanelet: the given lanelet
         :param index: index
         :return: orientation (as yaw angle)
@@ -474,7 +477,8 @@ class MapSupervisorCommonRoads(MapProvider):
                 return angles[i]
         return np.sum(angles) / len(angles)
 
-    def _generate_dummy_planning_problem(self) -> PlanningProblem:
+    @staticmethod
+    def _generate_dummy_planning_problem() -> PlanningProblem:
         """
         Generate the planning problem by setting the starting point and generating a target region
         :return: dummy generated problem

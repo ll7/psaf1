@@ -210,11 +210,11 @@ wie das Auto befindet.
 - Falls sich das Hindernis auf der Lanelet des Autos befindet, wird die Lanelet in drei Abschnitte aufgeteilt und das 
   Hindernis wird auf den dritten Abschnitt eingefügt. 
   Das genaue Vorgehen eines Teilungsprozesses wird im [CommonRoadManager](#map-manager-common_road_manager) beschrieben.
-  - Abschnitt eins ist der Teil der Lanelet auf der sich das Auto befindet. **[Lanelet Start, Position Auto]**
-  - Abschnitt zwei ist der Teil der Lanelet auf der sich das zwischen Auto und dem Hindernis befindet. 
+  - Abschnitt eins ist der Teil der Lanelet, auf der sich das Auto befindet. **[Lanelet Start, Position Auto]**
+  - Abschnitt zwei ist der Teil der Lanelet, der sich zwischen Auto und Hindernis befindet. 
     Dieser Abschnitt wird benötigt damit der Überholvorgang sauber zwischen Auto und Hindernis eingeplant werden kann. 
     **]Position Auto, Position Hindernis[**
-  - Abschnitt drei ist der Abschnitt der Lanelet auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
+  - Abschnitt drei ist der Abschnitt der Lanelet, auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
     
 Zu erwähnen ist, dass das Teilen einer Lanelet unmittelbar ein Aktualisieren aller Referenzen der Lanelets in der Umgebung, sowie ein
 Teilen aller adjazenten Lanelets zur Folge haben muss, da nur so das Lanelet-Netzwerk konsistent und mögliche 

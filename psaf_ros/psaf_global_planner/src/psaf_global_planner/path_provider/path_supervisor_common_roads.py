@@ -46,6 +46,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 return
             self.last_id = obstacle.id
             self.status_pub.publish("Start Replanning")
+            rospy.loginfo("PathSupervisor: Start Replanning")
             # create a clean slate
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
@@ -58,6 +59,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             if len(car_lanelet[0]) == 0:
                 rospy.logerr("PathSupervisor: Car is not on a lanelet, abort !!")
                 self.status_pub.publish("Car is not on a lanelet, abort !! ")
+                self.busy = False
+                return
             else:
                 # determine relevant lanelets for an obstacle
                 car_lanelet = car_lanelet[0][0]
