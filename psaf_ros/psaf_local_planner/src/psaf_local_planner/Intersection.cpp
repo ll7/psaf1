@@ -78,11 +78,16 @@ namespace psaf_local_planner {
         double target_vel = this->target_velocity;
         switch (this->state_machine->getState()) {
             case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
-                // If the traffic light is within out stopping distance
+                // If the traffic light is within out stopping distance but greater 15m
                 // and we don't have any information about the traffic state (= indicate by this global planner state),
                 // reduce the speed to be slow enough to be able to stop at the traffic light when we know more
-                if(this->stop_distance_at_intersection<getCurrentStoppingDistance()){
-                    target_vel = computeSpeedToStopInXMeters(this->target_velocity,this->stop_distance_at_intersection);
+                if(this->stop_distance_at_intersection > 15
+                        &&this->stop_distance_at_intersection<getCurrentStoppingDistance()){
+                    // check if that's not the last lanelet else ignore this use case
+                    if(this->global_route.size() == 1) {
+                        target_vel = computeSpeedToStopInXMeters(this->target_velocity,
+                                                                 this->stop_distance_at_intersection);
+                    }
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_GO:
