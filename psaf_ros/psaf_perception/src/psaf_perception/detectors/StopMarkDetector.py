@@ -122,6 +122,8 @@ class StopMarkDetector(AbstractDetector):
 
 # Show case code
 if __name__ == "__main__":
+    from psaf_perception.perception_util import show_image
+
     rospy.init_node("DetectionTest")
 
     detected_r = None
@@ -137,22 +139,20 @@ if __name__ == "__main__":
                 (x, y) = (int(element.x * W), int(element.y * H))
                 (w, h) = (int(element.w * W), int(element.h * H))
                 # draw a bounding box rectangle and label on the image
-                color = (0, 255, 0)
+                color = (255, 0, 0)
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
                 text = "{}: {:.4f}".format(element.label.label_text, element.confidence)
-                cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
         # show the output image
-        cv2.imshow("RGB", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-        cv2.waitKey(1)
-
+        show_image("Stopmarks",image)
 
     def on_detected(_,detected_list):
         global detected_r
         detected_r = detected_list
 
 
-    cam = RGBCamera(id="street")
+    cam = RGBCamera(id="front")
 
     cam.set_on_image_listener(store_image)
 
