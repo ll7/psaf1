@@ -514,4 +514,6 @@ namespace psaf_local_planner {
     * @return whether the lanelet has a stop sign/mark
     */
     bool hasLaneletTrafficLight(psaf_messages::XLanelet lanelet);
+
+    double computeSpeedToStopInXMeters(double wishedSpeed, double stoppingDistance);
 };

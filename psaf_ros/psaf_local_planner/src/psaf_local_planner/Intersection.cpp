@@ -78,36 +78,39 @@ namespace psaf_local_planner {
         double target_vel = this->target_velocity;
         switch (this->state_machine->getState()) {
             case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
+                // If the traffic light is within out stopping distance
+                // and we don't have any information about the traffic state (= indicate by this global planner state),
+                // reduce the speed to be slow enough to be able to stop at the traffic light when we know more
+                if(this->stop_distance_at_intersection<getCurrentStoppingDistance()){
+                    target_vel = computeSpeedToStopInXMeters(this->target_velocity,this->stop_distance_at_intersection);
+                }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_GO:
             case LocalPlannerState::STOP_GO:
+                // We can go
                 target_vel = getMaxVelocity();
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
             case LocalPlannerState::STOP_WILL_STOP:
-                double velocity_distance_diff;
+                // Stop at stop line
                 double stop_distance;
                 stop_distance = this->stop_distance_at_intersection;
                 if (stop_distance >  1e6) {
                     // Stop because we should see an stop line but we have no data -> emergency brake
                     stop_distance = 0;
                 }
-                if (stop_distance < 3) {
-                    velocity_distance_diff = this->target_velocity; // Drive very slow to stop line
-                } else {
-                    velocity_distance_diff =
-                            this->target_velocity - std::min(this->target_velocity, 25.0 / 18.0 * (-1 + std::sqrt(
-                                    1 + 4 * (stop_distance - 2))));
-                }
-                target_vel = this->target_velocity - velocity_distance_diff;
+                target_vel = computeSpeedToStopInXMeters(this->target_velocity,stop_distance);
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
-                target_vel = target_velocity / 2;
+                // Slow down and lets hope that the traffic light will turn green
+                target_vel = target_velocity * 0.5;
                 break;
             case LocalPlannerState::STOP_NEAR:
+                // Do absolute nothing -> keep driving with the same speed
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
             case LocalPlannerState::STOP_WAITING:
+                // have to do wait
                 target_vel = 0.0;
                 break;
             default:
@@ -120,22 +123,13 @@ namespace psaf_local_planner {
         double target_vel;
         switch (this->state_machine->getState()) {
             case LocalPlannerState::DRIVING:
+                // This is a duplicate code but keep it for a better understanding
                 target_vel = this->target_velocity;
             case LocalPlannerState::STOP_GO:
                 target_vel = getMaxVelocity();
                 break;
             case LocalPlannerState::STOP_WILL_STOP:
-                double velocity_distance_diff;
-                double stop_distance;
-                stop_distance = this->stop_distance_at_intersection;
-                if (stop_distance < 3) {
-                    velocity_distance_diff = this->target_velocity; // Drive very slow to stop line
-                } else {
-                    velocity_distance_diff =
-                            this->target_velocity - std::min(this->target_velocity, 25.0 / 18.0 * (-1 + std::sqrt(
-                                    1 + 4 * (stop_distance - 2))));
-                }
-                target_vel = this->target_velocity - velocity_distance_diff;
+                target_vel = computeSpeedToStopInXMeters(this->target_velocity,this->stop_distance_at_intersection);
                 break;
             case LocalPlannerState::STOP_NEAR:
                 target_vel = target_velocity;
