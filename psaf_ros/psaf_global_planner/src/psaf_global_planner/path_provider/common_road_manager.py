@@ -276,7 +276,7 @@ class CommonRoadManager:
             sep_index = end_index - (abs(end_index - start_index) // 2)
         else:
             sep_index = end_index + (abs(end_index - start_index) // 2)
-        if sep_index > 1 and len(lanelet_center_list) - sep_index > 1:
+        if sep_index > 2 and (len(lanelet_center_list)-1) - sep_index > 3:
             # bound lanelet_1
             left_1 = lanelet_copy.left_vertices[:sep_index + 1]
             center_1 = lanelet_copy.center_vertices[:sep_index + 1]
