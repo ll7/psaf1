@@ -120,6 +120,7 @@ Dieses Paket definiert lediglich eigene Nachrichten, die von den anderen Paketen
 ## Setup des Projektes
 
 ### Setup ROS Noetic und CARLA 0.9.10
+Zunächst wird ROS Noetic installiert:
 ``` bash
 # ros noetic
 # http://wiki.ros.org/noetic/Installation/Ubuntu
@@ -129,7 +130,10 @@ sudo apt update
 sudo apt install ros-noetic-desktop-full
 echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 source ~/.bashrc
-
+```
+ 
+Anschließend kann CARLA 0.9.10 heruntergeladen und installiert werden:
+``` bash
 # carla0.9.10.1
 cd ~/Downloads
 wget https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/CARLA_0.9.10.1.tar.gz
@@ -138,7 +142,10 @@ tar -xf archive.tar.gz -C ~/carla0.9.10.1 # extract
 echo "export PYTHONPATH=$PYTHONPATH:~/carla0.9.10.1/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg" >> ~/.bashrc
 sudo apt install python3-pip
 pip3 install --user pygame numpy
-
+```
+ 
+Zuletzt wird die Carla ROS Bridge installiert und eingerichtet:
+``` bash
 # git
 sudo apt install git
 
@@ -165,8 +172,7 @@ catkin_make
 ```
 
 ### Setup des PSAF1 Projekts
-
-
+Das PSAF1 Projekt wird geklont und eingerichtet:
 ``` bash
 # setup project
 git clone https://github.com/ll7/psaf1.git
@@ -177,14 +183,16 @@ catkin_make
 source ~/.bashrc
 ```
 
-#### Download PSAF Machine Learning Modelle
-Download the [models](https://git.rz.uni-augsburg.de/luttkule/carla-praktikum-ws2019/-/blob/master/carla_object_recognition/yolo-obj_last.weights) and copy them to **psaf1/psaf_ros/psaf_perception/models/**.
+#### PSAF Machine Learning Modelle
+Damit die Objekterkennung des [Perception](psaf_ros/psaf_perception)-Pakets funktioniert, müssen noch [Modelldaten]((https://git.rz.uni-augsburg.de/luttkule/carla-praktikum-ws2019/-/blob/master/carla_object_recognition/yolo-obj_last.weights)) heruntergeladen werden und nach **psaf1/psaf_ros/psaf_perception/models/** kopiert werden.
 
-#### Install PSAF Dependencies
+#### Installation von Abhängigkeiten
+Für den Betrieb des Projekts sind einige apt-Pakete notwendig:
 ``` bash
 sudo apt-get install ros-noetic-move-base ros-noetic-teb-local-planner ros-noetic-costmap-converter ros-noetic-map-server ros-noetic-lanelet2 ros-noetic-cv-bridge ros-noetic-mrt-cmake-modules ros-noetic-navigation ros-noetic-derived-object-msgs
 ```
-
+ 
+Zudem werden noch folgende Python Module benötigt:
 ``` bash
 pip install simple-pid torch torchvision seaborn tqdm pandas pyyaml
 
@@ -226,6 +234,8 @@ python3 spawn_npc.py -n 200 -w 0
 ```
 
 ## Hinweise & häufige Fehler
+
+1. Vor dem Starten der Planung muss gewartet werden, bis im RVIZ **GoalPanel** der Status *'Init Done'* angezeigt wird.
 
 ## Ausblick
 
