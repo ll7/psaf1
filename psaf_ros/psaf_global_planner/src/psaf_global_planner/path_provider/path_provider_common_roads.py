@@ -234,7 +234,7 @@ class PathProviderCommonRoads:
             orientation_diffs.sort()
             # start_lanelet is a list of matching lanelet with the least orientation difference
             res_lanelet = [matching_candidates[0]]
-            for diff, index in enumerate(orientation_diffs):
+            for index, diff in enumerate(orientation_diffs):
                 if abs(diff < 10) and index != 0:
                     res_lanelet.append(matching_candidates[index])
 

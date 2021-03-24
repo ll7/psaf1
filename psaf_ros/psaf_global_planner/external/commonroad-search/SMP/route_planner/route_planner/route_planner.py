@@ -298,7 +298,7 @@ class RoutePlanner:
 
                 # start_lanelet is a list of matching lanelet with the least orientation difference
                 start_lanelet_id = [matching_candidates_id[0]]
-                for diff, index in enumerate(orientation_diffs):
+                for index, diff in enumerate(orientation_diffs):
                     if abs(diff < 10) and index != 0:
                         start_lanelet_id.append(matching_candidates_id[index])
             self.id_lanelets_start = list(self._filter_allowed_lanelet_ids(start_lanelet_id))
