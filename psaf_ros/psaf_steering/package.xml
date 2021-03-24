@@ -68,6 +68,7 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>carla_msgs</exec_depend>
   <exec_depend>psaf_abstraction_layer</exec_depend>
+  <exec_depend>psaf_sensor_preprocessing</exec_depend>
   <exec_depend>move_base</exec_depend>
 
 
