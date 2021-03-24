@@ -301,12 +301,11 @@ class PathProviderCommonRoads:
         # create start and goal state for planning problem
         index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start.position,
                                                                 prematured_stop=False, use_xcenterline=False)
-        start_position = [start_lanelet.center_vertices[index][0], start_lanelet.center_vertices[index][1]]
 
         # yaw in third entry ([2]) of euler notation
         start_yaw = euler_from_quaternion((start.orientation.x, start.orientation.y,
                                            start.orientation.z, start.orientation.w))[2]
-        start_state: State = State(position=np.array([start_position[0], start_position[1]]), velocity=0,
+        start_state: State = State(position=start_lanelet.center_vertices[index], velocity=0,
                                    time_step=0, slip_angle=0, yaw_rate=0,
                                    orientation=start_yaw)
 
