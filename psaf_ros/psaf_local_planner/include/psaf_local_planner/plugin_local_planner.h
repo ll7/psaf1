@@ -515,5 +515,12 @@ namespace psaf_local_planner {
     */
     bool hasLaneletTrafficLight(psaf_messages::XLanelet lanelet);
 
+    /**
+     * Compute new speed to be able to stop in X meters
+     * @param wishedSpeed the originally desired speed (our max speed)
+     * @param stoppingDistance the distance (=X meters)
+     * @return the speed to be able to stop in x meters or the original speed
+     * if the computed value would exceed the wished speed
+     */
     double computeSpeedToStopInXMeters(double wishedSpeed, double stoppingDistance);
 };
