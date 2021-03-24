@@ -88,7 +88,8 @@ class PathProviderCommonRoads:
         self.planning_problem = None
         self.manager = None
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter),
-                                         intersections=self.map_provider.intersection, map_name=self.map_provider.map_name)
+                                         intersections=self.map_provider.intersection,
+                                         map_name=self.map_provider.map_name)
         self.route_id = 1  # 1 is the first valid id, 0 is reserved as invalid
         rospy.Subscriber("/psaf/goal/set_instruction", PlanningInstruction, self._callback_goal)
         self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
@@ -202,10 +203,10 @@ class PathProviderCommonRoads:
             [np.array([pos.position.x, pos.position.y])])
         if len(matching_lanelet[0]) == 0:
             # no matching lanelet found -> search nearby
-            start_lanelet = self._find_nearest_lanelet(pos.position)
+            res_lanelet = [self._find_nearest_lanelet(pos.position)]
         elif len(matching_lanelet[0]) == 1:
             # one matching lanelet found -> return that lanelet
-            start_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
+            res_lanelet = [self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])]
         else:
             # more than one matching lanelet found -> search for lanelet with the correct orientation
 
@@ -230,11 +231,14 @@ class PathProviderCommonRoads:
 
             # calculate orientation differences for every lanelet candidate
             orientation_diffs = [abs(val - start_yaw) for val in matching_orientation]
+            orientation_diffs.sort()
+            # start_lanelet is a list of matching lanelet with the least orientation difference
+            res_lanelet = [matching_candidates[0]]
+            for diff, index in enumerate(orientation_diffs):
+                if abs(diff < 10) and index != 0:
+                    res_lanelet.append(matching_candidates[index])
 
-            # start_lanelet is the matching lanelet with the least orientation difference
-            start_lanelet = matching_candidates[np.argmin(orientation_diffs).item()]
-
-        return start_lanelet
+        return res_lanelet
 
     def _generate_planning_problem(self, start: Pose, target: Pose, u_turn: bool = False) -> ProblemStatus:
         """
@@ -250,18 +254,21 @@ class PathProviderCommonRoads:
             self.planning_problem = None
             return ProblemStatus.BadMap
 
-        # get start lanelet
-        start_lanelet = self._get_matching_lanelet(start)
+        # get start lanelets
+        start_lanelet_list = self._get_matching_lanelet(start)
 
-        # get nearest lanelet to target
-        goal_lanelet: Lanelet = self._get_matching_lanelet(target)
+        # get nearest lanelets to target
+        goal_lanelet_list = self._get_matching_lanelet(target)
 
-        if start_lanelet is None:
+        if start_lanelet_list[0] is None:
             self.planning_problem = None
             return ProblemStatus.BadStart
-        elif goal_lanelet is None:
+        if goal_lanelet_list[0] is None:
             self.planning_problem = None
             return ProblemStatus.BadTarget
+
+        start_lanelet = start_lanelet_list[0]
+        goal_lanelet = goal_lanelet_list[0]
 
         rospy.loginfo("PathProvider: Matching Lanelet (Start) ID " + str(start_lanelet.lanelet_id))
         rospy.loginfo("PathProvider: Matching Lanelet (End) ID " + str(goal_lanelet.lanelet_id))
@@ -285,7 +292,7 @@ class PathProviderCommonRoads:
             if start_index > end_index:
                 # split lanelet in between those two points to fix that issue for a further iteration
                 # which is triggered after a BadLanelet status is received by the compute_route algorithm
-                split_index = end_index + (start_index - end_index)//2
+                split_index = end_index + (start_index - end_index) // 2
                 split_point = Point(start_lanelet.center_vertices[split_index][0],
                                     start_lanelet.center_vertices[split_index][1], 0)
 
@@ -301,10 +308,15 @@ class PathProviderCommonRoads:
         # create start and goal state for planning problem
         index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start.position,
                                                                 prematured_stop=False, use_xcenterline=False)
+        start_position = [start_lanelet.center_vertices[index][0], start_lanelet.center_vertices[index][1]]
 
         # yaw in third entry ([2]) of euler notation
         start_yaw = euler_from_quaternion((start.orientation.x, start.orientation.y,
                                            start.orientation.z, start.orientation.w))[2]
+        # if u turn mirror direction
+        if u_turn:
+            start_yaw += math.pi
+            start_yaw = math.fmod(start_yaw, 2 * math.pi)
         start_state: State = State(position=start_lanelet.center_vertices[index], velocity=0,
                                    time_step=0, slip_angle=0, yaw_rate=0,
                                    orientation=start_yaw)
@@ -313,8 +325,13 @@ class PathProviderCommonRoads:
                                             goal_lanelet.center_vertices[len(goal_lanelet.center_vertices) // 2][1]]))
         goal_state: State = State(position=circle, time_step=Interval(0, 10000.0))
 
+        # collect the ids of all possible goal lanelets
+        lanelet_ids = []
+        for lane in goal_lanelet_list:
+            lanelet_ids.append(lane.lanelet_id)
+
         goal_region: GoalRegion = GoalRegion(state_list=[goal_state],
-                                             lanelets_of_goal_position={0: [goal_lanelet.lanelet_id]})
+                                             lanelets_of_goal_position={0: lanelet_ids})
 
         # return planning problem with start_state and goal_region
         self.planning_problem = PlanningProblem(0, start_state, goal_region)

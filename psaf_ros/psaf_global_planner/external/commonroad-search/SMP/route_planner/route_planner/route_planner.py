@@ -265,7 +265,7 @@ class RoutePlanner:
             matching_lanelet = self.lanelet_network.find_lanelet_by_position([post_start])
             if len(matching_lanelet[0]) == 1:
                 # one matching lanelet found -> return that lanelet
-                start_lanelet_id = matching_lanelet[0][0]
+                start_lanelet_id = [matching_lanelet[0][0]]
             else:
                 # PSAF_ROS Imports
                 from psaf_global_planner.map_provider.map_supervisor_common_roads import MapSupervisorCommonRoads
@@ -296,10 +296,12 @@ class RoutePlanner:
                 # calculate orientation differences for every lanelet candidate
                 orientation_diffs = [abs(val - start_yaw) for val in matching_orientation]
 
-                # start_lanelet is the matching lanelet with the least orientation difference
-                start_lanelet_id = matching_candidates_id[np.argmin(orientation_diffs).item()]
-
-            self.id_lanelets_start = list(self._filter_allowed_lanelet_ids([start_lanelet_id]))
+                # start_lanelet is a list of matching lanelet with the least orientation difference
+                start_lanelet_id = [matching_candidates_id[0]]
+                for diff, index in enumerate(orientation_diffs):
+                    if abs(diff < 10) and index != 0:
+                        start_lanelet_id.append(matching_candidates_id[index])
+            self.id_lanelets_start = list(self._filter_allowed_lanelet_ids(start_lanelet_id))
 
         elif hasattr(self.planning_problem.initial_state, 'position'):
             post_start = self.planning_problem.initial_state.position

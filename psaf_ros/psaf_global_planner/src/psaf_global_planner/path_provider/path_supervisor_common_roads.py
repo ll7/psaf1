@@ -71,6 +71,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                     self._log_debug("\t {}".format(lane))
                 real_obstacles = {}
                 self._log_debug("--------------------")
+                self._log_debug("Trying to match {} obstacles".format(len(obstacle.obstacles)))
                 self._log_debug("Matched:")
                 for obs in obstacle.obstacles:
                     matching_lanelet = self._get_obstacle_lanelet(relevant_lanelets, obs)
