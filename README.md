@@ -138,7 +138,7 @@ Anschließend kann CARLA 0.9.10 heruntergeladen und installiert werden:
 cd ~/Downloads
 wget https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/CARLA_0.9.10.1.tar.gz
 mkdir -p ~/carla0.9.10.1
-tar -xf archive.tar.gz -C ~/carla0.9.10.1 # extract
+tar -xf CARLA_0.9.10.1.tar.gz -C ~/carla0.9.10.1 # extract
 echo "export PYTHONPATH=$PYTHONPATH:~/carla0.9.10.1/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg" >> ~/.bashrc
 sudo apt install python3-pip
 pip3 install --user pygame numpy
@@ -158,6 +158,10 @@ cd ~/carla-ros-bridge
 git clone https://github.com/carla-simulator/ros-bridge.git
 cd ros-bridge
 git submodule update --init
+
+# Select correct version matching carla version
+git checkout 0.9.10.1
+
 cd ../catkin_ws/src
 ln -s ../../ros-bridge
 echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
@@ -175,12 +179,9 @@ catkin_make
 Das PSAF1 Projekt wird geklont und eingerichtet:
 ``` bash
 # setup project
+cd ~/
 git clone https://github.com/ll7/psaf1.git
 ln -s ~/psaf1/psaf_ros/ ~/carla-ros-bridge/catkin_ws/src/
-# build project
-cd ~/carla-ros-bridge/catkin_ws
-catkin_make
-source ~/.bashrc
 ```
 
 #### PSAF Machine Learning Modelle
@@ -194,18 +195,29 @@ sudo apt-get install ros-noetic-move-base ros-noetic-teb-local-planner ros-noeti
  
 Zudem werden noch folgende Python Module benötigt:
 ``` bash
-pip install simple-pid torch torchvision seaborn tqdm pandas pyyaml
+pip3 install simple-pid seaborn tqdm pandas pyyaml
 
 cd ~/psaf1/psaf_ros/psaf_planning/external/
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
+Ebenso muss pytorch entsprechen der Anleitung auf (Pytorch.org)[https://pytorch.org/] installiert werden. Dabei ist auf die lokal verwendete Treiberversion zu achten.
+
+## Bauen des PSAF1 Projekts
+
+Vor der Ausführung muss der Source-Code kompiliert werden.
+``` bash
+cd ~/carla-ros-bridge/catkin_ws
+catkin_make
+echo "source ~/carla-ros-bridge/catkin_ws/devel/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+```
 
 ## Ausführung des PSAF1 Projekts
 Vor der Ausführung des Projekts muss zunächst der CARLA-Server gestartet werden. Dies lässt sich im CARLA Ordner mit dem Skript **CarlaUE4.sh** bewerkstelligen.
 ``` bash
-cd ~/carla_0.9.10.1
-./CarlaUE4.sh -carla-server -windowed -ResX=320 -ResY=240 -benchmark -fps 10
+cd ~/carla0.9.10.1
+./CarlaUE4.sh -carla-server -windowed -ResX=320 -ResY=240 -benchmark -fps 20 -opengl
 ```
 
 Anschließend kann das Projekt in einem neuen Terminal gestartet werden. Hierfür muss entschieden werden, ob die Fahrt mit oder ohne Verkehrsregeln 
