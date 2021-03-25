@@ -3,6 +3,13 @@
 // Uncomment macro to enable trace logging
 //#define STM_TRACE
 
+// CONSTANTS
+#define SPEED_FOR_LEAVING_GO_STATE  (15 / 3.6)
+#define MIN_DISTANCE_TO_STOP_LINE  2.0
+#define EQUIVALENT_TO_0_VEL  0.01
+#define SEC_TO_ESCALATE_TO_EMERGENCY_EXIT 15.0
+#define SEC_TO_WAIT_AT_STOP 1.0
+#define SEC_TO_KEEP_STOP_GO 3.0
 
 #include <psaf_messages/TrafficLight.h>
 #ifndef PSAF_STATE_MACHINE_H
