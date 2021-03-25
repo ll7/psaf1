@@ -59,6 +59,11 @@
 // external non ros
 #include <boost/algorithm/clamp.hpp>
 
+// Constants
+// Check min radius for traffic elements in global plan
+#define MIN_CHECK_RADIUS_FOR_TRAFFIC_ELEMENTS 15.0
+
+
 // Ensure that we work with the correct standard
 // see https://stackoverflow.com/questions/41160276/does-c-stds-inf-behave-exactly-as-common-sensical-infinity
 static_assert(std::numeric_limits<double>::is_iec559, "The numeric standard doesn't fit our requirements!");

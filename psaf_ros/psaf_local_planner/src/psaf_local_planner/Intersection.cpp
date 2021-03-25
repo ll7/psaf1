@@ -5,7 +5,7 @@ namespace psaf_local_planner {
 
 
     double PsafLocalPlanner::getCheckDistanceForLanelets() {
-        return std::max(1.5 * getCurrentStoppingDistance(), 15.);
+        return std::max(1.5 * getCurrentStoppingDistance(), MIN_CHECK_RADIUS_FOR_TRAFFIC_ELEMENTS);
     }
 
     bool hasLaneletStop(psaf_messages::XLanelet lanelet) {
@@ -81,7 +81,7 @@ namespace psaf_local_planner {
                 // If the traffic light is within out stopping distance but greater 15m
                 // and we don't have any information about the traffic state (= indicate by this global planner state),
                 // reduce the speed to be slow enough to be able to stop at the traffic light when we know more
-                if(this->stop_distance_at_intersection > 15
+                if(this->stop_distance_at_intersection > MIN_CHECK_RADIUS_FOR_TRAFFIC_ELEMENTS
                         &&this->stop_distance_at_intersection<getCurrentStoppingDistance()){
                     // check if that's not the last lanelet else ignore this use case
                     if(this->global_route.size() == 1) {
