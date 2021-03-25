@@ -1,6 +1,6 @@
 # PSAF WS20/21 Gruppe 1
 Das Simulieren von autonomen Fahrzeugen ist ein wichtiger Bestandteil des Entwicklungsprozesses von autonomen Fahrzeugen. 
-Durch Simulation kann ein System getestet und die Funktionen validiert und verifiziert werden. 
+Durch die Simulation kann ein System getestet und die Funktionen validiert und verifiziert werden. 
 Dies ermöglicht Fehlererkennung, Fehlerlokalisierung und Fehleridentifizierung, sodass eine Optimierung des Systems erleichtert wird. 
 In diesem Projekt soll ein autonomes Fahrzeug konzeptioniert und implementiert werden, welches mithilfe eines Simulators getestet werden kann.
 
@@ -54,13 +54,13 @@ Die Aufgabe umfasst folgende Punkte:
 ### Enthaltene Pakete
 
 #### [Abstraction Layer](psaf_ros/psaf_abstraction_layer)
-Dieses Paket stellt eine Abstraktionsschicht zu den Sensoren des Fahrzeugs dar. Für Sensoren wie das GPS-Modul oder die Semantic Camera wird von diesem Paket eine Klassenresentation angeboten, die von anderen Modulen eingebunden werden kann.
+Dieses Paket stellt eine Abstraktionsschicht zu den Sensoren des Fahrzeugs dar. Für Sensoren wie das GPS-Modul oder die Semantic Camera wird von diesem Paket eine Klassenrepräsentation angeboten, die von anderen Modulen eingebunden werden kann.
  
 Genauere Informationen sind dem Readme [Abstraction Layer](psaf_ros/psaf_abstraction_layer) zu entnehmen.
 
 #### [Global Planner](psaf_ros/psaf_global_planner)
-Die Hauptaufgabe des Global Planner besteht darin, einen Pfad vom der aktuellen Position zu einem Zielpunkt zu planen. Um dies zu bewerstelligen, müssen entsprechende Karteninformationen generiert, bzw. konvertiert und aufbereitet werden. Neben einer einfachen Abfolge von Wegpunkten enthält der Plan auch Informationen wie Geschwindigkeitsbeschränkungen oder Stoppschilder.
-Nach der initialen Planung steht der Planner bereit, um dynamisch neu zu planen, wenn beispielweise Hindernisse umfahren werden sollen.
+Die Hauptaufgabe des Global Planner besteht darin, einen Pfad vom der aktuellen Position zu einem Zielpunkt zu planen. Um dies zu bewerkstelligen, müssen entsprechende Karteninformationen generiert, bzw. konvertiert und aufbereitet werden. Neben einer einfachen Abfolge von Wegpunkten enthält der Plan auch Informationen wie Geschwindigkeitsbeschränkungen oder Stoppschilder.
+Nach der initialen Planung steht der Planner bereit, um im Falle von Hindernissen dynamisch neu zu planen.
  
 Genauere Informationen sind dem Readme [Global Planner](psaf_ros/psaf_global_planner) zu entnehmen.
 
@@ -68,13 +68,13 @@ Genauere Informationen sind dem Readme [Global Planner](psaf_ros/psaf_global_pla
 Die Hauptaufgabe des Local Planner ist das Berechnen einer Geschwindigkeits- und einer Lenkwinkelvorgabe für das Fahrzeug. Hierbei werden Informationen aus dem 
 [Global Planner](psaf_ros/psaf_global_planner) (Globaler Pfad, Geschwindigkeit auf Streckenabschnitten) oder der [Perception](psaf_ros/psaf_perception) (Ampeln, Stoppschilder) verwendet. Dadurch kann der Local Planner dem
 globalem Pfad zum Ziel folgen und dabei Verkehrsregeln beachten. Zudem werden andere Fahrzeuge in der näheren Umgebung des eigenen Fahrzeugs auch in die Planung einbezogen.
-Falls im Pfad Hindernisse wie langsamere Verkehrsteilnehmer auftreten kann der Local Planner eine Neuplanung beim Global Planner auslösen.
+Falls im Pfad Hindernisse wie langsamere Verkehrsteilnehmer auftreten, kann der Local Planner eine Neuplanung beim Global Planner auslösen.
  
 Genauere Informationen sind dem Readme [Local Planner](psaf_ros/psaf_local_planner) zu entnehmen. 
 
 #### [Sensor Preprocessing](psaf_ros/psaf_sensor_preprocessing)
 Dieses Paket kombiniert einerseits Bild-Daten der RGB-, der Tiefen- und der Segmentation-Kamera zu einem gesammelten Bild und stellt dies der Perception zur Verfügung.
-Anderseits werden hier Informationen eines LIDAR-Sensors auf bestimmte Hindernisse untersucht. Diese Informationen werden beispielsweise vom Local Planner verwendet.
+Anderseits werden hier Informationen eines LIDAR-Sensors auf bestimmte Hindernisse untersucht und vorab aufbereitet. Diese Informationen werden beispielsweise vom Local Planner verwendet.
 
 Genauere Informationen sind dem Readme [Sensor Preprocessing](psaf_ros/psaf_sensor_preprocessing) zu entnehmen. 
 
@@ -101,7 +101,7 @@ Genauere Informationen sind dem Readme [Obstacle Layer](psaf_ros/psaf_obstacle_l
 
 
 #### [Scenario](psaf_ros/psaf_scenario)
-Dieses Paket dient nur als Hilfe für die Entwicklung des Projekts. Es wird ermöglicht, den aktuellen Stand der Entwlicklung in einem Szenario zu Testen und zu Bewerten.
+Dieses Paket dient nur als Hilfe für die Entwicklung des Projekts. Es ermöglicht, den aktuellen Stand der Entwlicklung in einem Szenario zu testen und zu bewerten.
 Ein Szenario enthält dabei eine bestimmte Route, die das Fahrzeug abfahren soll. Als Ergebnis wird eine Bewertung bereitgestellt, die angibt wie gut dem Weg gefolgt wurde.
  
 Genauere Informationen sind dem Readme [Scenario](psaf_ros/psaf_scenario) zu entnehmen. 
@@ -112,7 +112,7 @@ Auch dieses Paket dient als Hilfe für die Entwicklung des Projekts. Der Optimiz
 Genauere Informationen sind dem Readme [Optimizer](psaf_ros/psaf_optimizero) zu entnehmen. 
 
 #### [Messages](psaf_ros/psaf_messages)
-Dieses Paket definiert lediglich eigene Nachrichten, die von den anderen Paketen verwendet werden.
+Dieses Paket definiert eigene neu definierte Nachrichtentypen, die von den anderen Paketen verwendet werden.
 
 
 
