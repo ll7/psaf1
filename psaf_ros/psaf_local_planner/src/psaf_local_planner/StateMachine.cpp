@@ -46,34 +46,49 @@ namespace psaf_local_planner {
                                                double stoppingDistance,
                                                double currentSpeed, double distanceToStopLine, bool isIntersectionClear,
                                                double currentTimeSec) {
+#ifdef STM_TRACE
+        ROS_DEBUG("Update state based on:"
+                  "TrafficLightDetected:%d"
+                  "stopDetected:%d"
+                  "trafficLightstate:%d"
+                  "stoppingDistance:%f"
+                  "currentSpeed:%f"
+                  "distanceToStopLine:%f"
+                  "isIntersectionClear:%d"
+                  "currentTimeSec:%f",
+                  trafficLightDetected,stopDetected,trafficLightKnowledge.state,stoppingDistance,
+                  currentSpeed,distanceToStopLine,isIntersectionClear,currentTimeSec
+                  );
+#endif
+        LocalPlannerState newState = this->state;
         // Switch statement represents transitions -> if no transition for current input is found we stay in the current state
         switch (this->state) {
             case LocalPlannerState::UNKNOWN:
-                this->state = LocalPlannerState::UNKNOWN;
+                newState = LocalPlannerState::UNKNOWN;
                 break;
 
             case LocalPlannerState::DRIVING:
                 if (trafficLightDetected) {
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_NEAR;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_NEAR;
                 } else if (stopDetected) {
-                    this->state = LocalPlannerState::STOP_NEAR;
+                    newState = LocalPlannerState::STOP_NEAR;
                 }
                 break;
                 // Begin traffic light transitions
             case LocalPlannerState::TRAFFIC_LIGHT_NEAR:
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN &&
                     distanceToStopLine < stoppingDistance) {
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 } else if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_RED &&
                            distanceToStopLine < stoppingDistance) {
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
                 } else if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_RED &&
                     distanceToStopLine >= stoppingDistance) {
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN;
                 } else if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_YELLOW) {
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
                 }else if(stopDetected && trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_UNKNOWN){ // Seems to be in the wrong state -> go back to driving
-                    this->state = LocalPlannerState::DRIVING;
+                    newState = LocalPlannerState::DRIVING;
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_GO:
@@ -82,27 +97,27 @@ namespace psaf_local_planner {
                     (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_UNKNOWN
                     // If the traffic light is red go to DRIVING to reevaluate the decisions
                     ||trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_RED)) {
-                    this->state = LocalPlannerState::DRIVING;
+                    newState = LocalPlannerState::DRIVING;
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN) {
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 } else if (distanceToStopLine < 2.0 || currentSpeed < 0.01) { // Keep 2m distance to stop line and accept speed of 0.01 as waiting
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_WAITING;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_WAITING;
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN) {
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 } else if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_RED
                            && distanceToStopLine <= stoppingDistance) {
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP;
                 }
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
                 if (trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_GREEN) {
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 }
                 if(trafficLightKnowledge.state == psaf_messages::TrafficLight::STATE_UNKNOWN){
                     // Update time since we haven't seen a traffic light while waiting
@@ -119,38 +134,44 @@ namespace psaf_local_planner {
                 if(currentTimeSec-this->start_time_waiting_without_tl_state >= 15.0 && isIntersectionClear){
                     ROS_WARN("The state machine used the emergency exit while waiting at TL because TL state is unknown"
                              " for more than 15sec");
-                    this->state = LocalPlannerState::TRAFFIC_LIGHT_GO;
+                    newState = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 }
                 break;
                 // Begin Stop sign / mark transitions
             case LocalPlannerState::STOP_NEAR:
                 if (distanceToStopLine <= stoppingDistance) {
-                    this->state = LocalPlannerState::STOP_WILL_STOP;
+                    newState = LocalPlannerState::STOP_WILL_STOP;
                 }else if(trafficLightDetected){ // Seems to be in the wrong state -> go back to driving
-                    this->state = LocalPlannerState::DRIVING;
+                    newState = LocalPlannerState::DRIVING;
                 }
                 break;
             case LocalPlannerState::STOP_WILL_STOP:
                 if (distanceToStopLine <= 2 || currentSpeed < 0.01) {
-                    this->state = LocalPlannerState::STOP_WAITING;
+                    newState = LocalPlannerState::STOP_WAITING;
                     this->start_time_stop_waiting = currentTimeSec;
                 }
                 break;
             case LocalPlannerState::STOP_WAITING:
                 // Wait until intersection is clear and wait at least 3 seconds
                 if (isIntersectionClear && (currentTimeSec-this->start_time_stop_waiting)>1.) {
-                    this->state = LocalPlannerState::STOP_GO;
+                    newState = LocalPlannerState::STOP_GO;
                     this->start_time_stop_go = currentTimeSec;
                 }
                 break;
             case LocalPlannerState::STOP_GO:
                 if (currentSpeed > 15 / 3.6 && (currentTimeSec-this->start_time_stop_go)>=3.) {
-                    this->state = LocalPlannerState::DRIVING;
+                    newState = LocalPlannerState::DRIVING;
                 }
                 break;
             default:
                 // If Current state is not part of the transitions stay in current state
                 break;
+        }
+        // Update state
+        if(this->state!=newState){
+            std::string oldChar = getTextRepresentation();
+            this->state = newState;
+            ROS_DEBUG("State changed from %s to %s",oldChar.c_str(),getTextRepresentation().c_str());
         }
     }
 
@@ -192,18 +213,33 @@ namespace psaf_local_planner {
                                                                   double stoppingDistance,
                                                                   double currentSpeed, double distanceToStopLine,
                                                                   bool isIntersectionClear,
-                                                                  double curTimeSec) {
+                                                                  double currentTimeSec) {
+#ifdef LP_TRACE
+        ROS_DEBUG("Update state based on:"
+                  "TrafficLightDetected:%d"
+                  "stopDetected:%d"
+                  "trafficLightstate:%d"
+                  "stoppingDistance:%f"
+                  "currentSpeed:%f"
+                  "distanceToStopLine:%f"
+                  "isIntersectionClear:%d"
+                  "currentTimeSec:%f",
+                  trafficLightDetected, stopDetected, trafficLightKnowledge.state, stoppingDistance,
+                  currentSpeed, distanceToStopLine, isIntersectionClear, currentTimeSec
+        );
+#endif
+        LocalPlannerState newState = this->state;
         // Switch statement represents transitions -> if no transition for current input is found we stay in the current state
         switch (this->state) {
             case LocalPlannerState::UNKNOWN:
-                this->state = LocalPlannerState::UNKNOWN;
+                newState = LocalPlannerState::UNKNOWN;
                 break;
 
             case LocalPlannerState::DRIVING:
                 if (trafficLightDetected) {
-                    this->state = LocalPlannerState::STOP_NEAR;
+                    newState = LocalPlannerState::STOP_NEAR;
                 } else if (stopDetected) {
-                    this->state = LocalPlannerState::STOP_NEAR;
+                    newState = LocalPlannerState::STOP_NEAR;
                 }
                 break;
                 // Begin traffic light transitions
@@ -212,35 +248,41 @@ namespace psaf_local_planner {
             case LocalPlannerState::TRAFFIC_LIGHT_WILL_STOP:
             case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
             case LocalPlannerState::TRAFFIC_LIGHT_WAITING:
-                this->state = LocalPlannerState::DRIVING;
+                newState = LocalPlannerState::DRIVING;
                 break;
             // Begin Stop sign / mark transitions
             case LocalPlannerState::STOP_NEAR:
                 if (distanceToStopLine <= stoppingDistance) {
-                    this->state = LocalPlannerState::STOP_WILL_STOP;
+                    newState = LocalPlannerState::STOP_WILL_STOP;
                 }else if(trafficLightDetected){ // Seems to be in the wrong state -> go back to driving
-                    this->state = LocalPlannerState::DRIVING;
+                    newState = LocalPlannerState::DRIVING;
                 }
                 break;
             case LocalPlannerState::STOP_WILL_STOP:
                 if (distanceToStopLine <= 2 || currentSpeed < 0.01) {
-                    this->state = LocalPlannerState::STOP_WAITING;
+                    newState = LocalPlannerState::STOP_WAITING;
                 }
                 break;
             case LocalPlannerState::STOP_WAITING:
                 if (isIntersectionClear) {
-                    this->state = LocalPlannerState::STOP_GO;
-                    this->start_time_stop_go = curTimeSec;
+                    newState = LocalPlannerState::STOP_GO;
+                    this->start_time_stop_go = currentTimeSec;
                 }
                 break;
             case LocalPlannerState::STOP_GO:
-                if (currentSpeed > 15 / 3.6 && (curTimeSec-this->start_time_stop_go)>=3.) {
-                    this->state = LocalPlannerState::DRIVING;
+                if (currentSpeed > 15 / 3.6 && (currentTimeSec - this->start_time_stop_go) >= 3.) {
+                    newState = LocalPlannerState::DRIVING;
                 }
                 break;
             default:
                 // If Current state is not part of the transitions stay in current state
                 break;
+        }
+        // Update state
+        if(this->state!=newState){
+            std::string oldChar = getTextRepresentation();
+            this->state = newState;
+            ROS_DEBUG("State changed from %s to %s",oldChar.c_str(),getTextRepresentation().c_str());
         }
     }
     bool LocalPlannerStateMachineWithoutTrafficRules::isInTrafficLightStates() {

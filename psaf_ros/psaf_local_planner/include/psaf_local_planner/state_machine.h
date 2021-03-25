@@ -1,3 +1,9 @@
+// Settings
+
+// Uncomment macro to enable trace logging
+//#define STM_TRACE
+
+
 #include <psaf_messages/TrafficLight.h>
 #ifndef PSAF_STATE_MACHINE_H
 #define PSAF_STATE_MACHINE_H
@@ -149,7 +155,7 @@ namespace psaf_local_planner {
         void updateState(bool trafficLightDetected, bool stopDetected,
                          psaf_messages::TrafficLight trafficLightKnowledge, double stoppingDistance,
                          double currentSpeed, double distanceToStopLine, bool isIntersectionClear,
-                         double curTimeSec) override;
+                         double currentTimeSec) override;
 
         bool isInTrafficLightStates() override;
     };
