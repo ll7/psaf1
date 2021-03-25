@@ -24,9 +24,10 @@ class PlanningPreprocessor:
         self.outer_sub = None
         self.instruction_pub = None
         self.plan_u_turn = False
-        self.perception_area = [25, 15]  # Area we want to check to see if uTurn is possible (forward, right)
+        self.perception_area = [20, 15]  # Area we want to check to see if uTurn is possible (forward, right)
         self.min_forward = 0
         self.min_left = 0
+        self.vehicle_detected = False  # if a vehicle is detected within the perception_area we don't want to do a uTurn
 
     def find_free_area(self):
         """
@@ -72,20 +73,27 @@ class PlanningPreprocessor:
         If uTurn has to be considered this function is called when data from both lidar sensors was received
         If uTurn doesnt have to be considered it is directly called after goal was received
         """
+
         # get distance to nearest obstacle in forward/left direction
-        self.min_forward, self.min_left = self.find_free_area()
-        self.points = []
+        if self.plan_u_turn and (not self.vehicle_detected):
+            self.min_forward, self.min_left = self.find_free_area()
 
         # build output message
         out_data = PlanningInstruction()
         out_data.goalPoint = self.goal  # relay goal position
         out_data.obstacleDistanceLeft = self.min_left  # distance to nearest obstacle
         out_data.obstacleDistanceForward = self.min_forward
-        out_data.planUTurn = self.plan_u_turn  # if true, uTurn should be considered by global planner
+        out_data.planUTurn = self.plan_u_turn and (not self.vehicle_detected)  # if true, uTurn should be considered by global planner
 
         self.instruction_pub.publish(out_data)
         rospy.loginfo('Planning Preprocessor: Message sent!')
         rospy.loginfo(f"Planning Preprocessor: uTurn-Area: %.2f x %.2f" % (self.min_left, self.min_forward))
+
+        if self.vehicle_detected:
+            rospy.loginfo('Not planning uTurn because oncoming traffic was detected!')
+
+        self.points = []
+        self.vehicle_detected = False
 
     def lidar_callback_outer(self, data: PointCloud2):
         """
@@ -96,9 +104,12 @@ class PlanningPreprocessor:
         for p in pc2.read_points(data, skip_nans=True):  # iteratre through all points in pointcloud from lidar
             # p[0]: x, p[1]: y, p[2]: z, p[3]: cos, p[4]: index, p[5]: tag
             if p[5] not in [0, 3, 6, 7, 13, 21]:  # check if point is of type wall, car, ...
-                if (-2 < p[0] < self.perception_area[0]) and (
-                        1 < p[1] < self.perception_area[1]):  # only consider points on the left side and forward
-                    self.points.append([abs(p[0]), abs(p[1])])  # save point
+                # only consider points on the left side and forward
+                if (-2 < p[0] < self.perception_area[0]) and (1 < p[1] < self.perception_area[1]):
+                    self.points.append([abs(p[0]+2), abs(p[1])])  # save point
+                    if p[5] == 10:  # if a vehicle (tag 10)is detected within the perception_area we don't want to do a uTurn
+                        self.vehicle_detected = True
+                        break
         self.outer_sub.unregister()  # we only want data from one callback
         self.outer_sub = None
         # if data from both lidars was received, both subs are None
@@ -115,7 +126,10 @@ class PlanningPreprocessor:
         for p in pc2.read_points(data, skip_nans=True):
             if p[5] not in [0, 3, 6, 7, 13, 21]:
                 if (-2 < p[0] < self.perception_area[0]) and (1 < p[1] < self.perception_area[1]):
-                    self.points.append([abs(p[0]), abs(p[1])])
+                    self.points.append([abs(p[0]+2), abs(p[1])])
+                    if p[5] == 10:
+                        self.vehicle_detected = True
+                        break
         self.inner_sub.unregister()
         self.inner_sub = None
         if self.inner_sub is None and self.outer_sub is None:
