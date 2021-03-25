@@ -85,6 +85,7 @@ namespace psaf_local_planner {
                         &&this->stop_distance_at_intersection<getCurrentStoppingDistance()){
                     // check if that's not the last lanelet else ignore this use case
                     if(this->global_route.size() == 1) {
+                        ROS_DEBUG("Reduce speed because near traffic light and no knowledge about the traffic light state");
                         target_vel = computeSpeedToStopInXMeters(this->target_velocity,
                                                                  this->stop_distance_at_intersection);
                     }
@@ -102,12 +103,14 @@ namespace psaf_local_planner {
                 stop_distance = this->stop_distance_at_intersection;
                 if (stop_distance >  1e6) {
                     // Stop because we should see an stop line but we have no data -> emergency brake
+                    ROS_DEBUG("Emergency brake due to missing information about distance to stop line but state"
+                              "forces the car to stop at a stop line -> for safety brake now");
                     stop_distance = 0;
                 }
                 target_vel = computeSpeedToStopInXMeters(this->target_velocity,stop_distance);
                 break;
             case LocalPlannerState::TRAFFIC_LIGHT_SLOW_DOWN:
-                // Slow down and lets hope that the traffic light will turn green
+                // Slow down and let's hope that the traffic light will turn green
                 target_vel = target_velocity * 0.5;
                 break;
             case LocalPlannerState::STOP_NEAR:
