@@ -25,12 +25,12 @@ gestartet wird.
 #### Publish
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
-| /carla/ego_vehicle/vehicle_control_cmd | [EgoVehicleControlInfo](https://github.com/carla-simulator/ros-bridge/blob/master/carla_ackermann_control/msg/EgoVehicleControlInfo.msg) | Carla Twist PID Control |
+| /carla/{role_name}/vehicle_control_cmd | [EgoVehicleControlInfo](https://carla.readthedocs.io/en/0.9.8/ros_msgs/#egovehiclecontrolinfomsg) | Carla Twist PID Control |
 
 #### Subscribe
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
-|  /carla/ego_vehicle/twist_pid | [Twist](http://docs.ros.org/en/jade/api/geometry_msgs/html/msg/Twist.html) | Carla Twist PID Control |
+|  /carla/{role_name}/twist_pid | [Twist](http://docs.ros.org/en/jade/api/geometry_msgs/html/msg/Twist.html) | Carla Twist PID Control |
 
 
 ### Launch Files
@@ -50,7 +50,7 @@ Zudem stellt *move_base* zwei *costmaps* zur Verfügung, die Informationen über
 Der Carla_Twist_PID_Controller ist eine Abwandlung des offiziellen *carla-ros-bride-Pakets* [carla_ackermann_control](https://github.com/carla-simulator/ros-bridge/tree/master/carla_ackermann_control). 
 Der Originale Controller wandelt [AckermannDrive](http://docs.ros.org/en/api/ackermann_msgs/html/msg/AckermannDrive.html)-Nachrichten zu [CarlaEgoVehicleControl](https://github.com/carla-simulator/ros-bridge/blob/master/carla_ackermann_control/msg/EgoVehicleControlInfo.msg)-Nachrichten um, die vom Fahrzeug in Bewegungen umgesetzt werden. Für die Beschleunigungs- und Bremsvorgänge kommt hierzu ein PID-Controller zum Einsatz. Lenkwinkelvorgaben werden ohne Regelung direkt an das Fahrzeug weitergegeben.
 Die hierfür benötigten Reglerparameter werden beim Start der Node der Datei [settings.yaml](config/settings.yaml) entnommen, können aber auch nachträglich über *dynamic_reconfigure* angepasst werden.
-Für unser Projekt wurde der Controller so verändert, dass er statt AckermannDrive-Nachrichten nun [Twist](http://docs.ros.org/en/jade/api/geometry_msgs/html/msg/Twist.html)-Nachrichten verwendet, die vom [Local Planner](https://github.com/ll7/psaf1/tree/develop/psaf_ros/psaf_local_planner) versendet werden.
+Für unser Projekt wurde der Controller so verändert, dass er statt AckermannDrive-Nachrichten nun [Twist](http://docs.ros.org/en/jade/api/geometry_msgs/html/msg/Twist.html)-Nachrichten verwendet, die vom [Local Planner](../psaf_local_planner) versendet werden.
 Eine weitere Änderung ist, dass bei einer starken Differenz der Stellgröße über einem bestimmten Threshold nun vollständig die Bremse oder das Gaspedal betätigt wird. Dies ist vor allem hilfreich, um zuverlässig vor Hindernissen abzubremsen.
 
 ### Carla Control Physics

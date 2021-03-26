@@ -28,8 +28,7 @@ In diesem Projekt soll ein autonomes Fahrzeug konzeptioniert und implementiert w
       - [Installation von Abhängigkeiten](#installation-von-abhängigkeiten)
   * [Ausführung des PSAF1 Projekts](#ausf%C3%BChrung-des-psaf1-projekts)
   * [Hinweise & häufige Fehler](#hinweise--häufige-fehler)
-  * [Ausblick](#ausblick)
-  * [Quellen](#quellen)
+  * [Fazit](#fazit)
 
 
 ## Aufgabenstellung
@@ -37,7 +36,7 @@ Dieses Repository ist das Ergebnis der Veranstaltung „Praktikum: Simulation f�
 Im Rahmen der Veranstaltung soll mithilfe der Simulationsumgebung [CARLA](http://carla.org/) ein autonomes Fahrzeug entwickelt werden. 
 
 Die Aufgabe umfasst folgende Punkte:
-1. Das Fahrzeug soll in ROS implementiert werden. Die [CARLA ROS bridge](https://github.com/carla-simulator/ros-bridge) dient hierbei als Schnittstelle zwischen CARLA und ROS.
+1. Das Fahrzeug soll in ROS implementiert werden. Die [CARLA ROS Bridge](https://github.com/carla-simulator/ros-bridge) dient hierbei als Schnittstelle zwischen CARLA und ROS.
 2. Das Fahrzeug soll selbstständig eine Route berechnen können.
 3. Das Fahrzeug muss selbständig vom Startpunkt zum Zielpunkt gelangen.
 4. Das Fahrzeug muss Ampeln, STOP-Schilder und Geschwindigkeitsbegrenzungsschilder erkennen und darauf entsprechend reagieren können.
@@ -248,10 +247,19 @@ python3 spawn_npc.py -n 200 -w 0
 ## Hinweise & häufige Fehler
 
 1. Vor dem Starten der Planung muss gewartet werden, bis im RVIZ **GoalPanel** der Status *'Init Done'* angezeigt wird.
+2. Für die Fahrt mit Verkehrsregeln wird eine sehr starke GPU empfohlen. (z.B. RTX 2080 oder besser)
 
-## Ausblick
+## Fazit
+Abschließend lässt sich sagen, dass das im Laufe des Projekts entwickelte Fahrzeug alle Anforderungen der 
+Aufgabenstellung erfüllt. 
+Obwohl das Themengebiet "autonomes Fahren" sehr weitreichend ist, hat es das Praktikum *Simulation von autonomen Fahrzeugen* ergöglicht, 
+teils tiefgreifendes Wissen zu bestimmten Bereichen des Themengebiets zu erwerben.
+Durch die im Projekt erlangte 'Hands-On' Erfahrung fällt es den Teilnemern sicherlich leichter zukünftige Projekte
+im Bereich autonomes Fahren oder auch ROS zu meistern.
 
-## Quellen
+
+
+
 
 
 
