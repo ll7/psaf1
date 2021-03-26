@@ -48,7 +48,7 @@ class ProblemStatus(Enum):
 
 class PathProviderCommonRoads:
 
-    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 40,
+    def __init__(self, init_rospy: bool = False, polling_rate: int = 1, timeout_iter: int = 60,
                  role_name: str = "ego_vehicle",
                  initial_search_radius: float = 1.0, step_size: float = 1.0,
                  max_radius: float = 100, enable_debug: bool = False, cost_traffic_light: int = 30,
@@ -88,7 +88,8 @@ class PathProviderCommonRoads:
         self.planning_problem = None
         self.manager = None
         self.manager = CommonRoadManager(self._load_scenario(polling_rate, timeout_iter),
-                                         intersections=self.map_provider.intersection, map_name=self.map_provider.map_name)
+                                         intersections=self.map_provider.intersection,
+                                         map_name=self.map_provider.map_name)
         self.route_id = 1  # 1 is the first valid id, 0 is reserved as invalid
         rospy.Subscriber("/psaf/goal/set_instruction", PlanningInstruction, self._callback_goal)
         self.xroute_pub = rospy.Publisher('/psaf/xroute', XRoute, queue_size=10)
@@ -160,9 +161,6 @@ class PathProviderCommonRoads:
             # no adjacent neighbour found, search for unknown neighbours
 
             center_point = start_lanelet.center_vertices[len(start_lanelet.center_vertices) // 2]
-            start_point = start_lanelet.center_vertices[0]
-            end_point = start_lanelet.center_vertices[-1]
-            length = np.linalg.norm(np.array(end_point) - np.array(start_point))
             temp_index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start,
                                                                          prematured_stop=False, use_xcenterline=False)
             start_orientation = self.map_provider.get_lanelet_orientation_at_index(start_lanelet, temp_index)
@@ -171,13 +169,6 @@ class PathProviderCommonRoads:
             nearest = self.manager.map.lanelet_network.lanelets_in_proximity(np.array(center_point),
                                                                              self.u_turn_distances[0])
             for near_lanelet in nearest:
-                curr_start_point = near_lanelet.center_vertices[0]
-                curr_end_point = near_lanelet.center_vertices[-1]
-                curr_length = np.linalg.norm(np.array(curr_end_point) - np.array(curr_start_point))
-
-                # neighbouring distance - should be less than half the intersection
-                neigh_dist = np.linalg.norm(np.array(curr_end_point) - np.array(start_point))
-
                 temp_index = PathProviderCommonRoads.find_nearest_path_index(near_lanelet.center_vertices, start,
                                                                              prematured_stop=False,
                                                                              use_xcenterline=False)
@@ -206,6 +197,49 @@ class PathProviderCommonRoads:
             # no solution was found
             return False, None
 
+    def _get_matching_lanelet(self, pos: Pose):
+        # check if the car is already on a lanelet, if not get nearest lanelet to start
+        matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position(
+            [np.array([pos.position.x, pos.position.y])])
+        if len(matching_lanelet[0]) == 0:
+            # no matching lanelet found -> search nearby
+            res_lanelet = [self._find_nearest_lanelet(pos.position)]
+        elif len(matching_lanelet[0]) == 1:
+            # one matching lanelet found -> return that lanelet
+            res_lanelet = [self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])]
+        else:
+            # more than one matching lanelet found -> search for lanelet with the correct orientation
+
+            matching_orientation = []
+            matching_candidates = []
+            for lanelet_id in matching_lanelet[0]:
+                temp_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(lanelet_id)
+                temp_index = PathProviderCommonRoads.find_nearest_path_index(temp_lanelet.center_vertices,
+                                                                             pos.position, prematured_stop=False,
+                                                                             use_xcenterline=False)
+                temp_orientation = self.map_provider.get_lanelet_orientation_at_index(temp_lanelet, temp_index)
+                matching_orientation.append(temp_orientation)
+                matching_candidates.append(temp_lanelet)
+
+            # get start orientation as yaw angle
+            start_yaw = math.degrees(euler_from_quaternion((pos.orientation.x, pos.orientation.y,
+                                                            pos.orientation.z, pos.orientation.w))[2])
+            # mirror and get positive angle to match yaw direction of map provider
+            start_yaw *= -1
+            if start_yaw < 0:
+                start_yaw += 360
+
+            # calculate orientation differences for every lanelet candidate
+            orientation_diffs = [abs(val - start_yaw) for val in matching_orientation]
+            orientation_diffs.sort()
+            # start_lanelet is a list of matching lanelet with the least orientation difference
+            res_lanelet = [matching_candidates[0]]
+            for index, diff in enumerate(orientation_diffs):
+                if abs(diff < 10) and index != 0:
+                    res_lanelet.append(matching_candidates[index])
+
+        return res_lanelet
+
     def _generate_planning_problem(self, start: Pose, target: Pose, u_turn: bool = False) -> ProblemStatus:
         """
         Generate the planning problem by setting the starting point and generating a target region
@@ -220,28 +254,28 @@ class PathProviderCommonRoads:
             self.planning_problem = None
             return ProblemStatus.BadMap
 
-        start_lanelet: Lanelet
-        # check if the car is already on a lanelet, if not get nearest lanelet to start
-        matching_lanelet = self.manager.map.lanelet_network.find_lanelet_by_position(
-            [np.array([start.position.x, start.position.y])])
-        if len(matching_lanelet[0]) == 0:
-            start_lanelet = self._find_nearest_lanelet(start.position)
-        else:
-            start_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])
+        # get start lanelets
+        start_lanelet_list = self._get_matching_lanelet(start)
 
-        # get nearest lanelet to target
-        goal_lanelet: Lanelet = self._find_nearest_lanelet(target.position)
+        # get nearest lanelets to target
+        goal_lanelet_list = self._get_matching_lanelet(target)
 
-        if start_lanelet is None:
+        if start_lanelet_list[0] is None:
             self.planning_problem = None
             return ProblemStatus.BadStart
-        elif goal_lanelet is None:
+        if goal_lanelet_list[0] is None:
             self.planning_problem = None
             return ProblemStatus.BadTarget
 
+        start_lanelet = start_lanelet_list[0]
+        goal_lanelet = goal_lanelet_list[0]
+
+        rospy.loginfo("PathProvider: Matching Lanelet (Start) ID " + str(start_lanelet.lanelet_id))
+        rospy.loginfo("PathProvider: Matching Lanelet (End) ID " + str(goal_lanelet.lanelet_id))
+
         if u_turn:
-            u_turn_succes, start_lanelet = self._find_nearest_u_turn_lanelet(start.position, start_lanelet)
-            if not u_turn_succes:
+            u_turn_success, start_lanelet = self._find_nearest_u_turn_lanelet(start.position, start_lanelet)
+            if not u_turn_success:
                 return ProblemStatus.BadUTurn
 
         # if start and target point are on the same lanelet
@@ -258,7 +292,7 @@ class PathProviderCommonRoads:
             if start_index > end_index:
                 # split lanelet in between those two points to fix that issue for a further iteration
                 # which is triggered after a BadLanelet status is received by the compute_route algorithm
-                split_index = end_index + (start_index - end_index)//2
+                split_index = end_index + (start_index - end_index) // 2
                 split_point = Point(start_lanelet.center_vertices[split_index][0],
                                     start_lanelet.center_vertices[split_index][1], 0)
 
@@ -274,12 +308,15 @@ class PathProviderCommonRoads:
         # create start and goal state for planning problem
         index = PathProviderCommonRoads.find_nearest_path_index(start_lanelet.center_vertices, start.position,
                                                                 prematured_stop=False, use_xcenterline=False)
-        start_position = [start_lanelet.center_vertices[index][0], start_lanelet.center_vertices[index][1]]
 
         # yaw in third entry ([2]) of euler notation
         start_yaw = euler_from_quaternion((start.orientation.x, start.orientation.y,
                                            start.orientation.z, start.orientation.w))[2]
-        start_state: State = State(position=np.array([start_position[0], start_position[1]]), velocity=0,
+        # if u turn mirror direction
+        if u_turn:
+            start_yaw += math.pi
+            start_yaw = math.fmod(start_yaw, 2 * math.pi)
+        start_state: State = State(position=start_lanelet.center_vertices[index], velocity=0,
                                    time_step=0, slip_angle=0, yaw_rate=0,
                                    orientation=start_yaw)
 
@@ -287,7 +324,13 @@ class PathProviderCommonRoads:
                                             goal_lanelet.center_vertices[len(goal_lanelet.center_vertices) // 2][1]]))
         goal_state: State = State(position=circle, time_step=Interval(0, 10000.0))
 
-        goal_region: GoalRegion = GoalRegion([goal_state], None)
+        # collect the ids of all possible goal lanelets
+        lanelet_ids = []
+        for lane in goal_lanelet_list:
+            lanelet_ids.append(lane.lanelet_id)
+
+        goal_region: GoalRegion = GoalRegion(state_list=[goal_state],
+                                             lanelets_of_goal_position={0: lanelet_ids})
 
         # return planning problem with start_state and goal_region
         self.planning_problem = PlanningProblem(0, start_state, goal_region)

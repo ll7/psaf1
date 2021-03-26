@@ -46,6 +46,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 return
             self.last_id = obstacle.id
             self.status_pub.publish("Start Replanning")
+            rospy.loginfo("PathSupervisor: Start Replanning")
             # create a clean slate
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
@@ -58,6 +59,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             if len(car_lanelet[0]) == 0:
                 rospy.logerr("PathSupervisor: Car is not on a lanelet, abort !!")
                 self.status_pub.publish("Car is not on a lanelet, abort !! ")
+                self.busy = False
+                return
             else:
                 # determine relevant lanelets for an obstacle
                 car_lanelet = car_lanelet[0][0]
@@ -68,6 +71,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                     self._log_debug("\t {}".format(lane))
                 real_obstacles = {}
                 self._log_debug("--------------------")
+                self._log_debug("Trying to match {} obstacles".format(len(obstacle.obstacles)))
                 self._log_debug("Matched:")
                 for obs in obstacle.obstacles:
                     matching_lanelet = self._get_obstacle_lanelet(relevant_lanelets, obs)
@@ -91,10 +95,15 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                         self.status_pub.publish("Replanning aborted, network error")
                         self.busy = False
                         return
-
                     relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
                 # generate new plan
-                self._replan()
+                if len(real_obstacles) != 0:
+                    self._replan()
+                    self.status_pub.publish("PathSupervisor: finished")
+                    rospy.loginfo("PathSupervisor: finished!!")
+                else:
+                    rospy.logerr("PathSupervisor: Replanning aborted, no matched obstacle !!")
+                    self.status_pub.publish("Replanning aborted, no matched obstacle")
             self.busy = False
         elif self.busy:
             rospy.logerr("PathSupervisor: Replanning aborted, still busy !!")
@@ -105,7 +114,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         else:
             rospy.logerr("PathSupervisor: Replanning aborted, contact support !!")
             self.status_pub.publish("Replanning aborted, contact support")
-        self.status_pub.publish("Replanning done")
 
     def _determine_relevant_lanelets(self, car_lanelet: int) -> List[int]:
         """

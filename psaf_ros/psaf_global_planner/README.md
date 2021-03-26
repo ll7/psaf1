@@ -210,11 +210,11 @@ wie das Auto befindet.
 - Falls sich das Hindernis auf der Lanelet des Autos befindet, wird die Lanelet in drei Abschnitte aufgeteilt und das 
   Hindernis wird auf den dritten Abschnitt eingefügt. 
   Das genaue Vorgehen eines Teilungsprozesses wird im [CommonRoadManager](#map-manager-common_road_manager) beschrieben.
-  - Abschnitt eins ist der Teil der Lanelet auf der sich das Auto befindet. **[Lanelet Start, Position Auto]**
-  - Abschnitt zwei ist der Teil der Lanelet auf der sich das zwischen Auto und dem Hindernis befindet. 
+  - Abschnitt eins ist der Teil der Lanelet, auf der sich das Auto befindet. **[Lanelet Start, Position Auto]**
+  - Abschnitt zwei ist der Teil der Lanelet, der sich zwischen Auto und Hindernis befindet. 
     Dieser Abschnitt wird benötigt damit der Überholvorgang sauber zwischen Auto und Hindernis eingeplant werden kann. 
     **]Position Auto, Position Hindernis[**
-  - Abschnitt drei ist der Abschnitt der Lanelet auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
+  - Abschnitt drei ist der Abschnitt der Lanelet, auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
     
 Zu erwähnen ist, dass das Teilen einer Lanelet unmittelbar ein Aktualisieren aller Referenzen der Lanelets in der Umgebung, sowie ein
 Teilen aller adjazenten Lanelets zur Folge haben muss, da nur so das Lanelet-Netzwerk konsistent und mögliche 
@@ -266,13 +266,13 @@ gespawnt wurde. Tritt dies ein, liest der Preprocessor die Zielkoordinaten aus d
  
 Bei Bedarf prüft der Prepocessor noch wie viel Platz neben dem Fahrzeug für einen 
 U-Turn zur Verfügung steht und fügt diese Information der ausgehenden Nachricht hinzu. Die Erkennung des freien 
-Bereichs links/vorne neben dem Auto funktioniert dabei analog zum semantic_lidar_processor mit den Daten von zwei
+Bereichs links/vorne neben dem Auto funktioniert dabei analog zum *semantic_lidar_processor* aus dem Paket [Sensor Preprocssing](../psaf_sensor_preprocessing) mit den Daten von zwei
 LIDAR-Sensoren, die auf Hindernisse wie Gebäude, Mauern und Zäune regieren. 
 
 ![uturn-lidar](doc/uturn_lidar.png)
  
 Ob ein U-Turn eingeplant wird, hängt von den *rosparam*-Parametern **obeyRules** und 
-**alwaysUTurn** ab. Diese Parameter werden wie in [psaf_starter](https://github.com/ll7/psaf1/tree/develop/psaf_ros/psaf_steering) beschrieben, über 
+**alwaysUTurn** ab. Diese Parameter werden wie in [psaf_starter](../psaf_steering) beschrieben, über 
 verschiedene launch-Dateien voreingestellt.
  
 Für einen Betrieb ohne den Competition Manager steht ein RVIZ-Panel zu Verfügung, 

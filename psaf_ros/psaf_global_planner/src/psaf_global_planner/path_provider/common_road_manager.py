@@ -22,11 +22,11 @@ class CommonRoadManager:
         self.map = hd_map
         # create neighbourhood dicts for efficient access to that information
         self.neighbourhood = self._analyze_neighbourhood(self.map)
-        self.original_neighbourhood = deepcopy(self.neighbourhood)
         self.message_by_lanelet = {}
         self.intersections = deepcopy(intersections)
         self._fill_message_dict()
         self._handle_town_03(map_name)
+        self.original_neighbourhood = deepcopy(self.neighbourhood)
         self.original_map = deepcopy(self.map)
         self.original_message_by_lanelet = deepcopy(self.message_by_lanelet)
         rospy.loginfo("CommonRoadManager: Done!")
@@ -276,7 +276,7 @@ class CommonRoadManager:
             sep_index = end_index - (abs(end_index - start_index) // 2)
         else:
             sep_index = end_index + (abs(end_index - start_index) // 2)
-        if sep_index > 1 and len(lanelet_center_list) - sep_index > 1:
+        if sep_index > 2 and (len(lanelet_center_list)-1) - sep_index > 3:
             # bound lanelet_1
             left_1 = lanelet_copy.left_vertices[:sep_index + 1]
             center_1 = lanelet_copy.center_vertices[:sep_index + 1]

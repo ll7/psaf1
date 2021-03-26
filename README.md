@@ -1,6 +1,6 @@
 # PSAF WS20/21 Gruppe 1
 Das Simulieren von autonomen Fahrzeugen ist ein wichtiger Bestandteil des Entwicklungsprozesses von autonomen Fahrzeugen. 
-Durch Simulation kann ein System getestet und die Funktionen validiert und verifiziert werden. 
+Durch die Simulation kann ein System getestet und die Funktionen validiert und verifiziert werden. 
 Dies ermöglicht Fehlererkennung, Fehlerlokalisierung und Fehleridentifizierung, sodass eine Optimierung des Systems erleichtert wird. 
 In diesem Projekt soll ein autonomes Fahrzeug konzeptioniert und implementiert werden, welches mithilfe eines Simulators getestet werden kann.
 
@@ -28,8 +28,7 @@ In diesem Projekt soll ein autonomes Fahrzeug konzeptioniert und implementiert w
       - [Installation von Abhängigkeiten](#installation-von-abhängigkeiten)
   * [Ausführung des PSAF1 Projekts](#ausf%C3%BChrung-des-psaf1-projekts)
   * [Hinweise & häufige Fehler](#hinweise--häufige-fehler)
-  * [Ausblick](#ausblick)
-  * [Quellen](#quellen)
+  * [Fazit](#fazit)
 
 
 ## Aufgabenstellung
@@ -37,7 +36,7 @@ Dieses Repository ist das Ergebnis der Veranstaltung „Praktikum: Simulation f�
 Im Rahmen der Veranstaltung soll mithilfe der Simulationsumgebung [CARLA](http://carla.org/) ein autonomes Fahrzeug entwickelt werden. 
 
 Die Aufgabe umfasst folgende Punkte:
-1. Das Fahrzeug soll in ROS implementiert werden. Die [CARLA ROS bridge](https://github.com/carla-simulator/ros-bridge) dient hierbei als Schnittstelle zwischen CARLA und ROS.
+1. Das Fahrzeug soll in ROS implementiert werden. Die [CARLA ROS Bridge](https://github.com/carla-simulator/ros-bridge) dient hierbei als Schnittstelle zwischen CARLA und ROS.
 2. Das Fahrzeug soll selbstständig eine Route berechnen können.
 3. Das Fahrzeug muss selbständig vom Startpunkt zum Zielpunkt gelangen.
 4. Das Fahrzeug muss Ampeln, STOP-Schilder und Geschwindigkeitsbegrenzungsschilder erkennen und darauf entsprechend reagieren können.
@@ -54,13 +53,13 @@ Die Aufgabe umfasst folgende Punkte:
 ### Enthaltene Pakete
 
 #### [Abstraction Layer](psaf_ros/psaf_abstraction_layer)
-Dieses Paket stellt eine Abstraktionsschicht zu den Sensoren des Fahrzeugs dar. Für Sensoren wie das GPS-Modul oder die Semantic Camera wird von diesem Paket eine Klassenresentation angeboten, die von anderen Modulen eingebunden werden kann.
+Dieses Paket stellt eine Abstraktionsschicht zu den Sensoren des Fahrzeugs dar. Für Sensoren wie das GPS-Modul oder die Semantic Camera wird von diesem Paket eine Klassenrepräsentation angeboten, die von anderen Modulen eingebunden werden kann.
  
 Genauere Informationen sind dem Readme [Abstraction Layer](psaf_ros/psaf_abstraction_layer) zu entnehmen.
 
 #### [Global Planner](psaf_ros/psaf_global_planner)
-Die Hauptaufgabe des Global Planner besteht darin, einen Pfad vom der aktuellen Position zu einem Zielpunkt zu planen. Um dies zu bewerstelligen, müssen entsprechende Karteninformationen generiert, bzw. konvertiert und aufbereitet werden. Neben einer einfachen Abfolge von Wegpunkten enthält der Plan auch Informationen wie Geschwindigkeitsbeschränkungen oder Stoppschilder.
-Nach der initialen Planung steht der Planner bereit, um dynamisch neu zu planen, wenn beispielweise Hindernisse umfahren werden sollen.
+Die Hauptaufgabe des Global Planner besteht darin, einen Pfad vom der aktuellen Position zu einem Zielpunkt zu planen. Um dies zu bewerkstelligen, müssen entsprechende Karteninformationen generiert, bzw. konvertiert und aufbereitet werden. Neben einer einfachen Abfolge von Wegpunkten enthält der Plan auch Informationen wie Geschwindigkeitsbeschränkungen oder Stoppschilder.
+Nach der initialen Planung steht der Planner bereit, um im Falle von Hindernissen dynamisch neu zu planen.
  
 Genauere Informationen sind dem Readme [Global Planner](psaf_ros/psaf_global_planner) zu entnehmen.
 
@@ -68,13 +67,13 @@ Genauere Informationen sind dem Readme [Global Planner](psaf_ros/psaf_global_pla
 Die Hauptaufgabe des Local Planner ist das Berechnen einer Geschwindigkeits- und einer Lenkwinkelvorgabe für das Fahrzeug. Hierbei werden Informationen aus dem 
 [Global Planner](psaf_ros/psaf_global_planner) (Globaler Pfad, Geschwindigkeit auf Streckenabschnitten) oder der [Perception](psaf_ros/psaf_perception) (Ampeln, Stoppschilder) verwendet. Dadurch kann der Local Planner dem
 globalem Pfad zum Ziel folgen und dabei Verkehrsregeln beachten. Zudem werden andere Fahrzeuge in der näheren Umgebung des eigenen Fahrzeugs auch in die Planung einbezogen.
-Falls im Pfad Hindernisse wie langsamere Verkehrsteilnehmer auftreten kann der Local Planner eine Neuplanung beim Global Planner auslösen.
+Falls im Pfad Hindernisse wie langsamere Verkehrsteilnehmer auftreten, kann der Local Planner eine Neuplanung beim Global Planner auslösen.
  
 Genauere Informationen sind dem Readme [Local Planner](psaf_ros/psaf_local_planner) zu entnehmen. 
 
 #### [Sensor Preprocessing](psaf_ros/psaf_sensor_preprocessing)
 Dieses Paket kombiniert einerseits Bild-Daten der RGB-, der Tiefen- und der Segmentation-Kamera zu einem gesammelten Bild und stellt dies der Perception zur Verfügung.
-Anderseits werden hier Informationen eines LIDAR-Sensors auf bestimmte Hindernisse untersucht. Diese Informationen werden beispielsweise vom Local Planner verwendet.
+Anderseits werden hier Informationen eines LIDAR-Sensors auf bestimmte Hindernisse untersucht und vorab aufbereitet. Diese Informationen werden beispielsweise vom Local Planner verwendet.
 
 Genauere Informationen sind dem Readme [Sensor Preprocessing](psaf_ros/psaf_sensor_preprocessing) zu entnehmen. 
 
@@ -101,7 +100,7 @@ Genauere Informationen sind dem Readme [Obstacle Layer](psaf_ros/psaf_obstacle_l
 
 
 #### [Scenario](psaf_ros/psaf_scenario)
-Dieses Paket dient nur als Hilfe für die Entwicklung des Projekts. Es wird ermöglicht, den aktuellen Stand der Entwlicklung in einem Szenario zu Testen und zu Bewerten.
+Dieses Paket dient nur als Hilfe für die Entwicklung des Projekts. Es ermöglicht, den aktuellen Stand der Entwlicklung in einem Szenario zu testen und zu bewerten.
 Ein Szenario enthält dabei eine bestimmte Route, die das Fahrzeug abfahren soll. Als Ergebnis wird eine Bewertung bereitgestellt, die angibt wie gut dem Weg gefolgt wurde.
  
 Genauere Informationen sind dem Readme [Scenario](psaf_ros/psaf_scenario) zu entnehmen. 
@@ -112,7 +111,7 @@ Auch dieses Paket dient als Hilfe für die Entwicklung des Projekts. Der Optimiz
 Genauere Informationen sind dem Readme [Optimizer](psaf_ros/psaf_optimizero) zu entnehmen. 
 
 #### [Messages](psaf_ros/psaf_messages)
-Dieses Paket definiert lediglich eigene Nachrichten, die von den anderen Paketen verwendet werden.
+Dieses Paket definiert eigene neu definierte Nachrichtentypen, die von den anderen Paketen verwendet werden.
 
 
 
@@ -138,7 +137,7 @@ Anschließend kann CARLA 0.9.10 heruntergeladen und installiert werden:
 cd ~/Downloads
 wget https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/CARLA_0.9.10.1.tar.gz
 mkdir -p ~/carla0.9.10.1
-tar -xf archive.tar.gz -C ~/carla0.9.10.1 # extract
+tar -xf CARLA_0.9.10.1.tar.gz -C ~/carla0.9.10.1 # extract
 echo "export PYTHONPATH=$PYTHONPATH:~/carla0.9.10.1/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg" >> ~/.bashrc
 sudo apt install python3-pip
 pip3 install --user pygame numpy
@@ -158,6 +157,10 @@ cd ~/carla-ros-bridge
 git clone https://github.com/carla-simulator/ros-bridge.git
 cd ros-bridge
 git submodule update --init
+
+# Select correct version matching carla version
+git checkout 0.9.10.1
+
 cd ../catkin_ws/src
 ln -s ../../ros-bridge
 echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
@@ -175,12 +178,9 @@ catkin_make
 Das PSAF1 Projekt wird geklont und eingerichtet:
 ``` bash
 # setup project
+cd ~/
 git clone https://github.com/ll7/psaf1.git
 ln -s ~/psaf1/psaf_ros/ ~/carla-ros-bridge/catkin_ws/src/
-# build project
-cd ~/carla-ros-bridge/catkin_ws
-catkin_make
-source ~/.bashrc
 ```
 
 #### PSAF Machine Learning Modelle
@@ -194,18 +194,29 @@ sudo apt-get install ros-noetic-move-base ros-noetic-teb-local-planner ros-noeti
  
 Zudem werden noch folgende Python Module benötigt:
 ``` bash
-pip install simple-pid torch torchvision seaborn tqdm pandas pyyaml
+pip3 install simple-pid seaborn tqdm pandas pyyaml
 
 cd ~/psaf1/psaf_ros/psaf_planning/external/
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
+Ebenso muss pytorch entsprechen der Anleitung auf (Pytorch.org)[https://pytorch.org/] installiert werden. Dabei ist auf die lokal verwendete Treiberversion zu achten.
+
+## Bauen des PSAF1 Projekts
+
+Vor der Ausführung muss der Source-Code kompiliert werden.
+``` bash
+cd ~/carla-ros-bridge/catkin_ws
+catkin_make
+echo "source ~/carla-ros-bridge/catkin_ws/devel/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+```
 
 ## Ausführung des PSAF1 Projekts
 Vor der Ausführung des Projekts muss zunächst der CARLA-Server gestartet werden. Dies lässt sich im CARLA Ordner mit dem Skript **CarlaUE4.sh** bewerkstelligen.
 ``` bash
-cd ~/carla_0.9.10.1
-./CarlaUE4.sh -carla-server -windowed -ResX=320 -ResY=240 -benchmark -fps 10
+cd ~/carla0.9.10.1
+./CarlaUE4.sh -carla-server -windowed -ResX=320 -ResY=240 -benchmark -fps 20 -opengl
 ```
 
 Anschließend kann das Projekt in einem neuen Terminal gestartet werden. Hierfür muss entschieden werden, ob die Fahrt mit oder ohne Verkehrsregeln 
@@ -236,10 +247,19 @@ python3 spawn_npc.py -n 200 -w 0
 ## Hinweise & häufige Fehler
 
 1. Vor dem Starten der Planung muss gewartet werden, bis im RVIZ **GoalPanel** der Status *'Init Done'* angezeigt wird.
+2. Für die Fahrt mit Verkehrsregeln wird eine sehr starke GPU empfohlen. (z.B. RTX 2080 oder besser)
 
-## Ausblick
+## Fazit
+Abschließend lässt sich sagen, dass das im Laufe des Projekts entwickelte Fahrzeug alle Anforderungen der 
+Aufgabenstellung erfüllt. 
+Obwohl das Themengebiet "autonomes Fahren" sehr weitreichend ist, hat es das Praktikum *Simulation von autonomen Fahrzeugen* ergöglicht, 
+teils tiefgreifendes Wissen zu bestimmten Bereichen des Themengebiets zu erwerben.
+Durch die im Projekt erlangte 'Hands-On' Erfahrung fällt es den Teilnemern sicherlich leichter zukünftige Projekte
+im Bereich autonomes Fahren oder auch ROS zu meistern.
 
-## Quellen
+
+
+
 
 
 
