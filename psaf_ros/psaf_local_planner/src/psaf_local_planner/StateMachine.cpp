@@ -14,11 +14,11 @@ namespace psaf_local_planner {
     LocalPlannerStateMachine::~LocalPlannerStateMachine() = default;
 
     void LocalPlannerStateMachine::init() {
-        this->state = LocalPlannerState::DRIVING;
+        reset();
     }
 
     void LocalPlannerStateMachine::reset() {
-        this->state = LocalPlannerState::DRIVING;
+        setState(LocalPlannerState::DRIVING);
     }
 
     LocalPlannerState LocalPlannerStateMachine::getState() {
@@ -41,13 +41,22 @@ namespace psaf_local_planner {
                this->state == LocalPlannerState::STOP_GO;
     }
 
+    void LocalPlannerStateMachine::setState(LocalPlannerState newState) {
+        if (this->state != newState) {
+            std::string oldChar = getTextRepresentation();
+            this->state = newState;
+            ROS_INFO_STREAM_NAMED(STM_LOGGER_NAME, "State changed from '" << oldChar << "' to '"
+                                                                          << getTextRepresentation()<< "'.");
+        }
+    }
+
     void LocalPlannerStateMachine::updateState(bool trafficLightDetected, bool stopDetected,
                                                psaf_messages::TrafficLight trafficLightKnowledge,
                                                double stoppingDistance,
                                                double currentSpeed, double distanceToStopLine, bool isIntersectionClear,
                                                double currentTimeSec) {
 #ifdef STM_TRACE
-        ROS_DEBUG("Update state based on:"
+        ROS_DEBUG_NAMED(STM_LOGGER_NAME,"Update state based on:"
                   "TrafficLightDetected:%d"
                   "stopDetected:%d"
                   "trafficLightstate:%d"
@@ -135,7 +144,7 @@ namespace psaf_local_planner {
                 // The intersection must be clear to prevent a collision
                 if (currentTimeSec - this->start_time_waiting_without_tl_state >= SEC_TO_ESCALATE_TO_EMERGENCY_EXIT
                     && isIntersectionClear) {
-                    ROS_WARN("The state machine used the emergency exit while waiting at TL because TL state is unknown"
+                    ROS_WARN_NAMED(STM_LOGGER_NAME,"The state machine used the emergency exit while waiting at TL because TL state is unknown"
                              " for more than %f sec",SEC_TO_ESCALATE_TO_EMERGENCY_EXIT);
                     newState = LocalPlannerState::TRAFFIC_LIGHT_GO;
                 }
@@ -171,11 +180,7 @@ namespace psaf_local_planner {
                 break;
         }
         // Update state
-        if (this->state != newState) {
-            std::string oldChar = getTextRepresentation();
-            this->state = newState;
-            ROS_DEBUG("State changed from %s to %s", oldChar.c_str(), getTextRepresentation().c_str());
-        }
+        this->setState(newState);
     }
 
     std::string LocalPlannerStateMachine::getTextRepresentation() {
@@ -208,6 +213,7 @@ namespace psaf_local_planner {
         }
     }
 
+    // Begin of state machine definition without traffic rules
 
     LocalPlannerStateMachineWithoutTrafficRules::LocalPlannerStateMachineWithoutTrafficRules() = default;
 
@@ -282,11 +288,7 @@ namespace psaf_local_planner {
                 break;
         }
         // Update state
-        if (this->state != newState) {
-            std::string oldChar = getTextRepresentation();
-            this->state = newState;
-            ROS_DEBUG("State changed from %s to %s", oldChar.c_str(), getTextRepresentation().c_str());
-        }
+        this->setState(newState);
     }
 
     bool LocalPlannerStateMachineWithoutTrafficRules::isInTrafficLightStates() {

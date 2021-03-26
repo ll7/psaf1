@@ -103,7 +103,7 @@ namespace psaf_local_planner {
                 stop_distance = this->stop_distance_at_intersection;
                 if (stop_distance >  1e6) {
                     // Stop because we should see an stop line but we have no data -> emergency brake
-                    ROS_DEBUG("Emergency brake due to missing information about distance to stop line but state"
+                    ROS_WARN("Emergency brake due to missing information about distance to stop line but state"
                               "forces the car to stop at a stop line -> for safety brake now");
                     stop_distance = 0;
                 }

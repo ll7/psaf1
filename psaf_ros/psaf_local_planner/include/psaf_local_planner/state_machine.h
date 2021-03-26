@@ -11,6 +11,8 @@
 #define SEC_TO_WAIT_AT_STOP 1.0
 #define SEC_TO_KEEP_STOP_GO 3.0
 
+#define STM_LOGGER_NAME "local_state_machine"
+
 #include <psaf_messages/TrafficLight.h>
 #ifndef PSAF_STATE_MACHINE_H
 #define PSAF_STATE_MACHINE_H
@@ -131,6 +133,12 @@ namespace psaf_local_planner {
           * infinity represents that no value was set
           */
         double start_time_stop_go;
+
+        /**
+         * Updates the state to the given value
+         * @param newState the new state
+         */
+        void setState(LocalPlannerState newState);
 
     private:
         /**
