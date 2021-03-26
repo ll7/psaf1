@@ -263,8 +263,6 @@ namespace psaf_local_planner {
             case LocalPlannerState::STOP_NEAR:
                 if (distanceToStopLine <= stoppingDistance) {
                     newState = LocalPlannerState::STOP_WILL_STOP;
-                } else if (trafficLightDetected) { // Seems to be in the wrong state -> go back to driving
-                    newState = LocalPlannerState::DRIVING;
                 }
                 break;
             case LocalPlannerState::STOP_WILL_STOP:
