@@ -170,6 +170,11 @@ class PlanningPreprocessor:
             goal.position.y = rospy.get_param('competition/goal/position/y')
             goal.position.z = rospy.get_param('competition/goal/position/z')
 
+            goal.orientation.x = rospy.get_param('competition/goal/orientation/x', 0)
+            goal.orientation.y = rospy.get_param('competition/goal/orientation/y', 0)
+            goal.orientation.z = rospy.get_param('competition/goal/orientation/z', 0)
+            goal.orientation.w = rospy.get_param('competition/goal/orientation/w', 0)
+
             # continue like goal position was received by RVIZ goal panel
             self.goal_callback(goal)
         except KeyError:
