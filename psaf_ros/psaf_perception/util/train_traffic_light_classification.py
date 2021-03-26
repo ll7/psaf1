@@ -20,8 +20,13 @@ from tqdm import tqdm
 data_dir = "/home/psaf1/project-files/training_data/traffic_light_data"
 
 # Generate path where the model will be stored
-now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 store_path =os.path.abspath(f"../models/traffic-light-classifiers-{now}")
+# Use existing model that will be fine tuned
+# set 'alexnet', 'resnet' or path to an existing pt file
+base_model_name = "alexnet"
+# None if net should be trained based on standard pretrained network -> define in base_model_name
+existing_model_path = "../models/traffic-light-classifiers-2021-03-26_12-49-07"
 
 # classes in the dataset
 classes = ['back', 'green','red','yellow']
@@ -118,22 +123,33 @@ def set_parameter_requires_grad(model, feature_extracting):
 
 
 def initialize_model(num_classes, feature_extract, use_pretrained=True):
+    global base_model_name
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
 
     """ Resnet
     """
-    # model_ft = models.resnet18(pretrained=use_pretrained)
-    # set_parameter_requires_grad(model_ft, feature_extract)
-    # num_ftrs = model_ft.fc.in_features
-    # model_ft.fc = nn.Linear(num_ftrs, num_classes)
-    # input_size = 224
+    if existing_model_path is None:
+        if base_model_name == "resnet":
+            model_ft = models.resnet18(pretrained=use_pretrained)
+            set_parameter_requires_grad(model_ft, feature_extract)
+            num_ftrs = model_ft.fc.in_features
+            model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        elif base_model_name == "alexnet":
+            # Alexnet
+            model_ft = models.alexnet(pretrained=use_pretrained)
+            set_parameter_requires_grad(model_ft, feature_extract)
+            num_ftrs = model_ft.classifier[6].in_features
+            model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
+        else:
+            assert False
+    else:
+        with open(os.path.abspath(existing_model_path+".config")) as f:
+            config = json.load(f)
+            base_model_name = config.get("base model name","unknown")
+        model_ft = torch.load(os.path.abspath(existing_model_path+".pt"))
+        set_parameter_requires_grad(model_ft, feature_extract)
 
-    # Alexnet
-    model_ft = models.alexnet(pretrained=use_pretrained)
-    set_parameter_requires_grad(model_ft, feature_extract)
-    num_ftrs = model_ft.classifier[6].in_features
-    model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
     input_size = 224
 
     return model_ft, input_size
@@ -228,6 +244,8 @@ if __name__ == "__main__":
         json.dump(names, f)
     results = {
         'epochs': num_epochs,
+        'base model name': base_model_name,
+        'training_based_on': existing_model_path,
         'batch size': batch_size,
         'freeze feature extraction layers': feature_extract,
         'Used cudnn': use_cudnn,
