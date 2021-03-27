@@ -26,8 +26,9 @@ namespace psaf_local_planner {
             for (auto lanelet : global_route) {
                 // sum up distance until lanelet is marked as intersection
                 distance += lanelet.route_portion.back().distance - lanelet.route_portion.front().distance;
-                if (attributeCheckFunction(lanelet))
+                if (attributeCheckFunction(lanelet)) {
                     break;
+                }
             }
             if(distance<=LANELET_CHECK_RADIUS){
                 return distance;
@@ -37,12 +38,17 @@ namespace psaf_local_planner {
     }
 
     void PsafLocalPlanner::updateStateMachine() {
+        double distanceToTrafficLight = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
+        double distanceToStop =  this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop);
         // A traffic light is detected if it is within our check distance on our path
-        bool traffic_light_detected = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight) <=
+        bool traffic_light_detected =  distanceToTrafficLight <=
                                       this->getCheckDistanceForLanelets();
         // A stop is detected if it is within our check distance on our path
-        bool stop_detected = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop) <=
+        bool stop_detected =  distanceToStop <=
                              this->getCheckDistanceForLanelets();
+        if(distanceToStop < distanceToTrafficLight){
+            traffic_light_detected = false;
+        }
         // whether the intersection is clear
         bool is_intersection_clear = false;
         // Without traffic rules we are less strict regarding a clear intersection
