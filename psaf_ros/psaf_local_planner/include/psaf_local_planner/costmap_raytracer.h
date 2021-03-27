@@ -85,7 +85,7 @@ namespace psaf_local_planner {
             static constexpr int MOVEMENT_CHECK_MAX_ITERATION_PAUSE_SECONDS = 3;
 
             /** Min distance which the obstacle should be away to be included in the movement check */
-            static constexpr int MOVEMENT_CHECK_MIN_DISTANCE = 3;
+            static constexpr int MOVEMENT_CHECK_MIN_DISTANCE = 7;
 
             /** Ros Seconds to keep a raytracing result for distance  */
             static constexpr int MOVEMENT_CHECK_SECONDS_TO_KEEP = 2;
