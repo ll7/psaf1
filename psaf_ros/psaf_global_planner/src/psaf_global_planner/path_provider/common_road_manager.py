@@ -266,6 +266,7 @@ class CommonRoadManager:
         # if a lanelet can't be found -> exit
         lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(lanelet_id)
         if lanelet_copy is None:
+            rospy.logerr("Manager: Lanelet is None")
             return None, None
         # bounds lanelet1
         sep_index = 0
@@ -389,6 +390,8 @@ class CommonRoadManager:
             self._fast_reference_cleanup(lanelet_id)
             self._update_message_dict(lanelet_copy.lanelet_id, id_lane_1, id_lane_2)
             return id_lane_1, id_lane_2
+        else:
+            rospy.logerr("Manager: Sep_index: {}, lanelet_length {}".format(sep_index, len(lanelet_center_list)))
         return None, None
 
     def _generate_lanelet_id(self, id_start=-1, exclude: int = -1) -> int:
