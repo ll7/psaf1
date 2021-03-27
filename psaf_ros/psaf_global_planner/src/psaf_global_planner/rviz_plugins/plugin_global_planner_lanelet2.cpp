@@ -91,7 +91,7 @@ namespace psaf_global_planner {
             if(path.size() > 0) {
                 if(comparePosition(path.back().pose, goal.pose)) {
                     plan = path; //move the path to the plan vector witch is used by the move_base to follow the path
-                    ROS_INFO("Path size: %d vs %d(msg)", plan.size(), path.size());
+                    ROS_INFO("Path size: %ld vs %ld(msg)", plan.size(), path.size());
                     ROS_INFO("Global planner was successful");
                     statusMsg.data= "Global planner was successful";
                     statusPublisher.publish(statusMsg);
