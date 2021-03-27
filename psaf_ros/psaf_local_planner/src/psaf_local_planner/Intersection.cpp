@@ -61,10 +61,12 @@ namespace psaf_local_planner {
         // whether the intersection is clear
         bool is_intersection_clear = false;
         // Without traffic rules we are less strict regarding a clear intersection
-        if (this->respect_traffic_rules) {
-            is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.8*M_PI, 20, 5);
-        } else {
-            is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5 * M_PI, 15, 5);
+        if (this->state_machine->isInStopStates()) {
+            if (this->respect_traffic_rules) {
+                is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.8 * M_PI, 20, 5);
+            } else {
+                is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5 * M_PI, 15, 5);
+            }
         }
         this->state_machine->updateState(traffic_light_detected, stop_detected,
                                          this->traffic_light_state,

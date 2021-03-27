@@ -346,6 +346,7 @@ namespace psaf_local_planner
         double check_distance_lanechange = 7;
         // calc distance to next alne change
         double distance = getDistanceToLaneChange(distance_begin_check_lane_change);
+        ROS_INFO("lanechange distance: %f", distance);
 
         if (distance < distance_begin_check_lane_change) {
             // lanechange ahead, but lane change direction not calculated therefore presume as before
@@ -365,6 +366,8 @@ namespace psaf_local_planner
                 angle_to = -M_PI / 4.0;
                 angle_from = -M_PI * (3.0/4.0);
             }
+
+            ROS_INFO("Should raytrace now for line checking");
             // raytrace area
             costmap_raytracer.raytraceSemiCircle(angle_from, angle_to, check_distance_lanechange, collisions);
             // set max velocity according to ANHALTEWEG if obstacle in area
@@ -422,13 +425,16 @@ namespace psaf_local_planner
                                     lane_change_direction = -1;
                                 }
                                 lane_change_direction_calculated = true;
+                                return distance;
                             } else
                                 ROS_WARN("Not enough points to use three point method");
-
                             }
                         } else {
                             ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
                         }
+                    } else {
+                        // We are for enough away so that we don't care anymore;
+                        return INFINITY;
                     }
                 }
                 // recent LaneChang is terminated, reset flags
