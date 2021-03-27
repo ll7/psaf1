@@ -111,11 +111,15 @@ namespace psaf_local_planner
                         max_velocity = std::min(global_route[0].route_portion[0].speed / 3.6,
                                                 center_point_out.speed / 3.6);
                     }
+
+                    if (!respect_traffic_rules) {
+                        max_velocity *= 1.5;
+                    }
                 }
 
-                if (!respect_traffic_rules) {
-                    max_velocity *= 1.5;
-                }
+                ROS_INFO("max vel: %f", max_velocity);
+
+
 
                 double angle = computeSteeringAngle(target_point, current_pose.pose);
 

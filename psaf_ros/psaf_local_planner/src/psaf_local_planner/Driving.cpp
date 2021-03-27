@@ -359,7 +359,7 @@ namespace psaf_local_planner
             // calculate angles for ray tracing circle area
             double angle_from, angle_to;
             // right(1) or left(-1)
-            if (lane_change_direction > 0) {
+            if (lane_change_direction <= 0) {
                 angle_from = M_PI / 4.0;
                 angle_to = M_PI * (3.0/4.0);
             } else {
