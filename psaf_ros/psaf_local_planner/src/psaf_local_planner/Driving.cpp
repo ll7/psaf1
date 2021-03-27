@@ -424,13 +424,14 @@ namespace psaf_local_planner
                                     lane_change_direction = -1;
                                 }
                                 lane_change_direction_calculated = true;
-                                return distance;
-                            } else
-                                ROS_WARN("Not enough points to use three point method");
                             } else {
+                                ROS_WARN("Not enough points to use three point method");
+                            }
+                        } else {
                             ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
                         }
-                        }
+                    }
+                    return distance;
                     } else {
                         // We are for enough away so that we don't care anymore;
                         return INFINITY;
@@ -441,7 +442,6 @@ namespace psaf_local_planner
                     lane_change_direction_calculated = false;
                     lane_change_direction = 0;
                 }
-
             }
         return distance;
         }
