@@ -326,9 +326,9 @@ namespace psaf_local_planner
     double PsafLocalPlanner::getDistanceToIntersection() {
         double distance = 0;
         // iterate over upcoming lanelets in the route
-        for (auto lanelet : global_route) {
+        for (auto &lanelet : global_route) {
             // sum up distance until lanelet is marked as intersection
-            distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
+            distance += lanelet.route_portion.end()->distance - lanelet.route_portion.begin()->distance;
             if (lanelet.isAtIntersection)
                 return distance;
         }
