@@ -53,7 +53,6 @@ namespace psaf_local_planner {
                 is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5 * M_PI, 18, 5);
             }
         }
-        ROS_WARN("Stopping distance %f",this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop));
         this->state_machine->updateState(traffic_light_detected, stop_detected,
                                          this->traffic_light_state,
                                          this->getCurrentStoppingDistance(), this->current_speed,
