@@ -25,14 +25,14 @@ namespace psaf_local_planner
         // Debug data for the rays if the car
         auto marker_ray = visualization_msgs::Marker();
 
-        marker_ray.type = visualization_msgs::Marker::LINE_STRIP;
+        marker_ray.type = visualization_msgs::Marker::LINE_LIST;
         marker_ray.action = visualization_msgs::Marker::ADD;
         marker_ray.ns = "ray";
         marker_ray.header.frame_id = "map";
         marker_ray.header.stamp = ros::Time::now();
         marker_ray.color.a = 1.0;
         marker_ray.color.r = 1.0;
-        marker_ray.scale.x = 0.5;
+        marker_ray.scale.x = 0.1;
         
         tf2::Transform current_transform;
         tf2::convert(current_pose->pose, current_transform);
@@ -65,6 +65,7 @@ namespace psaf_local_planner
             point.z = 0;
             marker_ray.points.push_back(point);
         }
+
 
         // Debug data for the position of the obstacles
         auto markers = visualization_msgs::MarkerArray();
