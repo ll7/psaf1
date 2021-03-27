@@ -146,7 +146,7 @@ class PathProviderCommonRoads:
                  False if not and None
         """
         neighbour_found = False
-        if self.u_turn_distances[0] < self.turning_circle and self.u_turn_distances[1] < self.turning_circle / 2:
+        if self.u_turn_distances[0] < self.turning_circle or self.u_turn_distances[1] < self.turning_circle / 2:
             # if free space is smaller than our minimum turning_circle a u_turn is not possible
             return False, None
         # first check if start_lanelet has a left adjacent neighbour, which faces in the opposite direction

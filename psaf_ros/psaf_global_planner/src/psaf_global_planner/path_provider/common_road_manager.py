@@ -139,7 +139,8 @@ class CommonRoadManager:
         """
         # add the new lanelets to the dict
         self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_front))
-        self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back))
+        front_speed = self.message_by_lanelet[lanelet_front].route_portion[-1].speed
+        self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back), start_speed=front_speed)
 
         # remove old lanelet from dict
         del self.message_by_lanelet[matching_lanelet_id]
@@ -168,7 +169,7 @@ class CommonRoadManager:
 
         return distance, time_spent
 
-    def _generate_xlanelet(self, lanelet: Lanelet):
+    def _generate_xlanelet(self, lanelet: Lanelet, start_speed: float = None):
         """
         Generate the XLanelet message of the given lanelet and store it in the message_by_lanelet dict for later use
         :param lanelet: the considered lanelet
@@ -181,7 +182,7 @@ class CommonRoadManager:
 
         light = len(lanelet.traffic_lights) > 0
         intersection = self._check_in_lanelet_for_intersection(lanelet)
-        center_line = self._generate_extended_centerline_by_lanelet(lanelet)
+        center_line = self._generate_extended_centerline_by_lanelet(lanelet, start_speed)
 
         # create message, isLaneChange is False by default
         message = XLanelet(id=lanelet.lanelet_id, hasLight=light, isAtIntersection=intersection, hasStop=stop,
@@ -189,7 +190,8 @@ class CommonRoadManager:
 
         self.message_by_lanelet[lanelet.lanelet_id] = message
 
-    def _generate_extended_centerline_by_lanelet(self, lanelet: Lanelet) -> List[CenterLineExtended]:
+    def _generate_extended_centerline_by_lanelet(self, lanelet: Lanelet, start_speed: float = None) -> \
+            List[CenterLineExtended]:
         """
         Generate the extended centerline Message based on the given lanelet
         Therefore check the current speed limit for every waypoint
@@ -197,6 +199,10 @@ class CommonRoadManager:
         :return: List of Waypoints and their corresponding speed. -> [[x,y,z, speed], ..]
         """
         from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads as pp
+
+        if start_speed is None:
+            start_speed = self.default_speed
+
         # first get speed_signs in current lanelet
         speed_signs = []
         for sign_id in lanelet.traffic_signs:
@@ -212,7 +218,7 @@ class CommonRoadManager:
 
         # generate CenterLineExtended
         center_line_extended = []
-        speed = self.default_speed
+        speed = start_speed
         time = 0.0
         dist = 0.0
         prev_point = None
