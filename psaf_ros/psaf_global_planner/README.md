@@ -46,7 +46,7 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 | /psaf/planning/obstacle | [Obstacle](../psaf_messages/msg/Obstacle.msg) | Path Provider |
 | /carla/world_info | CarlaWorldInfo | Map Provider |
 | /psaf/goal/set | Pose | Planning Prepocessor |
-| /carla/ego_vehicle/initialpose | PoseWithCovarianceStamped | Planning Prepocessor |
+| /carla/{role_name}/initialpose | PoseWithCovarianceStamped | Planning Prepocessor |
 
 
 ### Message Struktur
@@ -178,14 +178,21 @@ der CommonRoad Search Bibliothek alle möglichen Pfade (auf dem zugrunde liegend
 Anschließend wird aus den im [CommonRoadManager](#map-manager-common_road_manager) vorgehaltenen Message Informationen, 
 die Pfad Message aus den zu berücksichtigen Lanelets (bzw. Lanelet Abschnitten) zusammengesetzt.
 Aus dieser Kandidatenliste wird darauffolgend der (Pfad-) Kandidat ausgewählt, welcher die geringsten Pfad-Kosten aufweist.
-Für den Planungsfall mit Verkehrsregeln wird dazu für jeden Pfad (mithilfe der Pfad-Message) die Zeitdauer berechnet. Zu Beachten ist dabei, dass 
+Für den Planungsfall mit Verkehrsregeln wird dazu für jeden Pfad (mithilfe der Pfad-Message) die Zeitdauer berechnet. 
+Zu Beachten ist dabei, dass 
 für jedes auf dem jeweiligen Pfad vorkommende Stoppschild beziehungsweise jede Ampel eine (im launch file) definierte
-Penalty addiert wird. Spurwechsel werden gleichermaßen durch die Addition eines kleinen Zeitwertes „bestraft". Die Höhe
+Penalty addiert wird. Spurwechsel werden immer in der Mitte einer Lanelet eingeplant
+und gleichermaßen durch die Addition eines kleinen Zeitwertes „bestraft". Die Höhe
 dieser „Strafen" ist dabei frei wählbar. Entsprechend sind Strafen durch die Wahl des Wertes 0 auch deaktivierbar.
 Der schnellste Pfad ist im Sinne der Aufgabenstellung der Gesuchte und so wird die Message für diesen Pfad zurückgegeben.
 Für den Planungsfall ohne Verkehrsregeln wird hier anstelle der Zeitdauer eines Pfades die Gesamtdistanz eines Pfades 
 berücksichtigt und in Konsequenz der kürzeste Pfad zurückgegeben. Grund hierfür ist, dass bei der Fahrt ohne 
 Verkehrsregeln Geschwindigkeitslimits ignoriert werden und auch an Ampeln nicht auf Grünphasen gewartet wird. 
+Weiter sei erwähnt, dass vor Ausgabe der Route die letzte und erste Lanelet der Message zu den tatsächlichen Start- und 
+Zielpositionen beschnitten wird, da nicht der gesamte Straßenabschnitt benötigt wird. Dabei muss zusätzlich überprüft 
+werden, ob ein Spurwechsel auf der ersten Lanelet eingeplant wurde. Ist das der Fall muss dieser Spurwechsel, falls die
+tatsächliche Startposition in der hinteren Lanelet-Hälfte liegt, vor die tatsächliche Startposition geschoben werden.
+Dadurch ist auch das korrekte Einplanen eines Spurwechsels direkt zu Beginn einer Route garantiert.
 
 Zusätzlich wird in Abhängigkeit der übergebenen Informationen des [Planning Preprocessors](#planning-preprocessor)
 ein initialer U-Turn eingeplant. Dazu wird zunächst betrachtet, ob ausreichend Platz zur Verfügung steht. Das heißt, ob
