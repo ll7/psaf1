@@ -22,6 +22,18 @@ namespace psaf_local_planner
     }
 
     void CostmapRaytracer::raytraceSemiCircle(double angle_from, double angle_to, double distance, std::vector<RaytraceCollisionData> &collisions) {
+        // Debug data for the rays if the car
+        auto marker_ray = visualization_msgs::Marker();
+
+        marker_ray.type = visualization_msgs::Marker::LINE_STRIP;
+        marker_ray.action = visualization_msgs::Marker::ADD;
+        marker_ray.ns = "ray";
+        marker_ray.header.frame_id = "map";
+        marker_ray.header.stamp = ros::Time::now();
+        marker_ray.color.a = 1.0;
+        marker_ray.color.r = 1.0;
+        marker_ray.scale.x = 0.5;
+        
         tf2::Transform current_transform;
         tf2::convert(current_pose->pose, current_transform);
 
@@ -41,34 +53,46 @@ namespace psaf_local_planner
             if (dist < INFINITY) {
                 collisions.push_back(RaytraceCollisionData(coll_x, coll_y, actual_angle, distance, now));
             }
+
+            // Debugdata for visualizing the ray
+            geometry_msgs::Point point;
+            point.x = m_self_x;
+            point.y = m_self_y;
+            point.z = 0;
+            marker_ray.points.push_back(point);
+            point.x = x + m_self_x;
+            point.y = y + m_self_y;
+            point.z = 0;
+            marker_ray.points.push_back(point);
         }
 
-        // Debug data for the direction and the angle between the car and the road
+        // Debug data for the position of the obstacles
         auto markers = visualization_msgs::MarkerArray();
-        auto marker1 = visualization_msgs::Marker();
+        auto marker_obstacle = visualization_msgs::Marker();
 
-        marker1.type = visualization_msgs::Marker::SPHERE_LIST;
-        marker1.action = visualization_msgs::Marker::ADD;
-        marker1.ns = "obstacle";
-        marker1.header.frame_id = "map";
-        marker1.header.stamp = ros::Time::now();
-        marker1.color.a = 1.0;
-        marker1.color.r = 1.0;
-        marker1.scale.x = 0.5;
-        marker1.scale.y = 0.5;
-        marker1.scale.z = 4;
+        marker_obstacle.type = visualization_msgs::Marker::SPHERE_LIST;
+        marker_obstacle.action = visualization_msgs::Marker::ADD;
+        marker_obstacle.ns = "obstacle";
+        marker_obstacle.header.frame_id = "map";
+        marker_obstacle.header.stamp = ros::Time::now();
+        marker_obstacle.color.a = 1.0;
+        marker_obstacle.color.r = 1.0;
+        marker_obstacle.scale.x = 0.5;
+        marker_obstacle.scale.y = 0.5;
+        marker_obstacle.scale.z = 4;
 
         for (auto &pos : collisions) {
             geometry_msgs::Point point;
             point.x = pos.x;
             point.y = pos.y;
             point.z = 0;
-            marker1.points.push_back(point);
+            marker_obstacle.points.push_back(point);
         }
 
         ROS_DEBUG("RAYTRACER: found %lu collisions", collisions.size());
 
-        markers.markers.push_back(marker1);
+        markers.markers.push_back(marker_obstacle);
+        markers.markers.push_back(marker_ray);
         debug_pub->publish(markers);
     }
 
