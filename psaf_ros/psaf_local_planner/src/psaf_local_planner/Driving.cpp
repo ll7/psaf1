@@ -427,9 +427,9 @@ namespace psaf_local_planner
                                 return distance;
                             } else
                                 ROS_WARN("Not enough points to use three point method");
-                            }
-                        } else {
+                            } else {
                             ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
+                        }
                         }
                     } else {
                         // We are for enough away so that we don't care anymore;
