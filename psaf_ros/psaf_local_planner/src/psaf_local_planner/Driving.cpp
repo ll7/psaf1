@@ -312,7 +312,7 @@ namespace psaf_local_planner
                 velocity_distance_diff = target_vel - std::min(target_vel, getTargetVelocityForDistance(distance));
             }
 
-            ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
+            ROS_DEBUG("distance forward: %f, max velocity: %f", distance, target_vel);
         }
         
         // Check for slow car: Initiate a lanechange if it falls below a threshhold
@@ -358,13 +358,14 @@ namespace psaf_local_planner
             // calculate angles for ray tracing circle area
             double angle_from, angle_to;
             // right(1) or left(-1)
-            if (lane_change_direction > 0) {
+            if (lane_change_direction <= 0) {
                 angle_from = M_PI / 4.0;
                 angle_to = M_PI * (3.0/4.0);
             } else {
-                angle_to = -M_PI / 4.0;
-                angle_from = -M_PI * (3.0/4.0);
+                angle_from = 2 * M_PI - M_PI/4;
+                angle_to = M_PI + M_PI/4;
             }
+
             // raytrace area
             costmap_raytracer.raytraceSemiCircle(angle_from, angle_to, check_distance_lanechange, collisions);
             // set max velocity according to ANHALTEWEG if obstacle in area
@@ -422,13 +423,17 @@ namespace psaf_local_planner
                                     lane_change_direction = -1;
                                 }
                                 lane_change_direction_calculated = true;
-                            } else
+                            } else {
                                 ROS_WARN("Not enough points to use three point method");
-
                             }
                         } else {
                             ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
                         }
+                    }
+                    return distance;
+                    } else {
+                        // We are for enough away so that we don't care anymore;
+                        return INFINITY;
                     }
                 }
                 // recent LaneChang is terminated, reset flags
@@ -436,7 +441,6 @@ namespace psaf_local_planner
                     lane_change_direction_calculated = false;
                     lane_change_direction = 0;
                 }
-
             }
         return distance;
         }

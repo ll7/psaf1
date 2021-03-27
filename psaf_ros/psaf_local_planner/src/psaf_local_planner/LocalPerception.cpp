@@ -134,7 +134,6 @@ namespace psaf_local_planner
                     count_error += 1;
                     if (count_error >= 2)
                     {
-                        ROS_WARN("cost at %f %f", current_point.getX() - actual_point.getX(), current_point.getY() - actual_point.getY());
                         relative_x = current_point.getX() - actual_point.getX();
                         relative_y = current_point.getY() - actual_point.getY();
                         distance = sum_distance;

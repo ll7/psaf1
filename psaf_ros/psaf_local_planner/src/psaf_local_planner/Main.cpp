@@ -111,11 +111,12 @@ namespace psaf_local_planner
                         max_velocity = std::min(global_route[0].route_portion[0].speed / 3.6,
                                                 center_point_out.speed / 3.6);
                     }
+
+                    if (!respect_traffic_rules) {
+                        max_velocity *= 1.5;
+                    }
                 }
 
-                if (!respect_traffic_rules) {
-                    max_velocity *= 1.5;
-                }
 
                 double angle = computeSteeringAngle(target_point, current_pose.pose);
 
@@ -382,38 +383,7 @@ namespace psaf_local_planner
 
         ROS_INFO("LOCAL_PLANNER: fake stop check done.");
 
-        // Publish stop signs as markers 
-        auto markers = visualization_msgs::MarkerArray();
-        auto marker1 = visualization_msgs::Marker();
 
-        marker1.type = visualization_msgs::Marker::SPHERE_LIST;
-        marker1.action = visualization_msgs::Marker::ADD;
-        marker1.ns = "stop";
-        marker1.header.frame_id = "map";
-        marker1.header.stamp = ros::Time::now();
-        marker1.color.a = 1.0;
-        marker1.color.r = 1.0;
-        marker1.color.g = 1.0;
-        marker1.scale.x = 2;
-        marker1.scale.y = 2;
-        marker1.scale.z = 4;
-
-        for (auto &lanelet : global_route) {
-            if (lanelet.hasStop) {
-                geometry_msgs::Point point;
-                point.x = lanelet.route_portion[lanelet.route_portion.size() - 1].x;
-                point.y = lanelet.route_portion[lanelet.route_portion.size() - 1].y;
-                point.z = 0;
-                marker1.points.push_back(point);
-                ROS_INFO("collision at %f, %f", point.x, point.y);
-
-            }
-        }
-
-        markers.markers.push_back(marker1);
-        debug_marker_pub.publish(markers);
-        
-        ROS_INFO("LOCAL_PLANNER: done publishing stop signs.");
 
         // Convert xroute back into normal pose stamp list
         std::vector<geometry_msgs::PoseStamped> points = {};
@@ -439,8 +409,96 @@ namespace psaf_local_planner
         global_plan = points;
         planner_util.setPlan(global_plan);
         publishGlobalPlan(global_plan);
+        publishAdditionalInfoToRviz();
 
         ROS_INFO("PREPROCESSING XROUTE DONE!");
+    }
+
+
+    void PsafLocalPlanner::publishAdditionalInfoToRviz() {
+        // Publish stop signs as markers 
+        auto markers = visualization_msgs::MarkerArray();
+        auto marker_stop = visualization_msgs::Marker();
+        auto marker_traffic = visualization_msgs::Marker();
+
+        marker_stop.type = visualization_msgs::Marker::SPHERE_LIST;
+        marker_stop.action = visualization_msgs::Marker::ADD;
+        marker_stop.ns = "stop";
+        marker_stop.header.frame_id = "map";
+        marker_stop.header.stamp = ros::Time::now();
+        marker_stop.color.a = 1.0;
+        marker_stop.color.r = 1.0;
+        marker_stop.color.g = 1.0;
+        marker_stop.scale.x = 2;
+        marker_stop.scale.y = 2;
+        marker_stop.scale.z = 4;
+
+        marker_traffic.type = visualization_msgs::Marker::SPHERE_LIST;
+        marker_traffic.action = visualization_msgs::Marker::ADD;
+        marker_traffic.ns = "traffic";
+        marker_traffic.header.frame_id = "map";
+        marker_traffic.header.stamp = ros::Time::now();
+        marker_traffic.color.a = 1.0;
+        marker_traffic.color.g = 1.0;
+        marker_traffic.scale.x = 2;
+        marker_traffic.scale.y = 2;
+        marker_traffic.scale.z = 4;
+
+        double last_vel = 0;
+        int speed_counter = 0;
+        for (auto &lanelet : global_route) {
+            if (lanelet.hasStop) {
+                geometry_msgs::Point point;
+                point.x = lanelet.route_portion[lanelet.route_portion.size() - 1].x;
+                point.y = lanelet.route_portion[lanelet.route_portion.size() - 1].y;
+                point.z = 0;
+                marker_stop.points.push_back(point);
+            }
+
+            if (lanelet.hasLight) {
+                geometry_msgs::Point point;
+                point.x = lanelet.route_portion[lanelet.route_portion.size() - 1].x;
+                point.y = lanelet.route_portion[lanelet.route_portion.size() - 1].y;
+                point.z = 0;
+                marker_traffic.points.push_back(point);
+            }
+
+            bool start = true;
+            for (auto &center : lanelet.route_portion) {
+                if (abs(center.speed - last_vel) > 0.001 || start) {
+                    auto marker_speed = visualization_msgs::Marker();
+                    marker_speed.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+                    marker_speed.action = visualization_msgs::Marker::ADD;
+                    marker_speed.ns = "speed";
+                    marker_speed.id = speed_counter++;
+                    marker_speed.header.frame_id = "map";
+                    marker_speed.header.stamp = ros::Time::now();
+                    marker_speed.color.a = 1.0;
+                    marker_speed.color.r = 1.0;
+                    marker_speed.color.g = 1.0;
+                    marker_speed.color.b = 1.0;
+                    marker_speed.pose.position.x = center.x;
+                    marker_speed.pose.position.y = center.y;
+                    marker_speed.scale.z = 2;
+                    if (start) {
+                        marker_speed.text = "ID" + std::to_string(lanelet.id) + " | S" + std::to_string(center.speed);
+                    } else {
+                        marker_speed.text = "S" + std::to_string(center.speed);
+                    }
+                    markers.markers.push_back(marker_speed);
+
+                    last_vel = center.speed;
+                    start = false;
+                }
+            }
+        }
+
+        markers.markers.push_back(marker_stop);
+        markers.markers.push_back(marker_traffic);
+        debug_marker_pub.publish(markers);
+
+        
+        ROS_INFO("LOCAL_PLANNER: done publishing additional info.");
     }
 
 }

@@ -14,7 +14,7 @@
         <param name="controller_frequency" value="20.0" />
     </node>
 
-    <include file="$(find psaf_steering)/launch/carla_twist_pid_control_node.launch" />
+    <include file="$(find psaf_steering)/launch/psaf_twist_p_control_node.launch" />
 
     <include file="$(find psaf_sensor_preprocessing)/launch/psaf_semantic_processing.launch"/>
 
