@@ -207,14 +207,11 @@ Dementsprechend werden nur Hindernisse, die in Fahrtrichtung unseres Fahrzeugs l
 Für die relevanten Hindernisse wird im zweiten Schritt überprüft, ob sich das Hindernis auf der gleichen Lanelet 
 wie das Auto befindet.
 - Falls sich das Hindernis nicht auf der Lanelet des Autos befindet, wird es nur seiner eigenen Lanelet hinzufügt.
-- Falls sich das Hindernis auf der Lanelet des Autos befindet, wird die Lanelet in drei Abschnitte aufgeteilt und das 
-  Hindernis wird auf den dritten Abschnitt eingefügt. 
+- Falls sich das Hindernis auf der Lanelet des Autos befindet, wird die Lanelet in zwei Abschnitte aufgeteilt und das 
+  Hindernis wird auf den zweiten Abschnitt eingefügt. 
   Das genaue Vorgehen eines Teilungsprozesses wird im [CommonRoadManager](#map-manager-common_road_manager) beschrieben.
-  - Abschnitt eins ist der Teil der Lanelet, auf der sich das Auto befindet. **[Lanelet Start, Position Auto]**
-  - Abschnitt zwei ist der Teil der Lanelet, der sich zwischen Auto und Hindernis befindet. 
-    Dieser Abschnitt wird benötigt damit der Überholvorgang sauber zwischen Auto und Hindernis eingeplant werden kann. 
-    **]Position Auto, Position Hindernis[**
-  - Abschnitt drei ist der Abschnitt der Lanelet, auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
+  - Abschnitt eins ist der Teil der Lanelet, auf der sich das Auto befindet. **[Lanelet Start, Position Hindernis[**
+  - Abschnitt zwei ist der Abschnitt der Lanelet, auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
     
 Zu erwähnen ist, dass das Teilen einer Lanelet unmittelbar ein Aktualisieren aller Referenzen der Lanelets in der Umgebung, sowie ein
 Teilen aller adjazenten Lanelets zur Folge haben muss, da nur so das Lanelet-Netzwerk konsistent und mögliche 
@@ -225,12 +222,11 @@ Im dritten und letzten Schritt wird die Neuplanung angestoßen. Hierbei gilt es 
 dass Straßen mit einem Hindernis ein hohes Kantengewicht zugeteilt bekommen, sodass der Planungsalgorithmus
 Straßen mit Hindernissen nur dann wählt, wenn es keine Alternativen gibt. Also beispielsweise, wenn sich vor und neben dem 
 Fahrzeug ein anderes Fahrzeug befindet. Ist dies der Fall, fordert der globale Plan folglich indirekt dazu auf dem 
-vorausfahrenden Fahrzeug zu folgen, da es sich trotz Hindernis weiterhin um die, je nach Metrik, optimalste Route handelt.
+vorausfahrenden Fahrzeug zu folgen, da es sich trotz Hindernis weiterhin um die, je nach Metrik, beste Route handelt.
 
 Ein weiterer wichtiger Punkt ist es, dass eine Neuplanung immer auf den Originalkartendaten, 
 also auf Kartendaten ohne Hindernisse und ohne modifiziertes Lanelet-Netzwerk ausgeführt wird.
 
-![Überholvorgang](doc/obstacle.png)
 
 #### Map Manager (common_road_manager)
 
