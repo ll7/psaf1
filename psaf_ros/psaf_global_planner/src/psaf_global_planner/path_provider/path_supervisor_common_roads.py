@@ -66,6 +66,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 car_lanelet = car_lanelet[0][0]
                 relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
                 self._log_debug("--------------------")
+                self._log_debug("Car lanelet: {}".format(car_lanelet))
+                self._log_debug("--------------------")
                 self._log_debug("Relevant:")
                 for lane in relevant_lanelets:
                     self._log_debug("\t {}".format(lane))
@@ -75,6 +77,10 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 self._log_debug("Matched:")
                 for obs in obstacle.obstacles:
                     matching_lanelet = self._get_obstacle_lanelet(relevant_lanelets, obs)
+                    if self.enable_debug:
+                        obs_lane = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([obs.x, obs.y])])
+                        if obs_lane:
+                            self._log_debug("\t (Matched without relevant: {})".format(matching_lanelet))
                     if matching_lanelet == -1:
                         self._log_debug(
                             "PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")

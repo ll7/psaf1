@@ -276,16 +276,48 @@ class CommonRoadManager:
             sep_index = end_index - (abs(end_index - start_index) // 2)
         else:
             sep_index = end_index + (abs(end_index - start_index) // 2)
-        if sep_index > 2 and (len(lanelet_center_list)-1) - sep_index > 3:
+        if sep_index > 1 and (len(lanelet_center_list)-1) - sep_index > 1:
             # bound lanelet_1
             left_1 = lanelet_copy.left_vertices[:sep_index + 1]
             center_1 = lanelet_copy.center_vertices[:sep_index + 1]
             right_1 = lanelet_copy.right_vertices[:sep_index + 1]
-
+            # add additional to lanelet_1
+            factor_x = (left_1[-1][0] - left_1[-2][0]) / 4
+            factor_y = (left_1[-1][1] - left_1[-2][1]) / 4
+            additional = np.array([[left_1[-2][0] + factor_x, left_1[-2][1] + factor_y],
+                        [left_1[-2][0] + factor_x*2, left_1[-2][1] + factor_y * 2]])
+            np.concatenate((left_1, additional), axis=0)
+            factor_x = (center_1[-1][0] - center_1[-2][0]) / 4
+            factor_y = (center_1[-1][1] - center_1[-2][1]) / 4
+            additional = np.array([[center_1[-2][0] + factor_x, center_1[-2][1] + factor_y],
+                        [center_1[-2][0] + factor_x*2, center_1[-2][1] + factor_y * 2]])
+            np.concatenate((center_1, additional), axis=0)
+            factor_x = (right_1[-1][0] - right_1[-2][0]) / 4
+            factor_y = (right_1[-1][1] - right_1[-2][1]) / 4
+            additional = np.array([[right_1[-2][0] + factor_x, right_1[-2][1] + factor_y],
+                        [right_1[-2][0] + factor_x*2, right_1[-2][1] + factor_y * 2]])
+            np.concatenate((right_1, additional), axis=0)
             # bounds lanelet_2
             left_2 = lanelet_copy.left_vertices[sep_index:]
             center_2 = lanelet_copy.center_vertices[sep_index:]
             right_2 = lanelet_copy.right_vertices[sep_index:]
+            # add additional to lanelet_1
+            factor_x = (left_2[-1][0] - left_2[-2][0]) / 4
+            factor_y = (left_2[-1][1] - left_2[-2][1]) / 4
+            additional = np.array([[left_2[-2][0] + factor_x, left_2[-2][1] + factor_y],
+                        [left_2[-2][0] + factor_x*2, left_2[-2][1] + factor_y * 2]])
+            np.concatenate((left_2, additional), axis=0)
+            factor_x = (center_2[-1][0] - center_2[-2][0]) / 4
+            factor_y = (center_2[-1][1] - center_2[-2][1]) / 4
+            additional = np.array([[center_2[-2][0] + factor_x, center_2[-2][1] + factor_y],
+                        [center_2[-2][0] + factor_x*2, center_2[-2][1] + factor_y * 2]])
+            np.concatenate((center_2, additional), axis=0)
+            factor_x = (right_2[-1][0] - right_2[-2][0]) / 4
+            factor_y = (right_2[-1][1] - right_2[-2][1]) / 4
+            additional = np.array([[right_2[-2][0] + factor_x, right_2[-2][1] + factor_y],
+                        [right_2[-2][0] + factor_x*2, right_2[-2][1] + factor_y * 2]])
+            np.concatenate((right_2, additional), axis=0)
+            # add additional to lanelet_2
             # add traffic signs to lanelet_2 / lanelet_1
             signs_1 = set()
             signs_2 = set()
@@ -347,7 +379,7 @@ class CommonRoadManager:
                 if self.map.lanelet_network.find_lanelet_by_id(pred) is None:
                     continue
                 self.map.lanelet_network.find_lanelet_by_id(pred)._successor.append(id_lane_1)
-            # update neigbourhood
+            # update neighbourhood
             self._add_to_neighbourhood(id_lane_1, list([[id_lane_2], lanelet_copy.predecessor]))
             self._add_to_neighbourhood(id_lane_2, list([lanelet_copy.successor, [id_lane_1]]))
             # then add "back" to the lanelet_network
