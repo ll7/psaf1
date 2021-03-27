@@ -312,7 +312,7 @@ namespace psaf_local_planner
                 velocity_distance_diff = target_vel - std::min(target_vel, getTargetVelocityForDistance(distance));
             }
 
-            ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
+            ROS_DEBUG("distance forward: %f, max velocity: %f", distance, target_vel);
         }
         
         // Check for slow car: Initiate a lanechange if it falls below a threshhold
@@ -362,11 +362,10 @@ namespace psaf_local_planner
                 angle_from = M_PI / 4.0;
                 angle_to = M_PI * (3.0/4.0);
             } else {
-                angle_to = -M_PI / 4.0;
-                angle_from = -M_PI * (3.0/4.0);
+                angle_from = 2 * M_PI - M_PI/4;
+                angle_to = M_PI + M_PI/4;
             }
 
-            ROS_INFO("Should raytrace now for line checking");
             // raytrace area
             costmap_raytracer.raytraceSemiCircle(angle_from, angle_to, check_distance_lanechange, collisions);
             // set max velocity according to ANHALTEWEG if obstacle in area

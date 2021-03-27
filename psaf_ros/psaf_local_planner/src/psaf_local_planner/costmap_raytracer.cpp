@@ -40,11 +40,14 @@ namespace psaf_local_planner
         double m_self_x = current_pose->pose.position.x;
         double m_self_y = current_pose->pose.position.y;
 
+        double min_angle = std::min(angle_from, angle_to);
+        double max_angle = std::max(angle_from, angle_to);
+
         // Rotation around z axis of the car
         double orientation = tf2::getYaw(current_transform.getRotation());
         ros::Time now = ros::Time::now();
 
-        for (double actual_angle = angle_from; actual_angle <= angle_to; actual_angle += (M_PI / 180) * 5) {
+        for (double actual_angle = min_angle; actual_angle <= max_angle; actual_angle += (M_PI / 180) * 5) {
             double x = std::cos(actual_angle + orientation) * distance;
             double y = std::sin(actual_angle + orientation) * distance;
             double coll_x, coll_y;
