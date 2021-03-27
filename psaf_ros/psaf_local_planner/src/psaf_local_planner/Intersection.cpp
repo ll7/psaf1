@@ -21,31 +21,16 @@ namespace psaf_local_planner {
 
         if (global_route.size() >= 2) { // at least two lanelets in list -> 1 lanelet isn't important
             // -> goal lanelet and don't care about a traffic light or stop
-            if (global_route[0].route_portion.size() > 1) {
-                double remaining_way_on_lanelet =
-                        this->distanceBetweenCenterLines(global_route[0].route_portion.front(),
-                                                         global_route[0].route_portion.back());
-
-                // if the lanelet end is outside the check radius we check the lanelet for a stop
-                if (remaining_way_on_lanelet > this->LANELET_CHECK_RADIUS) {
-                    return std::numeric_limits<double>::infinity();
-                }
-                if (attributeCheckFunction(global_route[0])) {
-                    return remaining_way_on_lanelet;
-                }
-                // Check next lanelet
-                if (global_route[1].route_portion.size() > 1) {
-                    double remaining_way_to_next_lanelet_end = remaining_way_on_lanelet +
-                                                               this->distanceBetweenCenterLines(
-                                                                       global_route[1].route_portion.front(),
-                                                                       global_route[1].route_portion.back());
-                    // If the next lanelet end is inside the check radius
-                    if (remaining_way_to_next_lanelet_end < this->LANELET_CHECK_RADIUS) {
-                        if (attributeCheckFunction(global_route[1])) {
-                            return remaining_way_to_next_lanelet_end;
-                        }
-                    }
-                }
+            double distance = 0;
+            // iterate over upcoming lanelets in the route
+            for (auto lanelet : global_route) {
+                // sum up distance until lanelet is marked as intersection
+                distance += lanelet.route_portion.back().distance - lanelet.route_portion.front().distance;
+                if (attributeCheckFunction(lanelet))
+                    break;
+            }
+            if(distance<=LANELET_CHECK_RADIUS){
+                return distance;
             }
         }
         return std::numeric_limits<double>::infinity();
@@ -68,6 +53,7 @@ namespace psaf_local_planner {
                 is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5 * M_PI, 18, 5);
             }
         }
+        ROS_WARN("Stopping distance %f",this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop));
         this->state_machine->updateState(traffic_light_detected, stop_detected,
                                          this->traffic_light_state,
                                          this->getCurrentStoppingDistance(), this->current_speed,

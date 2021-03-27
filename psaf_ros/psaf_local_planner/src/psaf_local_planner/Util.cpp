@@ -79,6 +79,10 @@ namespace psaf_local_planner
         }else if (state_machine->isInStopStates()) {
             // because we don't have any other information we use the map data
             double distance_to_stop = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop);
+            // If we drive without traffic rules -> traffic lights equals stops -> get distance of a traffic light if there is one
+            if(!respect_traffic_rules){
+                distance_to_stop = std::min(distance_to_stop,this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight));
+            }
             if(distance_to_stop < 1e6){
                 return std::max((distance_to_stop),0.0);
             }
