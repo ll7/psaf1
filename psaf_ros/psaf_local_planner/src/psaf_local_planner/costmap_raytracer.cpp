@@ -66,6 +66,8 @@ namespace psaf_local_planner
             marker1.points.push_back(point);
         }
 
+        ROS_DEBUG("RAYTRACER: found %lu collisions", collisions.size());
+
         markers.markers.push_back(marker1);
         debug_pub->publish(markers);
     }

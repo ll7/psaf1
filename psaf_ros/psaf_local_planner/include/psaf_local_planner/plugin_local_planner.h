@@ -364,6 +364,12 @@ namespace psaf_local_planner {
             double getTargetVelocityForDistance(double distance);
 
 
+            /**
+             * Helper function to publish data like stopsigns etc to rviz
+             */
+            void publishAdditionalInfoToRviz();
+
+
             /** Helper object for raytracing */
             psaf_local_planner::CostmapRaytracer costmap_raytracer;
 

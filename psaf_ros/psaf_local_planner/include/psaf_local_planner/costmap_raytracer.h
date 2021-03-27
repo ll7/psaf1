@@ -88,7 +88,7 @@ namespace psaf_local_planner {
             static constexpr int MOVEMENT_CHECK_MIN_DISTANCE = 3;
 
             /** Ros Seconds to keep a raytracing result for distance  */
-            static constexpr int MOVEMENT_CHECK_SECONDS_TO_KEEP = 3;
+            static constexpr int MOVEMENT_CHECK_SECONDS_TO_KEEP = 2;
         private:
             /** The pointer to the costmap, updates automatically when the costmap changes */
             costmap_2d::Costmap2DROS *costmap_ros;
