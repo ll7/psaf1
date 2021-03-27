@@ -97,8 +97,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                                                               relevant_lanelets)
                     if not success:
                         # if a lanelet network error occurred, abort mission
-                        rospy.logerr("PathSupervisor: Replanning aborted, network error !!")
-                        self.status_pub.publish("Replanning aborted, network error")
+                        rospy.logerr("PathSupervisor: Replanning aborted, split failed !!")
+                        self.status_pub.publish("Replanning aborted, split failed")
                         self.busy = False
                         return
                     relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
@@ -184,8 +184,9 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         matching_lanelet = self._get_obstacle_lanelet(relevant, obstacle)
         # check if the obstacle is within a lanelet
         if matching_lanelet == -1:
-            rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
-            self.status_pub.publish("Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering")
+            rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet anymore -> no "
+                         "interfering !!")
+            self.status_pub.publish("Ignoring obstacle, obstacle not in a relevant lanelet anymore-> no interfering")
             return success, car_lanelet
 
         static_obstacle_id = self.manager.map.generate_object_id()
@@ -213,6 +214,10 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 if split_ids[0] is not None:
                     car_lanelet = split_ids[0]
                     success = True
+                else:
+                    self._log_debug("PathSupervisor: Double Split_ids[0] is None!")
+            else:
+                self._log_debug("PathSupervisor: First Split_ids[0] is None!")
         else:
             if static_obstacle is not None:
                 self.manager.map.lanelet_network.find_lanelet_by_id(
@@ -220,6 +225,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                     static_obstacle.obstacle_id)
                 self.manager.map.add_objects(static_obstacle)
                 success = True
+            else:
+                self._log_debug("PathSupervisor: Static obstacle is None!")
 
         return success, car_lanelet
 

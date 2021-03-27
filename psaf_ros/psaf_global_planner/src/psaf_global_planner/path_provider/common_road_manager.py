@@ -266,7 +266,7 @@ class CommonRoadManager:
         # if a lanelet can't be found -> exit
         lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(lanelet_id)
         if lanelet_copy is None:
-            rospy.logerr("Manager: Lanelet is None")
+            rospy.logerr("CommonRoadManager: Lanelet is None " + str(lanelet_id))
             return None, None
         # bounds lanelet1
         sep_index = 0
@@ -277,11 +277,11 @@ class CommonRoadManager:
             sep_index = end_index - (abs(end_index - start_index) // 2)
         else:
             sep_index = end_index + (abs(end_index - start_index) // 2)
-        if sep_index > 1 and (len(lanelet_center_list)-1) - sep_index > 1:
+        if sep_index > 1 and (len(lanelet_center_list)-1) - sep_index >= 1:
             # bound lanelet_1
-            left_1 = lanelet_copy.left_vertices[:sep_index + 1]
-            center_1 = lanelet_copy.center_vertices[:sep_index + 1]
-            right_1 = lanelet_copy.right_vertices[:sep_index + 1]
+            left_1 = lanelet_copy.left_vertices[:sep_index+1]
+            center_1 = lanelet_copy.center_vertices[:sep_index+1]
+            right_1 = lanelet_copy.right_vertices[:sep_index+1]
             # add additional to lanelet_1
             factor_x = (left_1[-1][0] - left_1[-2][0]) / 4
             factor_y = (left_1[-1][1] - left_1[-2][1]) / 4
@@ -390,8 +390,9 @@ class CommonRoadManager:
             self._fast_reference_cleanup(lanelet_id)
             self._update_message_dict(lanelet_copy.lanelet_id, id_lane_1, id_lane_2)
             return id_lane_1, id_lane_2
-        else:
-            rospy.logerr("Manager: Sep_index: {}, lanelet_length {}".format(sep_index, len(lanelet_center_list)))
+
+        rospy.logerr("CommonRoadManager: Sep_index: {}, lanelet_length {}".format(sep_index, len(lanelet_center_list)))
+        rospy.logerr("CommonRoadManager: Not enough space for split")
         return None, None
 
     def _generate_lanelet_id(self, id_start=-1, exclude: int = -1) -> int:
@@ -485,10 +486,14 @@ class CommonRoadManager:
             right_1, right_2 = self._modify_lanelet(
                 self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right,
                 modify_point, start_point)
+            if right_1 is None or right_2 is None:
+                return None, None
         if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_left is not None:
             left_1, left_2 = self._modify_lanelet(
                 self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_left,
                 modify_point, start_point)
+            if left_1 is None or left_2 is None:
+                return None, None
 
         # split obstacle lanelet
         matching_1, matching_2 = self._modify_lanelet(matching_lanelet_id, modify_point, start_point)
@@ -527,7 +532,7 @@ class CommonRoadManager:
                 else:
                     self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_left = right_1
                     self.map.lanelet_network.find_lanelet_by_id(right_2_old)._adj_left = right_2
-                    next_dir = self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_left_same_direction
+                    next_dir = not self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_left_same_direction
 
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = right_1_old
@@ -569,7 +574,7 @@ class CommonRoadManager:
                 else:
                     self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right = left_1
                     self.map.lanelet_network.find_lanelet_by_id(left_2_old)._adj_right = left_2
-                    next_dir = self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right_same_direction
+                    next_dir = not self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right_same_direction
 
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = left_1_old
