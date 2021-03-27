@@ -346,7 +346,6 @@ namespace psaf_local_planner
         double check_distance_lanechange = 7;
         // calc distance to next alne change
         double distance = getDistanceToLaneChange(distance_begin_check_lane_change);
-        ROS_INFO("lanechange distance: %f", distance);
 
         if (distance < distance_begin_check_lane_change) {
             // lanechange ahead, but lane change direction not calculated therefore presume as before

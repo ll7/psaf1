@@ -117,9 +117,6 @@ namespace psaf_local_planner
                     }
                 }
 
-                ROS_INFO("max vel: %f", max_velocity);
-
-
 
                 double angle = computeSteeringAngle(target_point, current_pose.pose);
 
