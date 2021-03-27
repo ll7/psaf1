@@ -285,6 +285,9 @@ namespace psaf_local_planner
         global_route = msg.route;
         goal_reached = false;
         
+        lanechange_direction_map.clear();
+
+
         // this block uses linear interpolation to smooth the curves of lanechanges
         // takes the last/first 10 points in both directions and distributes the points along linear line between them
         int size = global_route.size();
@@ -292,13 +295,49 @@ namespace psaf_local_planner
         for (int i = 0; i < size; i++) {
             auto &lanelet = global_route[i];
 
-            
             if (lanelet.isLaneChange && i + 1 < size) {
                 auto &next_lanelet = global_route[i + 1];
                 int lanelet_route_size = lanelet.route_portion.size();
                 int next_lanelet_route_size = next_lanelet.route_portion.size();
 
-                if (lanelet_route_size == 0 || next_lanelet_route_size == 0) continue;
+                if (lanelet_route_size <= 1 || next_lanelet_route_size <= 1) continue;
+
+                // Precalc all the lanechange directions, as we loose it when smoothing   
+                // last and second last point on lanelet before lanechange
+                auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
+                auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
+                // first point on lanelet after lanechange
+                auto &next = next_lanelet.route_portion[0];
+                // compute vectors from points
+                auto v_last = tf2::Vector3(last.x, last.y, last.z);
+                auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
+                auto v_next = tf2::Vector3(next.x, next.y, next.z);
+
+                // calculate vectors needed for angle calculation
+                // v1 equals current driving direction, v2 equals lane change direction
+                auto v1 = v_last - v_second_last;
+                auto v2 = v_next - v_last;
+                // calculate the angle between v1 and v2
+                double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
+
+                if (angle > M_PI)        { angle -= 2 * M_PI; }
+                else if (angle <= -M_PI) { angle += 2 * M_PI; }
+
+                    ROS_INFO("lanechange angle: %f", angle);
+
+
+                // use the angle to determine direction of lanechange
+                if (angle < 0) {
+                    ROS_INFO("lanechange: +1");
+                    lanechange_direction_map[lanelet.id] = +1;
+                } else {
+                    ROS_INFO("lanechange: -1");
+                    lanechange_direction_map[lanelet.id] = -1;
+                }
+
+                ROS_INFO("lanechange: %i", lanechange_direction_map[lanelet.id]);
+
+
 
                 // smoothing should be dependent on max velocity
                 float speed_factor;
@@ -338,6 +377,7 @@ namespace psaf_local_planner
                     next_lanelet.route_portion[j].x = lerp(x1, x2, (num_points_current + j + 1) / (num_points_total));
                     next_lanelet.route_portion[j].y = lerp(y1, y2, (num_points_current + j + 1) / (num_points_total));
                 }
+
             }
         }
 

@@ -488,6 +488,11 @@ namespace psaf_local_planner {
              */
             const double LANELET_CHECK_RADIUS = 100;
 
+            /**
+             * Map of lanechanges; key is id of the lanelet; value is +1 for right, -1 for left
+             */
+            std::map<int, int> lanechange_direction_map;
+
     };
 
     /**
