@@ -19,7 +19,8 @@ namespace psaf_local_planner {
     double PsafLocalPlanner::computeDistanceToUpcomingLaneletAttribute(
             bool (*attributeCheckFunction)(psaf_messages::XLanelet)) {
 
-        if (global_route.size() > 0) {
+        if (global_route.size() >= 2) { // at least two lanelets in list -> 1 lanelet isn't important
+            // -> goal lanelet and don't care about a traffic light or stop
             if (global_route[0].route_portion.size() > 1) {
                 double remaining_way_on_lanelet =
                         this->distanceBetweenCenterLines(global_route[0].route_portion.front(),
@@ -32,8 +33,8 @@ namespace psaf_local_planner {
                 if (attributeCheckFunction(global_route[0])) {
                     return remaining_way_on_lanelet;
                 }
-                // Check next lanelet if there is one
-                if (global_route.size() > 1 && global_route[1].route_portion.size() > 1) {
+                // Check next lanelet
+                if (global_route[1].route_portion.size() > 1) {
                     double remaining_way_to_next_lanelet_end = remaining_way_on_lanelet +
                                                                this->distanceBetweenCenterLines(
                                                                        global_route[1].route_portion.front(),
@@ -61,9 +62,9 @@ namespace psaf_local_planner {
         bool is_intersection_clear = false;
         // Without traffic rules we are less strict regarding a clear intersection
         if (this->respect_traffic_rules) {
-            is_intersection_clear = this->costmap_raytracer.checkForNoMovement(M_PI, 25, 5);
+            is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.8*M_PI, 20, 5);
         } else {
-            is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5 * M_PI, 25, 5);
+            is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5 * M_PI, 15, 5);
         }
         this->state_machine->updateState(traffic_light_detected, stop_detected,
                                          this->traffic_light_state,
