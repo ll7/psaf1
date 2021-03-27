@@ -14,7 +14,7 @@
 
 
   <!-- Map to load on startup (either a predefined CARLA town (e.g. 'Town01'), or a OpenDRIVE map file) -->
-  <arg name="town" default=''/>
+  <arg name="town" default='Town05'/>
 
   <!-- Synchronous mode-->
   <arg name='synchronous_mode' default=''/>
