@@ -207,15 +207,16 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                                                     static_obstacle)
             if split_ids[0] is not None:
                 car_lanelet = split_ids[0]
-                split_point = Point(
-                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
-                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
-                split_ids = self.manager.update_network(split_ids[0], curr_pos, split_point, None)
-                if split_ids[0] is not None:
-                    car_lanelet = split_ids[0]
-                    success = True
-                else:
-                    self._log_debug("PathSupervisor: Double Split_ids[0] is None!")
+                success = True
+                # split_point = Point(
+                #    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
+                #    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
+                # split_ids = self.manager.update_network(split_ids[0], curr_pos, split_point, None)
+                #if split_ids[0] is not None:
+                #    car_lanelet = split_ids[0]
+                #   success = True
+                #else:
+                #    self._log_debug("PathSupervisor: Double Split_ids[0] is None!")
             else:
                 self._log_debug("PathSupervisor: First Split_ids[0] is None!")
         else:

@@ -201,6 +201,7 @@ pip3 install -r requirements.txt
 ```
 
 Ebenso muss pytorch entsprechen der Anleitung auf (Pytorch.org)[https://pytorch.org/] installiert werden. Dabei ist auf die lokal verwendete Treiberversion zu achten.
+Für eine optimale Nutzung wird eine Nvidia-Grafikarte in Verbindung mit dem ensprechenden Cuda-Treiber benötigt. Die Anforderungen an die Grafikkarte sind im Modul  [Perception](psaf_ros/psaf_perception) näher beschrieben.
 
 ## Bauen des PSAF1 Projekts
 
@@ -252,8 +253,9 @@ python3 spawn_npc.py -n 200 -w 0
 ## Fazit
 Abschließend lässt sich sagen, dass das im Laufe des Projekts entwickelte Fahrzeug alle Anforderungen der 
 Aufgabenstellung erfüllt. 
+  
 Obwohl das Themengebiet "autonomes Fahren" sehr weitreichend ist, hat es das Praktikum *Simulation von autonomen Fahrzeugen* ergöglicht, 
-teils tiefgreifendes Wissen zu bestimmten Bereichen des Themengebiets zu erwerben.
+teils tiefgreifendes Wissen zu bestimmten Bereichen des Themengebiets zu erwerben.  
 Durch die im Projekt erlangte 'Hands-On' Erfahrung fällt es den Teilnemern sicherlich leichter zukünftige Projekte
 im Bereich autonomes Fahren oder auch ROS zu meistern.
 

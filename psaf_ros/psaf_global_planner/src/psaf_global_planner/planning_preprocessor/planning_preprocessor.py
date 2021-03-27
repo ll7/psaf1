@@ -11,8 +11,6 @@ from psaf_messages.msg import PlanningInstruction
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import Pose, PoseWithCovarianceStamped
 import sensor_msgs.point_cloud2 as pc2
-import matplotlib.pyplot as plt
-from matplotlib import patches
 
 
 class PlanningPreprocessor:
@@ -86,8 +84,10 @@ class PlanningPreprocessor:
         out_data.planUTurn = self.plan_u_turn and (not self.vehicle_detected)  # if true, uTurn should be considered by global planner
 
         self.instruction_pub.publish(out_data)
-        rospy.loginfo('Planning Preprocessor: Message sent!')
+        
         rospy.loginfo(f"Planning Preprocessor: uTurn-Area: %.2f x %.2f" % (self.min_left, self.min_forward))
+        rospy.loginfo(f"Planning Preprocessor: Plan Turn: %r" % out_data.planUTurn)
+        rospy.loginfo('Planning Preprocessor: Message sent!')
 
         if self.vehicle_detected:
             rospy.loginfo('Not planning uTurn because oncoming traffic was detected!')
@@ -185,18 +185,12 @@ class PlanningPreprocessor:
             rospy.init_node('planning_preprocessor')
 
             # rosparam determining if traffic rules should be obeyed, if false uTurn is always considered
-            if rospy.has_param('competition/traffic_rules'):
-                obey_rules = rospy.get_param('competition/traffic_rules', True)  # get from competition_manager
-                rospy.set_param('respect_traffic_rules', obey_rules)
-                rospy.loginfo(f"Planning Preprocessor: Competition Manager Traffic Rules: %r" % obey_rules)
-            else:  # if competition manager params are not existent, use our own param
-                obey_rules = rospy.get_param('respect_traffic_rules', True)
-                rospy.loginfo(f"Planning Preprocessor: Traffic Rules: %r" % obey_rules)
+            obey_rules = rospy.get_param('respect_traffic_rules', True)
+            rospy.loginfo(f"Planning Preprocessor: Traffic Rules: %r" % obey_rules)
 
             # rosparam determining if uTurn should be considered even when obeying traffic rules
             always_turn = rospy.get_param('always_u_turn', False)
             self.plan_u_turn = (not obey_rules) or always_turn
-            rospy.loginfo(f"Planning Preprocessor: Plan Turn: %r" % self.plan_u_turn)
 
             rospy.Subscriber('/psaf/goal/set', Pose, self.goal_callback, queue_size=1)
             rospy.Subscriber('/carla/ego_vehicle/initialpose', PoseWithCovarianceStamped, self.start_callback,
@@ -206,20 +200,6 @@ class PlanningPreprocessor:
                                                    queue_size=1)
 
             rospy.spin()
-            # while self.points:
-            #     fig, ax = plt.subplots(1)
-            #     print('PLOT')
-            #     plt.xlim(0, self.perception_area[0])
-            #     plt.ylim(0, self.perception_area[1])
-            #
-            #     test = list(filter(lambda p: p[0] < 15 and p[1] < 15, self.points))
-            #     ax.plot(*zip(*test), marker='o', color='r', ls='')
-            #     # print(test)
-            #     rect = patches.Rectangle((0, 0), self.min_forward, self.min_left, linewidth=1, edgecolor='r',
-            #                              facecolor='none')
-            #     ax.add_patch(rect)
-            #     plt.show()
-            #     break
 
         except rospy.ROSInterruptException:
             pass
