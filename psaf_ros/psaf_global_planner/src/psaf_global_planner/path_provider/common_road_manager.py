@@ -100,6 +100,7 @@ class CommonRoadManager:
                                           pos_index=len(self.map.lanelet_network.find_lanelet_by_id(_id).center_vertices)-1,
                                           typ=TrafficSignIDGermany.STOP, cur_mark_id=_id)
                 self.message_by_lanelet[_id].hasStop = True
+            self.neighbourhood = self._analyze_neighbourhood(self.map)
 
     def _add_light_to_lanelet(self, lanelet_id: int, cur_mark_id=-1):
         """
@@ -440,7 +441,7 @@ class CommonRoadManager:
         neighbourhood = {}
         for lane in scenario_map.lanelet_network.lanelets:
             entry = list()
-            entry.append(list())  # successor alist
+            entry.append(list())  # successor list
             entry.append(list())  # predecessor list
             neighbourhood[lane.lanelet_id] = entry
         # document references
