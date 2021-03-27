@@ -91,8 +91,12 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                         self._log_debug("\t {}".format(matching_lanelet))
                         real_obstacles[matching_lanelet] = obs
                 self._log_debug("--------------------")
-                for lane_id in real_obstacles:
-                    rospy.loginfo("PathSupervisor: Processing obstacle: {}".format(real_obstacles[lane_id]))
+                # obstacle on car_lanelet needs to be at the last dict position
+                if car_lanelet in real_obstacles:
+                    real_obstacles[car_lanelet] = real_obstacles.pop(car_lanelet)
+                for lane_id in reversed(real_obstacles):
+                    rospy.loginfo("PathSupervisor: Processing obstacle: {} on lane {}".format(real_obstacles[lane_id],
+                                                                                              lane_id))
                     success, car_lanelet = self._add_obstacle(real_obstacles[lane_id], car_lanelet, curr_pos,
                                                               relevant_lanelets)
                     if not success:
@@ -212,10 +216,10 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 #    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
                 #    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
                 # split_ids = self.manager.update_network(split_ids[0], curr_pos, split_point, None)
-                #if split_ids[0] is not None:
+                # if split_ids[0] is not None:
                 #    car_lanelet = split_ids[0]
                 #   success = True
-                #else:
+                # else:
                 #    self._log_debug("PathSupervisor: Double Split_ids[0] is None!")
             else:
                 self._log_debug("PathSupervisor: First Split_ids[0] is None!")
