@@ -34,14 +34,19 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
 | /psaf/status | String | Path Provider |
-| /psaf/xroute | [XRoute](../psaf_messages/msg/XRoute.msg) | Path Provider|
+| /psaf/xroute | [XRoute](../psaf_messages/msg/XRoute.msg) | Path Provider |
+| /psaf/goal/set_instruction | [PlanningInstruction](../psaf_messages/msg/PlanningInstruction.msg) | Planning Prepocessor |
+
+
 
 #### Subscribe
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
 | /psaf/goal/set_instruction | [PlanningInstruction](../psaf_messages/msg/PlanningInstruction.msg) | Path Provider |
-| /psaf/planning/obstacle | [Obstacle](../psaf_messages/msg/Obstacle.msg) | Path Provider|
+| /psaf/planning/obstacle | [Obstacle](../psaf_messages/msg/Obstacle.msg) | Path Provider |
 | /carla/world_info | CarlaWorldInfo | Map Provider |
+| /psaf/goal/set | Pose | Planning Prepocessor |
+| /carla/ego_vehicle/initialpose | PoseWithCovarianceStamped | Planning Prepocessor |
 
 
 ### Message Struktur
@@ -268,7 +273,7 @@ LIDAR-Sensoren, die auf Hindernisse wie Gebäude, Mauern und Zäune regieren.
 ![uturn-lidar](doc/uturn_lidar.png)
  
 Ob ein U-Turn eingeplant wird, hängt von den *rosparam*-Parametern **obeyRules** und 
-**alwaysUTurn** ab. Diese Parameter werden wie in [psaf_starter](../psaf_steering) beschrieben, über 
+**alwaysUTurn** ab. Diese Parameter werden wie in [psaf_starter](../psaf_starter) beschrieben, über 
 verschiedene launch-Dateien voreingestellt.
  
 Für einen Betrieb ohne den Competition Manager steht ein RVIZ-Panel zu Verfügung, 

@@ -1,8 +1,9 @@
 # PSAF WS20/21 Gruppe 1
 Das Simulieren von autonomen Fahrzeugen ist ein wichtiger Bestandteil des Entwicklungsprozesses von autonomen Fahrzeugen. 
-Durch die Simulation kann ein System getestet und die Funktionen validiert und verifiziert werden. 
+Durch Simulation kann ein System getestet und Funktionen validiert sowie verifiziert werden.  
 Dies ermöglicht Fehlererkennung, Fehlerlokalisierung und Fehleridentifizierung, sodass eine Optimierung des Systems erleichtert wird. 
-In diesem Projekt soll ein autonomes Fahrzeug konzeptioniert und implementiert werden, welches mithilfe eines Simulators getestet werden kann.
+  
+In diesem Projekt soll ein autonomes Fahrzeug in ROS konzeptioniert und implementiert werden, welches mithilfe des CARLA Simulators getestet werden kann.
 
 ## Inhalt
   * [Inhalt](#inhalt)
@@ -32,7 +33,7 @@ In diesem Projekt soll ein autonomes Fahrzeug konzeptioniert und implementiert w
 
 
 ## Aufgabenstellung
-Dieses Repository ist das Ergebnis der Veranstaltung „Praktikum: Simulation für autonome Fahrzeuge“ des Lehrstuhls für Mechatronik an der Universität Augsburg. 
+Dieses Repository ist das Ergebnis der Veranstaltung *„Praktikum: Simulation für autonome Fahrzeuge“* des Lehrstuhls für Mechatronik an der Universität Augsburg. 
 Im Rahmen der Veranstaltung soll mithilfe der Simulationsumgebung [CARLA](http://carla.org/) ein autonomes Fahrzeug entwickelt werden. 
 
 Die Aufgabe umfasst folgende Punkte:
@@ -78,13 +79,13 @@ Anderseits werden hier Informationen eines LIDAR-Sensors auf bestimmte Hindernis
 Genauere Informationen sind dem Readme [Sensor Preprocessing](psaf_ros/psaf_sensor_preprocessing) zu entnehmen. 
 
 #### [Perception](psaf_ros/psaf_perception)
-Das Paket Perception ermöglicht es, Ampeln und ihren Zustand sowie Haltelinien zu erkennen. Hierzu werden kombinierte Kamerainformationen aus dem Paket Sensor Preprocessing verwendet. Um aus diesen Informationen Objekte zu Detektieren kommt das System [YOLO v3](https://pjreddie.com/darknet/yolo/) zum Einsatz.
+Das Paket Perception ermöglicht es, Ampeln und ihren Zustand sowie Haltelinien zu erkennen. Hierzu werden kombinierte Kamerainformationen aus dem Paket [Sensor Preprocessing](psaf_ros/psaf_sensor_preprocessing) verwendet. Um mit diesen Informationen Objekte zu Detektieren kommt das System [YOLO v3](https://pjreddie.com/darknet/yolo/) zum Einsatz.
  
 Genauere Informationen sind dem Readme [Perception](psaf_ros/psaf_perception) zu entnehmen. 
 
 #### [Steering](psaf_ros/psaf_steering)
-Dieses Paket ist für die kontrollierte Steuerung des Fahrzeuges zuständig. Es erhält hierzu vom Local Planner Geschwindigkeits- und einer Lenkwinkelvorgaben, die über
-einen PID-Regler eingestellt und als Kontrollbefehle an das Fahrzeug weitergegeben werden.
+Dieses Paket ist für die kontrollierte Steuerung des Fahrzeuges zuständig. Es erhält hierzu vom [Local Planner](psaf_ros/psaf_local_planner) Geschwindigkeits- und einer Lenkwinkelvorgaben, die über
+einen Regler eingestellt und als Kontrollbefehle an das Fahrzeug weitergegeben werden.
  
 Genauere Informationen sind dem Readme [Steering](psaf_ros/psaf_steering) zu entnehmen. 
 
@@ -94,19 +95,19 @@ Dieses Paket ermöglicht das komfortable Starten unseres Projektes. Dafür stehe
 Genauere Informationen sind dem Readme [Starter](psaf_ros/psaf_starter) zu entnehmen. 
 
 #### [Obstacle Layer](psaf_ros/psaf_obstacle_layer)
-Das Paket Obstacle Layer leert regelmäßig, die *move_base* erstellte Costmap. Dadurch kann die Costmap wieder neu befüllt werden.
+Das Paket Obstacle Layer leert regelmäßig, die von *move_base* erstellte Costmap. Dadurch kann die Costmap wieder neu befüllt werden.
  
 Genauere Informationen sind dem Readme [Obstacle Layer](psaf_ros/psaf_obstacle_layer) zu entnehmen. 
 
 
 #### [Scenario](psaf_ros/psaf_scenario)
-Dieses Paket dient nur als Hilfe für die Entwicklung des Projekts. Es ermöglicht, den aktuellen Stand der Entwlicklung in einem Szenario zu testen und zu bewerten.
+Dieses Paket dient nur als Hilfe für die Entwicklung des Projekts. Es ermöglicht, den aktuellen Stand der Entwlicklung in einem Szenario zu testen und zu Bewerten.
 Ein Szenario enthält dabei eine bestimmte Route, die das Fahrzeug abfahren soll. Als Ergebnis wird eine Bewertung bereitgestellt, die angibt wie gut dem Weg gefolgt wurde.
  
 Genauere Informationen sind dem Readme [Scenario](psaf_ros/psaf_scenario) zu entnehmen. 
 
 #### [Optimizer](psaf_ros/psaf_optimizero)
-Auch dieses Paket dient als Hilfe für die Entwicklung des Projekts. Der Optimizer kann dazu verwendet werden, verschiedene Parameter der vorhandenen Implementierung zu optimieren. Hierzu werden mithilfe des Scenario Runner verschiedene Parametrierungen evaluiert und so ein Optimum gefunden.
+Auch dieses Paket dient als Hilfe für die Entwicklung des Projekts. Der Optimizer kann dazu verwendet werden, verschiedene Parameter der vorhandenen Implementierung zu optimieren. Hierzu werden mithilfe des [Scenario Runner](psaf_ros/psaf_scenario) verschiedene Parametrierungen evaluiert und so ein Optimum gefunden.
  
 Genauere Informationen sind dem Readme [Optimizer](psaf_ros/psaf_optimizero) zu entnehmen. 
 
@@ -254,9 +255,9 @@ python3 spawn_npc.py -n 200 -w 0
 Abschließend lässt sich sagen, dass das im Laufe des Projekts entwickelte Fahrzeug alle Anforderungen der 
 Aufgabenstellung erfüllt. 
   
-Obwohl das Themengebiet "autonomes Fahren" sehr weitreichend ist, hat es das Praktikum *Simulation von autonomen Fahrzeugen* ergöglicht, 
+Obwohl das Themengebiet "autonomes Fahren" sehr weitreichend ist, hat es das Praktikum *Simulation von autonomen Fahrzeugen* ermöglicht, 
 teils tiefgreifendes Wissen zu bestimmten Bereichen des Themengebiets zu erwerben.  
-Durch die im Projekt erlangte 'Hands-On' Erfahrung fällt es den Teilnemern sicherlich leichter zukünftige Projekte
+Durch die im Projekt erlangte 'Hands-On'-Erfahrung fällt es den Teilnemern sicherlich leichter zukünftige Projekte
 im Bereich autonomes Fahren oder auch ROS zu meistern.
 
 
