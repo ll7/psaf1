@@ -292,6 +292,8 @@ class RoutePlanner:
                     matching_candidates_id.append([lanelet_id, abs(temp_orientation - matching_yaw)])
 
                 # start_lanelet is a list of matching lanelet with the least orientation difference
+                # calculate orientation differences for every lanelet candidate
+                matching_candidates_id.sort(key=lambda x: x[1])
                 start_lanelet_id = [matching_candidates_id[0][0]]
                 for index, candidates in enumerate(matching_candidates_id):
                     if abs(candidates[1] < 10) and index != 0:
