@@ -201,6 +201,7 @@ pip3 install -r requirements.txt
 ```
 
 Ebenso muss pytorch entsprechen der Anleitung auf (Pytorch.org)[https://pytorch.org/] installiert werden. Dabei ist auf die lokal verwendete Treiberversion zu achten.
+Für eine optimale Nutzung wird eine Nvidia-Grafikarte in Verbindung mit dem ensprechenden Cuda-Treiber benötigt. Die Anforderungen an die Grafikkarte sind im Modul  [Perception](psaf_ros/psaf_perception) näher beschrieben.
 
 ## Bauen des PSAF1 Projekts
 
