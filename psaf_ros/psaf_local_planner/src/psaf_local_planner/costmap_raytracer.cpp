@@ -64,7 +64,6 @@ namespace psaf_local_planner
             point.y = pos.y;
             point.z = 0;
             marker1.points.push_back(point);
-            ROS_INFO("collision at %f, %f", pos.x, pos.y);
         }
 
         markers.markers.push_back(marker1);
@@ -115,32 +114,30 @@ namespace psaf_local_planner
         auto now = ros::Time::now();
         if ((now - last_movement_check) > ros::Duration(MOVEMENT_CHECK_MAX_ITERATION_PAUSE_SECONDS)) {
             confidence = 0;
-            second_last_raytrace_results.clear();
             last_raytrace_results.clear();
         }
 
 
         std::vector<RaytraceCollisionData> raytrace_results;
         raytraceSemiCircle(angle, distance, raytrace_results);
-        std::remove_if(raytrace_results.begin(), raytrace_results.end(), [](RaytraceCollisionData x){return x.distance < MOVEMENT_CHECK_MIN_DISTANCE;});
+        ros::Time x_sec_before = now - ros::Duration(MOVEMENT_CHECK_SECONDS_TO_KEEP);
 
+        std::remove_if(raytrace_results.begin(), raytrace_results.end(), [](RaytraceCollisionData x){return x.distance < MOVEMENT_CHECK_MIN_DISTANCE;});
+        std::remove_if(last_raytrace_results.begin(), last_raytrace_results.end(), [&](RaytraceCollisionData x){return x.timestamp < x_sec_before;});
 
         if (raytrace_results.empty()) return true;
         
-
-
         bool hasMovement = false;
 
 
         for (auto coll : raytrace_results) {
-            if (!isCollisionInVector(coll, second_last_raytrace_results, MANHATTAN_EPSILON) || !isCollisionInVector(coll, last_raytrace_results, MANHATTAN_EPSILON)) {
+            if (!isCollisionInVector(coll, last_raytrace_results, MANHATTAN_EPSILON)) {
                 hasMovement = true;
                 break;
             }
         }
 
-        second_last_raytrace_results = last_raytrace_results;
-        last_raytrace_results = raytrace_results;
+        last_raytrace_results.insert(last_raytrace_results.end(), raytrace_results.begin(), raytrace_results.end());
 
         if (hasMovement) {
             confidence = 0;

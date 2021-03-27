@@ -405,8 +405,6 @@ namespace psaf_local_planner
                 point.y = lanelet.route_portion[lanelet.route_portion.size() - 1].y;
                 point.z = 0;
                 marker1.points.push_back(point);
-                ROS_INFO("collision at %f, %f", point.x, point.y);
-
             }
         }
 

@@ -86,6 +86,9 @@ namespace psaf_local_planner {
 
             /** Min distance which the obstacle should be away to be included in the movement check */
             static constexpr int MOVEMENT_CHECK_MIN_DISTANCE = 3;
+
+            /** Ros Seconds to keep a raytracing result for distance  */
+            static constexpr int MOVEMENT_CHECK_SECONDS_TO_KEEP = 3;
         private:
             /** The pointer to the costmap, updates automatically when the costmap changes */
             costmap_2d::Costmap2DROS *costmap_ros;
@@ -96,9 +99,6 @@ namespace psaf_local_planner {
 
             /** Publisher for debug messages; e.g. arrows along path, obstacle bobbels */
             ros::Publisher *debug_pub;
-
-            /** Second list of the recent collisions which have been found; allows comparing the current collisions with two generations of collisions */
-            std::vector<RaytraceCollisionData> second_last_raytrace_results;
 
             /** First list of the recent collisions which have been found; allows comparing the current collisions with two generations of collisions */
             std::vector<RaytraceCollisionData> last_raytrace_results;
