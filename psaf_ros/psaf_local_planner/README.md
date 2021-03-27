@@ -152,10 +152,12 @@ Grundsätzlich wird zwischen drei Szenarien unterschieden:
 - Das Auto kommt an eine Kreuzung mit einer Ampel: **Traffic_Light_***
 - Das Auto kommt an eine Kreuzung mit einer Stopp-Regelung: **STOP_*** 
 
+![Zustandsautomat-Diagramm](doc/ZuständeFahrverhaltenKreuzungen.png)
+
 Im Falle des Fahrens ohne Verkehrsregeln werden Ampeln so behandelt als seien es reguläre Kreuzungen mit Stopp-Regelung.
 Somit ist der Automat nahezu identisch, nur werden die Ampelzustände nicht mehr betrachtet.
 
-![Zustandsautomat-Diagramm](doc/ZuständeFahrverhaltenKreuzungen.png)
+![Zustandsautomat-Diagramm](doc/ZuständeFahrverhaltenKreuzungenOhneRegeln.png)
 
 Das Verhalten in den jeweiligen Zuständen lässt sich wie folgt vereinfacht beschreiben:
 - **Driving**: Fahre mit der aktuell maximal erlaubten Geschwindigkeit

@@ -16,6 +16,7 @@ import torch.backends.cudnn as cudnn
 from psaf_abstraction_layer.sensors.FusionCamera import FusionCamera, SegmentationTag
 from psaf_perception.detectors.AbstractDetector import DetectedObject, AbstractDetector, Labels
 
+times = []
 
 class TrafficLightDetector(AbstractDetector):
     """
@@ -32,7 +33,7 @@ class TrafficLightDetector(AbstractDetector):
 
         self.logger_name = "TrafficLightDetector"
 
-        self.confidence_min = 0.65
+        self.confidence_min = 0.75
         self.threshold = 0.7
         self.canny_threshold = 100
 
@@ -49,7 +50,7 @@ class TrafficLightDetector(AbstractDetector):
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
         rospy.loginfo("Device:" + str(self.device), logger_name=self.logger_name)
         # load our model
-        model_name = 'traffic-light-classifiers-2021-02-09-18:29:47'
+        model_name = 'traffic-light-classifiers-2021-03-26_15-38-55'
         rospy.loginfo("loading classifier model from disk...", logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
@@ -86,13 +87,19 @@ class TrafficLightDetector(AbstractDetector):
         :param image: the important part of the camera image
         :return: the Label
         """
+        # global times
+        # import time
+        # start = time.time_ns()
         image = self.transforms(image).unsqueeze(dim=0)
         imgblob = Variable(image).to(self.device)
         pred = torch.nn.functional.softmax(self.net(imgblob).cpu(), dim=1).detach().numpy()[0, :]
 
         hit = np.argmax(pred)
         label = self.labels.get(hit, Labels.TrafficLightUnknown)
-
+        # end = time.time_ns()
+        # times.append((end-start)/10e6)
+        # if len(times)>10000:
+        #     times.pop(0)
         return label, float(pred[hit])
 
     def __on_new_image_data(self,time, segmentation_image, rgb_image, depth_image):
@@ -107,9 +114,12 @@ class TrafficLightDetector(AbstractDetector):
         if (rospy.Time.now()-time).to_sec()>0.6:
             # Ignore the new image data if its older than 600ms
             # -> Reduce message aging
-            return 
+            return
         (height_seg, width_seg) = segmentation_image.shape[:2]
         (height_rgb, width_rgb) = rgb_image.shape[:2]
+
+        h_scale = width_rgb / width_seg
+        v_scale = height_rgb / height_seg
 
         # List oif detected elements
         detected = []
@@ -127,19 +137,19 @@ class TrafficLightDetector(AbstractDetector):
             x1, y1, w, h = cv2.boundingRect(contours_poly)
             x2 = x1 + w
             y2 = y1 + h
-            if w < h and w > 1 and h > 2:
+            if w > 1 and h > 2:
                 mask = segmentation_image[y1:y2, x1:x2] != (255,255,255)
 
                 # get cropped depth image
                 crop_depth = depth_image[y1:y2, x1:x2]
                 masked_crop_depth = crop_depth[mask[:, :, 1]]
 
+                if np.size(masked_crop_depth)<1:
+                    continue
                 # use mask to extract the traffic sign distances
                 distance = np.min(masked_crop_depth)
 
                 if distance <= 100:
-                    h_scale = width_rgb/width_seg
-                    v_scale = height_rgb/height_seg
                     # get cropped rgb image
                     crop_rgb = rgb_image[
                                int(y1 * v_scale):min([height_rgb, int(y2 * v_scale + 1)]),
@@ -164,7 +174,7 @@ class TrafficLightDetector(AbstractDetector):
                 label = classes[i]
                 confidence = confidences[i]
 
-                if not confidence >= self.confidence_min:
+                if confidence < self.confidence_min:
                     label = Labels.TrafficLightUnknown
                     confidence = 1.
 
@@ -174,22 +184,22 @@ class TrafficLightDetector(AbstractDetector):
                                    label=label,
                                    confidence=confidence))
                 # Store traffic light data in folder to train a better network
-                if self.data_collect_path is not None and distance < 25:
-                    x1, y1, w, h = boxes[i]
-                    x1 = int(x1 * h_scale)
-                    y1 = int(y1 * v_scale)
-                    x2 = min([width_rgb, int((x1 + w) * h_scale + 1)])
-                    y2 = min([height_rgb, int((y1 + h) * v_scale + 1)])
-                    # get cropped rgb image
-                    crop_rgb = rgb_image[y1:y2, x1:x2, :]
-                    # use inverted mask to clear the background
-                    crop_rgb[np.logical_not(mask)] = 0
-                    now = datetime.now().strftime("%H:%M:%S")
-                    folder = os.path.abspath(
-                        f"{self.data_collect_path}/{label.name if label is not None else 'unknown'}")
-                    if not os.path.exists(folder):
-                        os.mkdir(folder)
-                    cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
+                if self.data_collect_path is not None and distance < 50:
+                    # Reduce duplicate data:
+                    if (confidence < 0.9 and label in [Labels.TrafficLightRed,Labels.Other]) or label != Labels.TrafficLightRed:
+                        x1, y1, w, h = boxes[i]
+                        x1 = int(x1 * width_rgb)
+                        y1 = int(y1 * height_rgb)
+                        x2 = x1 +int(w * width_rgb)
+                        y2 = y1 +int(h * height_rgb)
+                        # get cropped rgb image
+                        crop_rgb = rgb_image[y1:y2, x1:x2, :]
+                        now = datetime.now().strftime("%H:%M:%S")
+                        folder = os.path.abspath(
+                            f"{self.data_collect_path}/{label.name if label is not None else 'unknown'}")
+                        if not os.path.exists(folder):
+                            os.mkdir(folder)
+                        cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
 
         self.inform_listener(time,detected)
 
@@ -225,8 +235,9 @@ if __name__ == "__main__":
                 text = "{}-{:.1f}m: {:.4f}".format(element.label.label_text, element.distance, element.confidence)
                 cv2.putText(image, text, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
-            print(f"Age {(rospy.Time.now()-time).to_sec()}")
+            print(f"Age {(rospy.Time.now()-time).to_sec()}s")
         show_image("Traffic light detection", image)
+        print(f"took: {np.average(times)}ms")
 
 
     def on_detected(time_in,detected_list):

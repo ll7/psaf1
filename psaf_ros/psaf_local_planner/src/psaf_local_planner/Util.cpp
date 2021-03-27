@@ -101,5 +101,13 @@ namespace psaf_local_planner
         this->debug_state_pub.publish(msg);
     }
 
+    double computeSpeedToStopInXMeters(double wishedSpeed, double stoppingDistance){
+        if (stoppingDistance < 3) {
+            return 0; // Drive very slow to stop line
+        } else {
+            return std::min(wishedSpeed, 25.0 / 18.0 * (-1 + std::sqrt(
+                    1 + 4 * (stoppingDistance - 2))));
+        }
+    }
 
 }
