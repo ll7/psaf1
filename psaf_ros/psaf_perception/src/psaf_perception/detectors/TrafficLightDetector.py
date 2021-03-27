@@ -144,6 +144,8 @@ class TrafficLightDetector(AbstractDetector):
                 crop_depth = depth_image[y1:y2, x1:x2]
                 masked_crop_depth = crop_depth[mask[:, :, 1]]
 
+                if np.size(masked_crop_depth)<1:
+                    continue
                 # use mask to extract the traffic sign distances
                 distance = np.min(masked_crop_depth)
 
