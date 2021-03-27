@@ -23,8 +23,9 @@ namespace psaf_local_planner {
             /**
              * Data Class which contains the data that is tracked in a collision
              */
-            RaytraceCollisionData(double x, double y, double angle, double distance);
+            RaytraceCollisionData(double x, double y, double angle, double distance, ros::Time timestamp);
             double x, y, angle, distance;
+            ros::Time timestamp;
     };
 
     class CostmapRaytracer {
@@ -82,6 +83,9 @@ namespace psaf_local_planner {
 
             /** Time in seconds that should cause the old maps to be reset if there wasn't a movement check inbetween */
             static constexpr int MOVEMENT_CHECK_MAX_ITERATION_PAUSE_SECONDS = 3;
+
+            /** Min distance which the obstacle should be away to be included in the movement check */
+            static constexpr int MOVEMENT_CHECK_MIN_DISTANCE = 3;
         private:
             /** The pointer to the costmap, updates automatically when the costmap changes */
             costmap_2d::Costmap2DROS *costmap_ros;
