@@ -1,5 +1,4 @@
 import json
-import math
 import os
 from datetime import datetime
 from typing import Tuple
@@ -50,7 +49,7 @@ class TrafficLightDetector(AbstractDetector):
         self.device = torch.device("cuda:0" if use_gpu and torch.cuda.is_available() else "cpu")
         rospy.loginfo("Device:" + str(self.device), logger_name=self.logger_name)
         # load our model
-        model_name = 'traffic-light-classifiers-2021-03-26_15-38-55'
+        model_name = 'traffic-light-classifiers-2021-03-27_23-55-48'
         rospy.loginfo("loading classifier model from disk...", logger_name=self.logger_name)
         model = torch.load(os.path.join(root_path, f"models/{model_name}.pt"))
 
@@ -153,7 +152,7 @@ class TrafficLightDetector(AbstractDetector):
                     # get cropped rgb image
                     crop_rgb = rgb_image[
                                int(y1 * v_scale):min([height_rgb, int(y2 * v_scale + 1)]),
-                               int(x1 * h_scale):min([width_rgb, int(x2 * h_scale + 1)]),
+                               max([int(x1 * h_scale-5),0]):min([width_rgb, int(x2 * h_scale + 1)]),
                                :]
                     # Classify the cropped image
                     label, confidence = self.__extract_label(crop_rgb)
@@ -184,22 +183,20 @@ class TrafficLightDetector(AbstractDetector):
                                    label=label,
                                    confidence=confidence))
                 # Store traffic light data in folder to train a better network
-                if self.data_collect_path is not None and distance < 50:
-                    # Reduce duplicate data:
-                    if (confidence < 0.9 and label in [Labels.TrafficLightRed,Labels.Other]) or label != Labels.TrafficLightRed:
-                        x1, y1, w, h = boxes[i]
-                        x1 = int(x1 * width_rgb)
-                        y1 = int(y1 * height_rgb)
-                        x2 = x1 +int(w * width_rgb)
-                        y2 = y1 +int(h * height_rgb)
-                        # get cropped rgb image
-                        crop_rgb = rgb_image[y1:y2, x1:x2, :]
-                        now = datetime.now().strftime("%H:%M:%S")
-                        folder = os.path.abspath(
-                            f"{self.data_collect_path}/{label.name if label is not None else 'unknown'}")
-                        if not os.path.exists(folder):
-                            os.mkdir(folder)
-                        cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
+                if self.data_collect_path is not None and distance < 25:
+                    x1, y1, w, h = boxes[i]
+                    x1 = int(x1 * width_rgb)
+                    y1 = int(y1 * height_rgb)
+                    x2 = x1 +int(w * width_rgb)
+                    y2 = y1 +int(h * height_rgb)
+                    # get cropped rgb image
+                    crop_rgb = rgb_image[y1:y2, x1:x2, :]
+                    now = datetime.now().strftime("%H:%M:%S")
+                    folder = os.path.abspath(
+                        f"{self.data_collect_path}/{label.name if label is not None else 'unknown'}")
+                    if not os.path.exists(folder):
+                        os.mkdir(folder)
+                    cv2.imwrite(os.path.join(folder, f"{now}-{i}.jpg"), cv2.cvtColor(crop_rgb, cv2.COLOR_RGB2BGR))
 
         self.inform_listener(time,detected)
 

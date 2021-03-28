@@ -24,18 +24,18 @@ now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 store_path =os.path.abspath(f"../models/traffic-light-classifiers-{now}")
 # Use existing model that will be fine tuned
 # set 'alexnet', 'resnet' or path to an existing pt file
-base_model_name = "alexnet"
+base_model_name = "resnet"
 # None if net should be trained based on standard pretrained network -> define in base_model_name
-existing_model_path = "../models/traffic-light-classifiers-2021-03-26_12-49-07"
+existing_model_path = None #"../models/traffic-light-classifiers-2021-03-26_12-49-07"
 
 # classes in the dataset
 classes = ['back', 'green','red','yellow']
 
 # Batch size for training (change depending on how much memory you have)
-batch_size = 256
+batch_size = 250
 
 # Number of epochs to train for
-num_epochs = 500
+num_epochs = 8000
 
 # Flag for feature extracting. When False, we finetune the whole model,
 #   when True we only update the reshaped layer params
