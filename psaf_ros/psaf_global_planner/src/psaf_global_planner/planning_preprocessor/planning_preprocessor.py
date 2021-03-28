@@ -90,7 +90,7 @@ class PlanningPreprocessor:
         rospy.loginfo('Planning Preprocessor: Message sent!')
 
         if self.vehicle_detected:
-            rospy.loginfo('Not planning uTurn because oncoming traffic was detected!')
+            rospy.logwarn('Not planning uTurn because oncoming traffic was detected!')
 
         self.points = []
         self.vehicle_detected = False
@@ -174,6 +174,8 @@ class PlanningPreprocessor:
             goal.orientation.y = rospy.get_param('competition/goal/orientation/y', 0)
             goal.orientation.z = rospy.get_param('competition/goal/orientation/z', 0)
             goal.orientation.w = rospy.get_param('competition/goal/orientation/w', 0)
+
+            rospy.sleep(2)  # wait for vehicle to be spawned and drop down
 
             # continue like goal position was received by RVIZ goal panel
             self.goal_callback(goal)
