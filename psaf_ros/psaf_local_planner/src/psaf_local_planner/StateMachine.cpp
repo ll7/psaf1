@@ -158,14 +158,15 @@ namespace psaf_local_planner {
                 }
                 break;
             case LocalPlannerState::STOP_WILL_STOP:
-                if (distanceToStopLine <= MIN_DISTANCE_TO_STOP_LINE || currentSpeed < EQUIVALENT_TO_0_VEL) {
+                if (distanceToStopLine <= MIN_DISTANCE_TO_STOP_LINE) {
                     newState = LocalPlannerState::STOP_WAITING;
                     this->start_time_stop_waiting = currentTimeSec;
                 }
                 break;
             case LocalPlannerState::STOP_WAITING:
                 // Wait until intersection is clear and wait at least SEC_TO_WAIT_AT_STOP seconds
-                if (isIntersectionClear && (currentTimeSec - this->start_time_stop_waiting) > SEC_TO_WAIT_AT_STOP) {
+                if (isIntersectionClear && (currentTimeSec - this->start_time_stop_waiting) > SEC_TO_WAIT_AT_STOP
+                    && currentSpeed <= EQUIVALENT_TO_0_VEL) {
                     newState = LocalPlannerState::STOP_GO;
                     this->start_time_stop_go = currentTimeSec;
                 }
@@ -266,7 +267,7 @@ namespace psaf_local_planner {
                 }
                 break;
             case LocalPlannerState::STOP_WILL_STOP:
-                if (distanceToStopLine <= MIN_DISTANCE_TO_STOP_LINE || currentSpeed < EQUIVALENT_TO_0_VEL) {
+                if (distanceToStopLine <= MIN_DISTANCE_TO_STOP_LINE || currentSpeed <= EQUIVALENT_TO_0_VEL) {
                     newState = LocalPlannerState::STOP_WAITING;
                 }
                 break;
@@ -290,7 +291,7 @@ namespace psaf_local_planner {
     }
 
     bool LocalPlannerStateMachineWithoutTrafficRules::isInTrafficLightStates() {
-        return LocalPlannerStateMachineWithoutTrafficRules::isInStopStates();
+        return false;
     }
 
 

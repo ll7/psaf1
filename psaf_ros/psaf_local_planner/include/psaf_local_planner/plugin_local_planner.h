@@ -62,6 +62,8 @@
 // Constants
 // Check min radius for traffic elements in global plan
 #define MIN_CHECK_RADIUS_FOR_TRAFFIC_ELEMENTS 15.0
+// minimal distance to center line to prevent attribute check during an u-turn
+#define MIN_DISTANCE_TO_CENTERLINE_FOR_ATTRIBUTE_CHECK 2.0
 
 
 // Ensure that we work with the correct standard

@@ -49,8 +49,14 @@ namespace psaf_local_planner
         // Distance to stop can be determined in two the distance to the end of the lanelet,
         // the distance to the traffic light on the right hand side or the distance to the stop line
         if(msg->distanceToStopLine<1e6){ // abstraction for infinity
-            // Use the stop line distance
-            this->stop_distance_at_intersection = msg->distanceToStopLine;
+            // Use the stop line distance only of it is plausible (= diff to computed value is <=10m)
+            // and when we are inside a stop state
+            double theoriaticalValue = this->computeDistanceToStoppingPointWithoutStopLine();
+            if(std::abs(theoriaticalValue - msg->distanceToStopLine)>10 && this->state_machine->isInStopStates()) {
+                this->stop_distance_at_intersection = theoriaticalValue;
+            }else {
+                this->stop_distance_at_intersection = msg->distanceToStopLine;
+            }
         }else{
             this->stop_distance_at_intersection = this->computeDistanceToStoppingPointWithoutStopLine();
         }
@@ -61,21 +67,31 @@ namespace psaf_local_planner
         if (state_machine->isInTrafficLightStates()){ // Use traffic light data only when in correct state
             // Use the traffic light distance if the perception already knows something
             if(this->traffic_light_state.state!=psaf_messages::TrafficLight::STATE_UNKNOWN){
-                // if the traffic light is on the other side of the intersection (american style)
-                if(this->traffic_light_state.x<0.8 && this->traffic_light_state.y<0.32 && traffic_light_state.distance>15.){
-                    // we keep 20 meters as distance
-                    return std::max(this->traffic_light_state.distance-30.,0.);
-                }else{
-                    // else the traffic_light is on the right hand side we want to stop 5 meters in front of it
+                // if the traffic_light is on the right hand side we want to stop 5 meters in front of it
+                if(this->traffic_light_state.x>0.6 && traffic_light_state.distance<15.){
                     return std::max(this->traffic_light_state.distance-5.,0.);
-                }
-            } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
-                    double distance_to_traffic_light = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
-                    if( distance_to_traffic_light <1e6){
-                        return std::max((distance_to_traffic_light-1),0.0);
+                }else{
+                    // else the traffic light is on the other side of the intersection (american style)
+                    // -> keep 30 meters as distance
+                    double distance_to_traffic_light_lanelet = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
+                    double distance_to_traffic_light_perception = std::max(this->traffic_light_state.distance-30.,0.);
+                    // Respect lanelet data for american traffic lights because the distance we want to keep depends
+                    // on the road size -> take the min value
+                    // only use the lanelet data if it has data about a tl nearby
+                    if(distance_to_traffic_light_lanelet<1e6 &&
+                          std::abs(distance_to_traffic_light_lanelet-distance_to_traffic_light_perception)<40){
+                        return std::max(distance_to_traffic_light_lanelet-2,distance_to_traffic_light_perception);
                     }
-                    // No success go to fallback return
+                    return distance_to_traffic_light_perception;
                 }
+            }
+            // if we don't have any other information we use the map data minus 1 meter as safety distance
+            double distance_to_traffic_light = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
+            if( distance_to_traffic_light <1e6){
+                return std::max((distance_to_traffic_light-1),0.0);
+            }
+            // No success go to fallback return
+
         }else if (state_machine->isInStopStates()) {
             // because we don't have any other information we use the map data
             double distance_to_stop = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop);
@@ -110,7 +126,7 @@ namespace psaf_local_planner
             return 0; // Drive very slow to stop line
         } else {
             return std::min(wishedSpeed, 25.0 / 18.0 * (-1 + std::sqrt(
-                    1 + 4 * (stoppingDistance - 2))));
+                    1 + 4 * (stoppingDistance - 1))));
         }
     }
 
