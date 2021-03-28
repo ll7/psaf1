@@ -48,3 +48,5 @@ mithilfe des Cosinus Satzes die globale Abweichung von der Route bewertet.
 
 Der Scenario Runner bietet zwei Implementierungen. Die eine baut auf der XRoute auf, welche durch den [Global Planner](../psaf_global_planner/README.md) berechnet
 wird und die andere setzt auf den Ros Datentyp Path.
+
+![result](doc/result.png)
