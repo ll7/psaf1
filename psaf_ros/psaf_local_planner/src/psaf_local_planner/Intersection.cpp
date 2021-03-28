@@ -63,7 +63,7 @@ namespace psaf_local_planner {
             if (this->respect_traffic_rules) {
                 is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5 * M_PI, 22, 5);
             } else {
-                is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5 * M_PI, 18, 5);
+                is_intersection_clear = this->costmap_raytracer.checkForNoMovement(0.5 * M_PI, 20, 5);
             }
         }
         this->state_machine->updateState(traffic_light_detected, stop_detected,
