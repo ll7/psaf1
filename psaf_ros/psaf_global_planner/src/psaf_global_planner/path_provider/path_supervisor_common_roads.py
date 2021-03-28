@@ -281,7 +281,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
 
 
 def main():
-    respect_traffic_rules = rospy.get_param('/path_provider/respect_traffic_rules', False)
+    respect_traffic_rules = rospy.get_param('respect_traffic_rules', False)
     export_path = rospy.get_param('/path_provider/export_path', False)
     enable_debug = rospy.get_param('/path_provider/enable_debug', False)
     provider = PathSupervisorCommonRoads(init_rospy=False, enable_debug=bool(enable_debug),
