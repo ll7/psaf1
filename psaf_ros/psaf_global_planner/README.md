@@ -239,6 +239,7 @@ vorausfahrenden Fahrzeug zu folgen, da es sich trotz Hindernis weiterhin um die,
 Ein weiterer wichtiger Punkt ist es, dass eine Neuplanung immer auf den Originalkartendaten, 
 also auf Kartendaten ohne Hindernisse und ohne modifiziertes Lanelet-Netzwerk ausgeführt wird.
 
+![obstacle](doc/obstacle.png)
 
 #### Map Manager (common_road_manager)
 
