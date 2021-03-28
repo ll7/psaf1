@@ -125,7 +125,7 @@ namespace psaf_local_planner
             return 0; // Drive very slow to stop line
         } else {
             return std::min(wishedSpeed, 25.0 / 18.0 * (-1 + std::sqrt(
-                    1 + 4 * (stoppingDistance - 2))));
+                    1 + 4 * (stoppingDistance - 1))));
         }
     }
 
