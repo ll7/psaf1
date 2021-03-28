@@ -55,10 +55,10 @@ Derzeit werden folgende Detektoren gestartet:
 - StopLineDetector
 - TrafficLightDetector
 
-Sollen alle verfügbaren Detektoren ausgeführt werden, werden mindestens 7.8 GB Grafikspeicher benötigt.
+Sollen alle verfügbaren Detektoren zusammen mit der Simulationsumgebung ausgeführt werden, werden mindestens 7.8 GB Grafikspeicher benötigt.
 
 ### Stop Line Detector
-Die Aufgabe des Detektors ist die Erkennung der Stopp-Linien und die entsprechenden Entfernungen.
+Die Aufgabe des Detektors ist die Erkennung der Stopp-Linien und die Bestimmung der entsprechenden Entfernungen.
 #### Ziel
 Um an den richtigen Stellen bei Ampeln und Kreuzungen zum Stehen zu kommen, benötigt das Fahrzeug die Entfernung zur Haltelinie.
 Dabei sollen jedoch andere Markierungen auf der Straße nicht beachtetet werden.
@@ -66,29 +66,30 @@ Dabei sollen jedoch andere Markierungen auf der Straße nicht beachtetet werden.
 #### Umsetzung
 Anhand der Bilder der Segmentation-Kamera werden die Markierungen der Straße gefiltert. 
 Das gefilterte Bild wird daraufhin mittels eines Kantenfilters (Canny) auf Kanten untersucht.
-Ein probalistischer Hough Line Detektor ermittelt auf Basis der erkannten Kanten Linie ([siehe OpenCv](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_houghlines/py_houghlines.html)).
+Ein probalistischer Hough Line Detektor ermittelt auf Basis der erkannten Kanten Linien ([siehe OpenCv](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_houghlines/py_houghlines.html)).
 Dann werden die gesammelten Linien anhand ihres Winkels und der Abmessungen gefiltert. 
-Anhand einer empirisch ermittelten Funktion werden die y-Koordinaten in Bezug zum Bild in eine Abstandsschätzung umgewandelt.
+Mit Hilfe einer empirisch ermittelten Funktion werden die y-Koordinaten in Bezug zum Bild in eine Abstandsschätzung umgewandelt.
 
 ![Erkennung der Haltelinien](doc/stop_line-detection.png)
 
 ### Stop Mark Detector
-Unter Wiederverwendung des YOLO v3 Modells der Gruppe vom Wintersemester 2019 wurde eine Detektion anhand der RGB Bilder 
-umgesetzt.
+Unter Wiederverwendung des YOLO v3 Modells der Gruppe vom Wintersemester 2019 wurde eine Detektion anhand der RGB Bilder umgesetzt.
+
 #### Ziel
 Um Kreuzung mit einer Stopp-Regelung zu erkennen, müssen die Beschriftungen am Boden mit "Stop" erkannt werden.
 
 ![Erkennung Stop](doc/stop_detector.png)
 #### Umsetzung
 Das trainierte Netz wird in PyTorch geladen und die nicht benötigten Klassen werden ignoriert.
-Das Modell kann unter dem [Gitlab-Server](https://git.rz.uni-augsburg.de/luttkule/carla-praktikum-ws2019/-/blob/master/carla_object_recognition/yolo-obj_last.weights) der Universität heruntergeladen werden.
-Dies muss händisch geschehen.
+Das Modell kann unter dem [Gitlab-Server](https://git.rz.uni-augsburg.de/luttkule/carla-praktikum-ws2019/-/blob/master/carla_object_recognition/yolo-obj_last.weights) der Universität heruntergeladen werden. Als Bildquelle dient dabei allein die RGB-Kamera.
+**Dies muss händisch geschehen.**
 
 ### Traffic Light Detector
 Die Aufgabe des Detektors ist die Erkennung der Ampel und ihres aktuellen Zustands. Zudem wird die Entfernung mittels der Tiefen-Kamera gemessen.
 
 #### Ziel
-Damit sich das Fahrzeug an den Kreuzungen mit einer Ampel korrekt verhält, müssen die Zustände der Ampeln bekannt sein.
+Damit sich das Fahrzeug an Kreuzungen mit einer Ampel korrekt verhält, müssen die Zustände der Ampeln bekannt sein. 
+Ebenso bedarf es einer Aussage über den Abstand zur Ampel, da auf manchen Karten (z.B. Town02) keine Haltelinien gegeben sind und somit die Ampel das einzige Indiz für die Halteposition sind.
 ![Erkennung der Ampeln](doc/Traffic_light_detection.png)
 
 #### Umsetzung
@@ -96,6 +97,10 @@ Damit sich das Fahrzeug an den Kreuzungen mit einer Ampel korrekt verhält, müs
 
 Das Bild der FusionCamera, also der Vereinigung der drei Kamera-Bilder von RGB-, Tiefen und Segmentation-Kamera, wird zunächst zu Erkennung der Ampeln genutzt.
 Auf Basis des Segmentation-Bildes werden die Objekte im Bild, welche als Ampeln markiert sind, mit *Bounding Boxes* beschrieben.
+Anschließend wird für jede Bounding Box anhand der Segmentierungsdaten eine Maske erstellt. Diese Maske wird genutzt die richtigen Pixel des Tiefenbildes zu wählen.
+Über eine Mittelwertsberechnung wird dann anhand der Pixel die Entfernung zur Ampel bestimmt.
+
+Da der Klassifizierungsaufwand den Hauptteil der Rechenleistung beansprucht, werden lediglich Objekte in einem bestimmten Radius (100m) weiterverarbeitet.
 
 Daraufhin wird der entsprechende Ausschnitt des RGB-Bildes durch ein Klassifikationsnetzes (Resnet18) klassifiziert.
 Das entsprechende Modell ist im Ordner *models* unter "traffic-light-classifiers-*.pt" zu finden.
@@ -106,11 +111,9 @@ Dabei stehen folgende Klassen zur Wahl:
 - **Yellow**: Die Ampel zeigt gelb
 - **Back**: Die Rückseite der Ampel ist zu sehen.
 
-Als Ergebnis der Klassifizierung erhält man die wahrscheinlichste Klasse und das Vertrauen des Modells in das Ergebnis.
+Als Ergebnis der Klassifizierung erhält man die wahrscheinlichste Klasse und das Vertrauen des Modells in das Ergebnis. 
+Diejenigen Objekte, welche mit *back* klassifiziert wurden, werden verworfen.
 
-Anschließend wird für jede Bounding Box, welche nicht als *Back* klassifiziert wurde, anhand der Segmentierungsdaten eine Maske erstellt.
-Diese Maske wird genutzt die richtigen Pixel des Tiefenbildes zu wählen.
-Über eine Mittelwertsberechnung wird dann anhand der Pixel die Entfernung zur Ampel bestimmt.
 
 ### Traffic Sign Detector
 Die Aufgabe des Detektors ist die Erkennung der Schilder und deren Entsprechung. Zudem wird die Entfernung mittels der Tiefen-Kamera gemessen.
@@ -123,6 +126,11 @@ Damit sich das Fahrzeug an den Kreuzungen mit einer Ampel korrekt verhält, müs
 #### Umsetzung
 Das Bild der FusionCamera ([siehe Traffic Light Detector](#Traffic-Light-Detector)) wird zunächst zu Erkennung der Schilder genutzt.
 Auf Basis des Segmentation-Bildes werden die Objekte im Bild, welche als Verkehrsschilder markiert sind, mit *Bounding Boxes* beschrieben.
+
+Anschließend wird für jede Bounding Box anhand der Segmentierungsdaten eine Maske erstellt. Diese Maske wird genutzt die richtigen Pixel des Tiefenbildes zu wählen.
+Über eine Mittelwertsberechnung wird dann anhand der Pixel die Entfernung zur Ampel bestimmt.
+
+Da der Klassifizierungsaufwand den Hauptteil der Rechenleistung beansprucht, werden lediglich Objekte in einem bestimmten Radius (100m) weiterverarbeitet.
 
 Daraufhin wird der entsprechende Ausschnitt des RGB-Bildes durch ein Klassifikationsnetzes (Resnet18) klassifiziert.
 Das entsprechende Modell ist im Ordner *models* unter "traffic_sign-classifier-*.pt" zu finden.
@@ -137,11 +145,9 @@ Dabei stehen folgende Klassen zur Wahl:
 - **speed_limit_60**: Ein amerikanisches Geschwindigkeitsbeschränkungsschild auf 60mp/h
 - **stop**: Ein Stopp-Schild
 
-Als Ergebnis der Klassifizierung erhält man die wahrscheinlichste Klasse und das Vertrauen des Modells in das Ergebnis.
+Als Ergebnis der Klassifizierung erhält man die wahrscheinlichste Klasse und das Vertrauen des Modells in das Ergebnis. 
+Diejenigen Objekte, welche mit *back* klassifiziert wurden, werden verworfen.
 
-Anschließend wird für jede Bounding Box, welche nicht als *Back* klassifiziert wurde, anhand der Segmentierungsdaten eine Maske erstellt.
-Diese Maske wird genutzt die richtigen Pixel des Tiefenbildes zu wählen.
-Über eine Mittelwertsberechnung wird dann anhand der Pixel die Entfernung zur Ampel bestimmt.
 
 ### Training der neuronalen Klassifikationsnetze
 
@@ -149,5 +155,7 @@ Wie bereits erwähnt wurden die Klassifikationsnetze für die Ampel- und Schilde
 Die entsprechenden Trainingsdaten liegen im Ordner *"training_data"* bei. 
 Mithilfe der Skripte im *"util"*-Ordner können weitere Modelle trainiert werden.
 Die zum Training verwendeten Parameter und die erreichte Präzision sind bei jedem resultierenden Modell in der gleichnamigen Konfigurationsdatei hinterlegt.
+
+Die Wahl ist hierbei auf Resnet-18 gefallen, da es die beste Lösung für eine geringe Berechnungszeit pro Klassifizierung bei hoher Zuverlässigkeit darstellt (siehe [Beispielmessungen](https://github.com/jcjohnson/cnn-benchmarks)). 
 
 Die derzeit verwenden Modelle kommen jeweils auf eine Präzision von über 92 %.
