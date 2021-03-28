@@ -28,7 +28,7 @@ class LocalPerceptionEvaluation:
 
         self.publish_timer = rospy.Timer(rospy.Duration(0.05), self.periodic_planner_input_update)
 
-        self.current_traffic_light = None
+        self.last_traffic_light_states = []
         self.distance_to_stop_line = float('inf')
 
         self.steer = 0.
@@ -83,9 +83,11 @@ class LocalPerceptionEvaluation:
                     filter(lambda x: x.state == most_common_state, filtered_traffic_light_list),
                     key=lambda x: x.distance)), None)
 
-            self.current_traffic_light = closest_with_correct_state
+            self.last_traffic_light_states.append(closest_with_correct_state)
         else:
-            self.current_traffic_light = None
+            self.last_traffic_light_states.append(None)
+        if len(self.last_traffic_light_states) >= 3:
+            self.last_traffic_light_states.pop(0)
 
     def callback_traffic_signs(self, traffic_signs: TrafficSignInfo):
         """
@@ -111,8 +113,13 @@ class LocalPerceptionEvaluation:
         :return: None
         """
         msg = TrafficSituation()
-        if self.current_traffic_light is not None:
-            msg.trafficLight.append(self.current_traffic_light)
+        most_common_state, _ = Counter(map(lambda x: x.state if x is not None else None, self.last_traffic_light_states)).most_common(1)[0]
+        majority_representative = next(iter(
+            sorted(
+                filter(lambda x: x.state == most_common_state if x is not None else False, self.last_traffic_light_states),
+                key=lambda x: x.distance)), None)
+        if majority_representative is not None:
+            msg.trafficLight.append(majority_representative)
         msg.distanceToStopLine = self.distance_to_stop_line
         msg.header.stamp = rospy.Time.now()
         msg.header.frame_id = 'car'
