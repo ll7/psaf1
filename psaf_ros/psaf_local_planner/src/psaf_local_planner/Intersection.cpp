@@ -21,17 +21,24 @@ namespace psaf_local_planner {
 
         if (global_route.size() >= 2) { // at least two lanelets in list -> 1 lanelet isn't important
             // -> goal lanelet and don't care about a traffic light or stop
-            double distance = 0;
-            // iterate over upcoming lanelets in the route
-            for (auto lanelet : global_route) {
-                // sum up distance until lanelet is marked as intersection
-                distance += lanelet.route_portion.back().distance - lanelet.route_portion.front().distance;
-                if (attributeCheckFunction(lanelet)) {
-                    break;
+
+            // Check distance to lanelet to ignore attribute during a u-turn
+            psaf_messages::CenterLineExtended firstWayPoint = global_route.front().route_portion.front();
+            geometry_msgs::Point currentPos = this->current_pose.pose.position;
+            double distanceToLanelet = std::hypot(currentPos.x - firstWayPoint.x, currentPos.y - firstWayPoint.y);
+            if(distanceToLanelet<2.) {
+                double distance = 0;
+                // iterate over upcoming lanelets in the route
+                for (auto lanelet : global_route) {
+                    // sum up distance until lanelet is marked as intersection
+                    distance += lanelet.route_portion.back().distance - lanelet.route_portion.front().distance;
+                    if (attributeCheckFunction(lanelet)) {
+                        break;
+                    }
                 }
-            }
-            if(distance<=LANELET_CHECK_RADIUS){
-                return distance;
+                if (distance <= LANELET_CHECK_RADIUS) {
+                    return distance;
+                }
             }
         }
         return std::numeric_limits<double>::infinity();
