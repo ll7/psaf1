@@ -250,7 +250,7 @@ python3 spawn_npc.py -n 200 -w 0
 ## Hinweise & häufige Fehler
 
 1. Vor dem Starten der Planung muss gewartet werden, bis im RVIZ **GoalPanel** der Status *'Init Done'* angezeigt wird.
-2. Für die Fahrt mit Verkehrsregeln wird eine sehr starke GPU und CPU empfohlen.
+2. Für die Fahrt mit Verkehrsregeln wird eine sehr starke GPU und CPU empfohlen. Die Anforderungen an die Grafikkarte sind im Modul  [Perception](psaf_ros/psaf_perception) näher beschrieben. Wird die Option 'use_gpu=False' genutzt, kann die Berechnung zu langsam sein und das Fahrzeug bremst zu spät.
 3. Falls die Verwendete Hardware nicht ausreichend ist oder zu viele Verkehrsteilnehmer gespawnt wurden, kann es vorkommen, dass die Simulation
 *'Out-Of-Sync'*-Läuft. Dabei wird das autonome Fahrzeug nicht mehr zuverlässig mit der Simulation aktualisiert und kann daher nicht mehr korrekt auf die Umgebung reagieren.
 4. Auf der CARLA-Karte *Town 05* kommt es in der Umgebung der Koordinaten (38,-171) zu Problemen. An dieser Stelle läuft die Simulation selbst mit sehr wenigen NPCs und guter Hardware *'Out-Of-Sync'*.
