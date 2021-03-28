@@ -47,6 +47,7 @@ Die Aufgabe umfasst folgende Punkte:
 8. Eine Fahrt soll über den vorgegebenen [Comeptition Manager](https://github.com/ll7/psaf20/tree/main/psaf20_competition_manager) gestartet werden können.
 
 ## Übersicht der Ergebnisse
+![Video](docs/psaf_video.gif)
 
 ### Abhängigkeiten zwischen Modulen
 ![Module](docs/modules_diagram.png)
@@ -249,7 +250,10 @@ python3 spawn_npc.py -n 200 -w 0
 ## Hinweise & häufige Fehler
 
 1. Vor dem Starten der Planung muss gewartet werden, bis im RVIZ **GoalPanel** der Status *'Init Done'* angezeigt wird.
-2. Für die Fahrt mit Verkehrsregeln wird eine sehr starke GPU empfohlen. (z.B. RTX 2080 oder besser)
+2. Für die Fahrt mit Verkehrsregeln wird eine sehr starke GPU und CPU empfohlen.
+3. Falls die Verwendete Hardware nicht ausreichend ist oder zu viele Verkehrsteilnehmer gespawnt wurden, kann es vorkommen, dass die Simulation
+*'Out-Of-Sync'*-Läuft. Dabei wird das autonome Fahrzeug nicht mehr zuverlässig mit der Simulation aktualisiert und kann daher nicht mehr korrekt auf die Umgebung reagieren.
+4. Auf der CARLA-Karte *Town 05* kommt es in der Umgebung der Koordinaten (38,-171) zu Problemen. An dieser Stelle läuft die Simulation selbst mit sehr wenigen NPCs und guter Hardware *'Out-Of-Sync'*.
 
 ## Fazit
 Abschließend lässt sich sagen, dass das im Laufe des Projekts entwickelte Fahrzeug alle Anforderungen der 
