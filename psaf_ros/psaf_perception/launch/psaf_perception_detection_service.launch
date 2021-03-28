@@ -1,0 +1,25 @@
+<!-- -->
+<launch>
+    <!--  Arguments begin-->
+    <arg name='use_gpu' default='True'/>
+    <arg name='role_name' default='ego_vehicle'/>
+    <arg name='activate_traffic_light_detector' default='True'/>
+
+    <!-- Arguments end-->
+
+    <!-- Camera Fusion is only required when we need to detect traffic lights-->
+    <group if="$(arg activate_traffic_light_detector)">
+        <!--  Start the camera fusion service for the detector-->
+        <include file="$(find psaf_sensor_preprocessing)/launch/psaf_fusion_camera_service.launch">
+            <arg name='role_name' value="$(arg role_name)"/>
+            <arg name='camera_group' value="front"/>
+            <arg name='threshold_diff' value="0.1"/>
+        </include>
+    </group>
+
+
+    <param name="use_gpu" type="bool" value="$(arg use_gpu)"/>
+    <param name="activate_traffic_light_detector" type="bool" value="$(arg activate_traffic_light_detector)"/>
+    <node pkg="psaf_perception" type="DetectionService.py" name="detection_service" output="screen">
+    </node>
+</launch>

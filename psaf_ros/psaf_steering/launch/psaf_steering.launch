@@ -1,5 +1,0 @@
-<!-- -->
-<launch>
-  <node pkg="psaf_steering" type="hello.py" name="psaf_steering" output="screen">
-  </node>
-</launch>

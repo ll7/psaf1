@@ -1,0 +1,5 @@
+<!-- -->
+<launch>
+  <node pkg="psaf_global_planner" type="path_provider_lanelet2.py" name="path_provider" output="screen">
+  </node>
+</launch>
