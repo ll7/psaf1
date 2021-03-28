@@ -254,6 +254,7 @@ python3 spawn_npc.py -n 200 -w 0
 3. Falls die Verwendete Hardware nicht ausreichend ist oder zu viele Verkehrsteilnehmer gespawnt wurden, kann es vorkommen, dass die Simulation
 *'Out-Of-Sync'*-Läuft. Dabei wird das autonome Fahrzeug nicht mehr zuverlässig mit der Simulation aktualisiert und kann daher nicht mehr korrekt auf die Umgebung reagieren.
 4. Auf der CARLA-Karte *Town 05* kommt es in der Umgebung der Koordinaten (38,-171) zu Problemen. An dieser Stelle läuft die Simulation selbst mit sehr wenigen NPCs und guter Hardware *'Out-Of-Sync'*.
+5. Gelegentlich tritt ein Fehler beim Start von RVIZ auf. Dieser Fehler steht nicht im Zusammenhang mit dem entwickelten System, sondern tritt auch bei anderer Nutzung der Carla-Ros-Bridge auf. Ein Neustart des Befehls behebt den Fehler.
 
 ## Fazit
 Abschließend lässt sich sagen, dass das im Laufe des Projekts entwickelte Fahrzeug alle Anforderungen der 
