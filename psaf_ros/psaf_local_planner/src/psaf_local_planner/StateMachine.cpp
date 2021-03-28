@@ -267,7 +267,7 @@ namespace psaf_local_planner {
                 }
                 break;
             case LocalPlannerState::STOP_WILL_STOP:
-                if (distanceToStopLine <= MIN_DISTANCE_TO_STOP_LINE || currentSpeed <= EQUIVALENT_TO_0_VEL) {
+                if (distanceToStopLine <= MIN_DISTANCE_TO_STOP_LINE) {
                     newState = LocalPlannerState::STOP_WAITING;
                 }
                 break;
