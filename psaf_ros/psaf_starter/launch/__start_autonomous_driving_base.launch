@@ -27,7 +27,7 @@
     <!-- Whether to respect the traffic rules -->
     <arg name='respect_traffic_rules' default='True'/>
     <!-- If true, always try to do a uTurn -->
-    <arg name='always_u_turn' default='False'/>
+    <arg name='always_u_turn' default='True'/>
 
 
     <!-- Arguments end-->

@@ -8,11 +8,11 @@ namespace psaf_local_planner
 {
     PsafLocalPlanner::PsafLocalPlanner() : odom_helper("/carla/ego_vehicle/odometry"), global_plan({}),
                                             initialized(false), closest_point_local_plan(2),
-                                            lookahead_factor(3), lookahead_factor_exp(1.3), target_velocity(15), min_velocity(5),
+                                            lookahead_factor(0.25), lookahead_factor_exp(1.4), lookahead_factor_const_additive(1.5), 
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
                                             slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), 
                                             duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true), max_points_smoothing(10), 
-                                            lane_change_direction(0), lane_change_direction_calculated(false), lookahead_factor_const_additive(1)
+                                            lane_change_direction(0), lane_change_direction_calculated(false), target_velocity(15), min_velocity(5)
     {
         std::cout << "Hi";
         this->state_machine = new LocalPlannerStateMachine();
@@ -111,11 +111,12 @@ namespace psaf_local_planner
                         max_velocity = std::min(global_route[0].route_portion[0].speed / 3.6,
                                                 center_point_out.speed / 3.6);
                     }
+
+                    if (!respect_traffic_rules) {
+                        max_velocity *= 1.5;
+                    }
                 }
 
-                if (!respect_traffic_rules) {
-                    max_velocity *= 1.5;
-                }
 
                 double angle = computeSteeringAngle(target_point, current_pose.pose);
 
@@ -284,6 +285,9 @@ namespace psaf_local_planner
         global_route = msg.route;
         goal_reached = false;
         
+        lanechange_direction_map.clear();
+
+
         // this block uses linear interpolation to smooth the curves of lanechanges
         // takes the last/first 10 points in both directions and distributes the points along linear line between them
         int size = global_route.size();
@@ -291,17 +295,60 @@ namespace psaf_local_planner
         for (int i = 0; i < size; i++) {
             auto &lanelet = global_route[i];
 
-            ROS_INFO("size: %i; i+1: %i", size, i+1);
-            
             if (lanelet.isLaneChange && i + 1 < size) {
                 auto &next_lanelet = global_route[i + 1];
                 int lanelet_route_size = lanelet.route_portion.size();
                 int next_lanelet_route_size = next_lanelet.route_portion.size();
 
-                if (lanelet_route_size == 0 || next_lanelet_route_size == 0) continue;
+                if (lanelet_route_size <= 1 || next_lanelet_route_size <= 1) continue;
+
+                // Precalc all the lanechange directions, as we loose it when smoothing   
+                // last and second last point on lanelet before lanechange
+                auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
+                auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
+                // first point on lanelet after lanechange
+                auto &next = next_lanelet.route_portion[0];
+                // compute vectors from points
+                auto v_last = tf2::Vector3(last.x, last.y, last.z);
+                auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
+                auto v_next = tf2::Vector3(next.x, next.y, next.z);
+
+                // calculate vectors needed for angle calculation
+                // v1 equals current driving direction, v2 equals lane change direction
+                auto v1 = v_last - v_second_last;
+                auto v2 = v_next - v_last;
+                // calculate the angle between v1 and v2
+                double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
+
+                if (angle > M_PI)        { angle -= 2 * M_PI; }
+                else if (angle <= -M_PI) { angle += 2 * M_PI; }
+
+                    ROS_INFO("lanechange angle: %f", angle);
+
+
+                // use the angle to determine direction of lanechange
+                if (angle < 0) {
+                    ROS_INFO("lanechange: +1");
+                    lanechange_direction_map[lanelet.id] = +1;
+                } else {
+                    ROS_INFO("lanechange: -1");
+                    lanechange_direction_map[lanelet.id] = -1;
+                }
+
+                ROS_INFO("lanechange: %i", lanechange_direction_map[lanelet.id]);
+
+
 
                 // smoothing should be dependent on max velocity
-                float speed_factor = lanelet.route_portion[0].speed / 3.6 / 5;
+                float speed_factor;
+                // speed > 50 -> out of town (e.g. Highway) higher factor needed
+                if (lanelet.route_portion[0].speed > 50) {
+                    speed_factor = lanelet.route_portion[0].speed / 3.6 / 5;
+                }
+                // speed =< 50 -> inside of town smaller factor for not cutting other lanelets
+                else {
+                    speed_factor = lanelet.route_portion[0].speed / 3.6 / 10;
+                }
                 // number of points on current lanelet
                 unsigned long num_points_current = std::min(lanelet.route_portion.size(), (long unsigned int)(max_points_smoothing * speed_factor));
                 // number of points on next lanelet
@@ -330,6 +377,7 @@ namespace psaf_local_planner
                     next_lanelet.route_portion[j].x = lerp(x1, x2, (num_points_current + j + 1) / (num_points_total));
                     next_lanelet.route_portion[j].y = lerp(y1, y2, (num_points_current + j + 1) / (num_points_total));
                 }
+
             }
         }
 
@@ -341,7 +389,6 @@ namespace psaf_local_planner
         // When at an intersection and turning left --> inserting a fake stop sign to check for collision
         for (int i = 0; i < size; i++) {
             auto &lanelet = global_route[i];
-            ROS_INFO("lanelet: %i intersection %i", lanelet.id, lanelet.isAtIntersection);
             if (i + 1 < size) {
                 auto &next_lanelet = global_route[i + 1];
                 int lanelet_route_size = lanelet.route_portion.size();
@@ -350,7 +397,6 @@ namespace psaf_local_planner
                 if (next_lanelet.isAtIntersection && !lanelet.isAtIntersection && !lanelet.hasStop && !lanelet.hasLight) {
                     if (lanelet_route_size > 2 && next_lanelet_route_size > lookahead_left_turn) {
                         // calculate angle between three points
-                        // TODO: move to own function
                         auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
                         auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
                         auto &next = next_lanelet.route_portion[lookahead_left_turn];
@@ -377,38 +423,7 @@ namespace psaf_local_planner
 
         ROS_INFO("LOCAL_PLANNER: fake stop check done.");
 
-        // Publish stop signs as markers 
-        auto markers = visualization_msgs::MarkerArray();
-        auto marker1 = visualization_msgs::Marker();
 
-        marker1.type = visualization_msgs::Marker::SPHERE_LIST;
-        marker1.action = visualization_msgs::Marker::ADD;
-        marker1.ns = "stop";
-        marker1.header.frame_id = "map";
-        marker1.header.stamp = ros::Time::now();
-        marker1.color.a = 1.0;
-        marker1.color.r = 1.0;
-        marker1.color.g = 1.0;
-        marker1.scale.x = 2;
-        marker1.scale.y = 2;
-        marker1.scale.z = 4;
-
-        for (auto &lanelet : global_route) {
-            if (lanelet.hasStop) {
-                geometry_msgs::Point point;
-                point.x = lanelet.route_portion[lanelet.route_portion.size() - 1].x;
-                point.y = lanelet.route_portion[lanelet.route_portion.size() - 1].y;
-                point.z = 0;
-                marker1.points.push_back(point);
-                ROS_INFO("collision at %f, %f", point.x, point.y);
-
-            }
-        }
-
-        markers.markers.push_back(marker1);
-        debug_marker_pub.publish(markers);
-        
-        ROS_INFO("LOCAL_PLANNER: done publishing stop signs.");
 
         // Convert xroute back into normal pose stamp list
         std::vector<geometry_msgs::PoseStamped> points = {};
@@ -434,8 +449,96 @@ namespace psaf_local_planner
         global_plan = points;
         planner_util.setPlan(global_plan);
         publishGlobalPlan(global_plan);
+        publishAdditionalInfoToRviz();
 
         ROS_INFO("PREPROCESSING XROUTE DONE!");
+    }
+
+
+    void PsafLocalPlanner::publishAdditionalInfoToRviz() {
+        // Publish stop signs as markers 
+        auto markers = visualization_msgs::MarkerArray();
+        auto marker_stop = visualization_msgs::Marker();
+        auto marker_traffic = visualization_msgs::Marker();
+
+        marker_stop.type = visualization_msgs::Marker::SPHERE_LIST;
+        marker_stop.action = visualization_msgs::Marker::ADD;
+        marker_stop.ns = "stop";
+        marker_stop.header.frame_id = "map";
+        marker_stop.header.stamp = ros::Time::now();
+        marker_stop.color.a = 1.0;
+        marker_stop.color.r = 1.0;
+        marker_stop.color.g = 1.0;
+        marker_stop.scale.x = 2;
+        marker_stop.scale.y = 2;
+        marker_stop.scale.z = 4;
+
+        marker_traffic.type = visualization_msgs::Marker::SPHERE_LIST;
+        marker_traffic.action = visualization_msgs::Marker::ADD;
+        marker_traffic.ns = "traffic";
+        marker_traffic.header.frame_id = "map";
+        marker_traffic.header.stamp = ros::Time::now();
+        marker_traffic.color.a = 1.0;
+        marker_traffic.color.g = 1.0;
+        marker_traffic.scale.x = 2;
+        marker_traffic.scale.y = 2;
+        marker_traffic.scale.z = 4;
+
+        double last_vel = 0;
+        int speed_counter = 0;
+        for (auto &lanelet : global_route) {
+            if (lanelet.hasStop) {
+                geometry_msgs::Point point;
+                point.x = lanelet.route_portion[lanelet.route_portion.size() - 1].x;
+                point.y = lanelet.route_portion[lanelet.route_portion.size() - 1].y;
+                point.z = 0;
+                marker_stop.points.push_back(point);
+            }
+
+            if (lanelet.hasLight) {
+                geometry_msgs::Point point;
+                point.x = lanelet.route_portion[lanelet.route_portion.size() - 1].x;
+                point.y = lanelet.route_portion[lanelet.route_portion.size() - 1].y;
+                point.z = 0;
+                marker_traffic.points.push_back(point);
+            }
+
+            bool start = true;
+            for (auto &center : lanelet.route_portion) {
+                if (abs(center.speed - last_vel) > 0.001 || start) {
+                    auto marker_speed = visualization_msgs::Marker();
+                    marker_speed.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+                    marker_speed.action = visualization_msgs::Marker::ADD;
+                    marker_speed.ns = "speed";
+                    marker_speed.id = speed_counter++;
+                    marker_speed.header.frame_id = "map";
+                    marker_speed.header.stamp = ros::Time::now();
+                    marker_speed.color.a = 1.0;
+                    marker_speed.color.r = 1.0;
+                    marker_speed.color.g = 1.0;
+                    marker_speed.color.b = 1.0;
+                    marker_speed.pose.position.x = center.x;
+                    marker_speed.pose.position.y = center.y;
+                    marker_speed.scale.z = 2;
+                    if (start) {
+                        marker_speed.text = "ID" + std::to_string(lanelet.id) + " | S" + std::to_string(center.speed);
+                    } else {
+                        marker_speed.text = "S" + std::to_string(center.speed);
+                    }
+                    markers.markers.push_back(marker_speed);
+
+                    last_vel = center.speed;
+                    start = false;
+                }
+            }
+        }
+
+        markers.markers.push_back(marker_stop);
+        markers.markers.push_back(marker_traffic);
+        debug_marker_pub.publish(markers);
+
+        
+        ROS_INFO("LOCAL_PLANNER: done publishing additional info.");
     }
 
 }

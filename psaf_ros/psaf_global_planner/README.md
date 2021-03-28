@@ -34,14 +34,19 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
 | /psaf/status | String | Path Provider |
-| /psaf/xroute | [XRoute](../psaf_messages/msg/XRoute.msg) | Path Provider|
+| /psaf/xroute | [XRoute](../psaf_messages/msg/XRoute.msg) | Path Provider |
+| /psaf/goal/set_instruction | [PlanningInstruction](../psaf_messages/msg/PlanningInstruction.msg) | Planning Prepocessor |
+
+
 
 #### Subscribe
 | Topic | Datatype | Module|
 | ----------- | ----------- |----------- |
 | /psaf/goal/set_instruction | [PlanningInstruction](../psaf_messages/msg/PlanningInstruction.msg) | Path Provider |
-| /psaf/planning/obstacle | [Obstacle](../psaf_messages/msg/Obstacle.msg) | Path Provider|
+| /psaf/planning/obstacle | [Obstacle](../psaf_messages/msg/Obstacle.msg) | Path Provider |
 | /carla/world_info | CarlaWorldInfo | Map Provider |
+| /psaf/goal/set | Pose | Planning Prepocessor |
+| /carla/{role_name}/initialpose | PoseWithCovarianceStamped | Planning Prepocessor |
 
 
 ### Message Struktur
@@ -173,14 +178,21 @@ der CommonRoad Search Bibliothek alle möglichen Pfade (auf dem zugrunde liegend
 Anschließend wird aus den im [CommonRoadManager](#map-manager-common_road_manager) vorgehaltenen Message Informationen, 
 die Pfad Message aus den zu berücksichtigen Lanelets (bzw. Lanelet Abschnitten) zusammengesetzt.
 Aus dieser Kandidatenliste wird darauffolgend der (Pfad-) Kandidat ausgewählt, welcher die geringsten Pfad-Kosten aufweist.
-Für den Planungsfall mit Verkehrsregeln wird dazu für jeden Pfad (mithilfe der Pfad-Message) die Zeitdauer berechnet. Zu Beachten ist dabei, dass 
+Für den Planungsfall mit Verkehrsregeln wird dazu für jeden Pfad (mithilfe der Pfad-Message) die Zeitdauer berechnet. 
+Zu Beachten ist dabei, dass 
 für jedes auf dem jeweiligen Pfad vorkommende Stoppschild beziehungsweise jede Ampel eine (im launch file) definierte
-Penalty addiert wird. Spurwechsel werden gleichermaßen durch die Addition eines kleinen Zeitwertes „bestraft". Die Höhe
+Penalty addiert wird. Spurwechsel werden immer in der Mitte einer Lanelet eingeplant
+und gleichermaßen durch die Addition eines kleinen Zeitwertes „bestraft". Die Höhe
 dieser „Strafen" ist dabei frei wählbar. Entsprechend sind Strafen durch die Wahl des Wertes 0 auch deaktivierbar.
 Der schnellste Pfad ist im Sinne der Aufgabenstellung der Gesuchte und so wird die Message für diesen Pfad zurückgegeben.
 Für den Planungsfall ohne Verkehrsregeln wird hier anstelle der Zeitdauer eines Pfades die Gesamtdistanz eines Pfades 
 berücksichtigt und in Konsequenz der kürzeste Pfad zurückgegeben. Grund hierfür ist, dass bei der Fahrt ohne 
 Verkehrsregeln Geschwindigkeitslimits ignoriert werden und auch an Ampeln nicht auf Grünphasen gewartet wird. 
+Weiter sei erwähnt, dass vor Ausgabe der Route die letzte und erste Lanelet der Message zu den tatsächlichen Start- und 
+Zielpositionen beschnitten wird, da nicht der gesamte Straßenabschnitt benötigt wird. Dabei muss zusätzlich überprüft 
+werden, ob ein Spurwechsel auf der ersten Lanelet eingeplant wurde. Ist das der Fall muss dieser Spurwechsel, falls die
+tatsächliche Startposition in der hinteren Lanelet-Hälfte liegt, vor die tatsächliche Startposition geschoben werden.
+Dadurch ist auch das korrekte Einplanen eines Spurwechsels direkt zu Beginn einer Route garantiert.
 
 Zusätzlich wird in Abhängigkeit der übergebenen Informationen des [Planning Preprocessors](#planning-preprocessor)
 ein initialer U-Turn eingeplant. Dazu wird zunächst betrachtet, ob ausreichend Platz zur Verfügung steht. Das heißt, ob
@@ -207,14 +219,11 @@ Dementsprechend werden nur Hindernisse, die in Fahrtrichtung unseres Fahrzeugs l
 Für die relevanten Hindernisse wird im zweiten Schritt überprüft, ob sich das Hindernis auf der gleichen Lanelet 
 wie das Auto befindet.
 - Falls sich das Hindernis nicht auf der Lanelet des Autos befindet, wird es nur seiner eigenen Lanelet hinzufügt.
-- Falls sich das Hindernis auf der Lanelet des Autos befindet, wird die Lanelet in drei Abschnitte aufgeteilt und das 
-  Hindernis wird auf den dritten Abschnitt eingefügt. 
+- Falls sich das Hindernis auf der Lanelet des Autos befindet, wird die Lanelet in zwei Abschnitte aufgeteilt und das 
+  Hindernis wird auf den zweiten Abschnitt eingefügt. 
   Das genaue Vorgehen eines Teilungsprozesses wird im [CommonRoadManager](#map-manager-common_road_manager) beschrieben.
-  - Abschnitt eins ist der Teil der Lanelet auf der sich das Auto befindet. **[Lanelet Start, Position Auto]**
-  - Abschnitt zwei ist der Teil der Lanelet auf der sich das zwischen Auto und dem Hindernis befindet. 
-    Dieser Abschnitt wird benötigt damit der Überholvorgang sauber zwischen Auto und Hindernis eingeplant werden kann. 
-    **]Position Auto, Position Hindernis[**
-  - Abschnitt drei ist der Abschnitt der Lanelet auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
+  - Abschnitt eins ist der Teil der Lanelet, auf der sich das Auto befindet. **[Lanelet Start, Position Hindernis[**
+  - Abschnitt zwei ist der Abschnitt der Lanelet, auf der sich das Hindernis befindet. **[Position Hindernis, Lanelet Ende]**
     
 Zu erwähnen ist, dass das Teilen einer Lanelet unmittelbar ein Aktualisieren aller Referenzen der Lanelets in der Umgebung, sowie ein
 Teilen aller adjazenten Lanelets zur Folge haben muss, da nur so das Lanelet-Netzwerk konsistent und mögliche 
@@ -225,12 +234,11 @@ Im dritten und letzten Schritt wird die Neuplanung angestoßen. Hierbei gilt es 
 dass Straßen mit einem Hindernis ein hohes Kantengewicht zugeteilt bekommen, sodass der Planungsalgorithmus
 Straßen mit Hindernissen nur dann wählt, wenn es keine Alternativen gibt. Also beispielsweise, wenn sich vor und neben dem 
 Fahrzeug ein anderes Fahrzeug befindet. Ist dies der Fall, fordert der globale Plan folglich indirekt dazu auf dem 
-vorausfahrenden Fahrzeug zu folgen, da es sich trotz Hindernis weiterhin um die, je nach Metrik, optimalste Route handelt.
+vorausfahrenden Fahrzeug zu folgen, da es sich trotz Hindernis weiterhin um die, je nach Metrik, beste Route handelt.
 
 Ein weiterer wichtiger Punkt ist es, dass eine Neuplanung immer auf den Originalkartendaten, 
 also auf Kartendaten ohne Hindernisse und ohne modifiziertes Lanelet-Netzwerk ausgeführt wird.
 
-![Überholvorgang](doc/obstacle.png)
 
 #### Map Manager (common_road_manager)
 
@@ -266,13 +274,13 @@ gespawnt wurde. Tritt dies ein, liest der Preprocessor die Zielkoordinaten aus d
  
 Bei Bedarf prüft der Prepocessor noch wie viel Platz neben dem Fahrzeug für einen 
 U-Turn zur Verfügung steht und fügt diese Information der ausgehenden Nachricht hinzu. Die Erkennung des freien 
-Bereichs links/vorne neben dem Auto funktioniert dabei analog zum semantic_lidar_processor mit den Daten von zwei
+Bereichs links/vorne neben dem Auto funktioniert dabei analog zum *semantic_lidar_processor* aus dem Paket [Sensor Preprocssing](../psaf_sensor_preprocessing) mit den Daten von zwei
 LIDAR-Sensoren, die auf Hindernisse wie Gebäude, Mauern und Zäune regieren. 
 
 ![uturn-lidar](doc/uturn_lidar.png)
  
 Ob ein U-Turn eingeplant wird, hängt von den *rosparam*-Parametern **obeyRules** und 
-**alwaysUTurn** ab. Diese Parameter werden wie in [psaf_starter](https://github.com/ll7/psaf1/tree/develop/psaf_ros/psaf_steering) beschrieben, über 
+**alwaysUTurn** ab. Diese Parameter werden wie in [psaf_starter](../psaf_starter) beschrieben, über 
 verschiedene launch-Dateien voreingestellt.
  
 Für einen Betrieb ohne den Competition Manager steht ein RVIZ-Panel zu Verfügung, 

@@ -46,6 +46,7 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                 return
             self.last_id = obstacle.id
             self.status_pub.publish("Start Replanning")
+            rospy.loginfo("PathSupervisor: Start Replanning")
             # create a clean slate
             self.manager.map = deepcopy(self.manager.original_map)
             self.manager.neighbourhood = deepcopy(self.manager.original_neighbourhood)
@@ -58,19 +59,28 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
             if len(car_lanelet[0]) == 0:
                 rospy.logerr("PathSupervisor: Car is not on a lanelet, abort !!")
                 self.status_pub.publish("Car is not on a lanelet, abort !! ")
+                self.busy = False
+                return
             else:
                 # determine relevant lanelets for an obstacle
                 car_lanelet = car_lanelet[0][0]
                 relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
+                self._log_debug("--------------------")
+                self._log_debug("Car lanelet: {}".format(car_lanelet))
                 self._log_debug("--------------------")
                 self._log_debug("Relevant:")
                 for lane in relevant_lanelets:
                     self._log_debug("\t {}".format(lane))
                 real_obstacles = {}
                 self._log_debug("--------------------")
+                self._log_debug("Trying to match {} obstacles".format(len(obstacle.obstacles)))
                 self._log_debug("Matched:")
                 for obs in obstacle.obstacles:
                     matching_lanelet = self._get_obstacle_lanelet(relevant_lanelets, obs)
+                    if self.enable_debug:
+                        obs_lane = self.manager.map.lanelet_network.find_lanelet_by_position([np.array([obs.x, obs.y])])
+                        if obs_lane:
+                            self._log_debug("\t (Matched without relevant: {})".format(matching_lanelet))
                     if matching_lanelet == -1:
                         self._log_debug(
                             "PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
@@ -81,20 +91,29 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                         self._log_debug("\t {}".format(matching_lanelet))
                         real_obstacles[matching_lanelet] = obs
                 self._log_debug("--------------------")
-                for lane_id in real_obstacles:
-                    rospy.loginfo("PathSupervisor: Processing obstacle: {}".format(real_obstacles[lane_id]))
+                # obstacle on car_lanelet needs to be at the last dict position
+                if car_lanelet in real_obstacles:
+                    real_obstacles[car_lanelet] = real_obstacles.pop(car_lanelet)
+                for lane_id in reversed(real_obstacles):
+                    rospy.loginfo("PathSupervisor: Processing obstacle: {} on lane {}".format(real_obstacles[lane_id],
+                                                                                              lane_id))
                     success, car_lanelet = self._add_obstacle(real_obstacles[lane_id], car_lanelet, curr_pos,
                                                               relevant_lanelets)
                     if not success:
                         # if a lanelet network error occurred, abort mission
-                        rospy.logerr("PathSupervisor: Replanning aborted, network error !!")
-                        self.status_pub.publish("Replanning aborted, network error")
+                        rospy.logerr("PathSupervisor: Replanning aborted, split failed !!")
+                        self.status_pub.publish("Replanning aborted, split failed")
                         self.busy = False
                         return
-
                     relevant_lanelets = self._determine_relevant_lanelets(car_lanelet)
                 # generate new plan
-                self._replan()
+                if len(real_obstacles) != 0:
+                    self._replan()
+                    self.status_pub.publish("PathSupervisor: finished")
+                    rospy.loginfo("PathSupervisor: finished!!")
+                else:
+                    rospy.logerr("PathSupervisor: Replanning aborted, no matched obstacle !!")
+                    self.status_pub.publish("Replanning aborted, no matched obstacle")
             self.busy = False
         elif self.busy:
             rospy.logerr("PathSupervisor: Replanning aborted, still busy !!")
@@ -105,7 +124,6 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         else:
             rospy.logerr("PathSupervisor: Replanning aborted, contact support !!")
             self.status_pub.publish("Replanning aborted, contact support")
-        self.status_pub.publish("Replanning done")
 
     def _determine_relevant_lanelets(self, car_lanelet: int) -> List[int]:
         """
@@ -170,8 +188,9 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
         matching_lanelet = self._get_obstacle_lanelet(relevant, obstacle)
         # check if the obstacle is within a lanelet
         if matching_lanelet == -1:
-            rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering !!")
-            self.status_pub.publish("Ignoring obstacle, obstacle not in a relevant lanelet -> no interfering")
+            rospy.logerr("PathSupervisor: Ignoring obstacle, obstacle not in a relevant lanelet anymore -> no "
+                         "interfering !!")
+            self.status_pub.publish("Ignoring obstacle, obstacle not in a relevant lanelet anymore-> no interfering")
             return success, car_lanelet
 
         static_obstacle_id = self.manager.map.generate_object_id()
@@ -192,13 +211,18 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                                                     static_obstacle)
             if split_ids[0] is not None:
                 car_lanelet = split_ids[0]
-                split_point = Point(
-                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
-                    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
-                split_ids = self.manager.update_network(split_ids[0], curr_pos, split_point, None)
-                if split_ids[0] is not None:
-                    car_lanelet = split_ids[0]
-                    success = True
+                success = True
+                # split_point = Point(
+                #    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][0],
+                #    self.manager.map.lanelet_network.find_lanelet_by_id(split_ids[1]).center_vertices[0][1], 0)
+                # split_ids = self.manager.update_network(split_ids[0], curr_pos, split_point, None)
+                # if split_ids[0] is not None:
+                #    car_lanelet = split_ids[0]
+                #   success = True
+                # else:
+                #    self._log_debug("PathSupervisor: Double Split_ids[0] is None!")
+            else:
+                self._log_debug("PathSupervisor: First Split_ids[0] is None!")
         else:
             if static_obstacle is not None:
                 self.manager.map.lanelet_network.find_lanelet_by_id(
@@ -206,6 +230,8 @@ class PathSupervisorCommonRoads(PathProviderCommonRoads):
                     static_obstacle.obstacle_id)
                 self.manager.map.add_objects(static_obstacle)
                 success = True
+            else:
+                self._log_debug("PathSupervisor: Static obstacle is None!")
 
         return success, car_lanelet
 

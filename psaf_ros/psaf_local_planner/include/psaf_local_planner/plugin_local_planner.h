@@ -59,6 +59,11 @@
 // external non ros
 #include <boost/algorithm/clamp.hpp>
 
+// Constants
+// Check min radius for traffic elements in global plan
+#define MIN_CHECK_RADIUS_FOR_TRAFFIC_ELEMENTS 15.0
+
+
 // Ensure that we work with the correct standard
 // see https://stackoverflow.com/questions/41160276/does-c-stds-inf-behave-exactly-as-common-sensical-infinity
 static_assert(std::numeric_limits<double>::is_iec559, "The numeric standard doesn't fit our requirements!");
@@ -223,26 +228,6 @@ namespace psaf_local_planner {
             bool checkDistanceForward(double& distance, double &relative_x, double &relative_y);
 
             /**
-             * Send a raytrace along the costmap from the current position of the car
-             *
-             * @param m_target_x: x position where to raytrace to in global map coordinates (in meters)
-             * @param m_target_y: x position where to raytrace to in global map coordinates (in meters)
-             * @param coll_x: x position where the collision happend on the costmap in global map coordinates (in meters)
-             * @param coll_y: x position where the collision happend on the costmap in global map coordinates (in meters)
-             * @return distance of the raytrace; returns infinity if there was no collision between those two points
-             */
-            double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
-
-            /**
-             * Sends out a bunch of raytraces around the car in a semi circle with the given angle
-             *
-             * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
-             * @param distance: max distance that should be looked at by the raytrace
-             * @param collisions: in case of collisions they are getting added to the vector
-             */
-            void raytraceSemiCircle(double angle, double distance, std::vector<RaytraceCollisionData> &collisions);
-
-            /**
              * Function that checks for a slow car ahead using the slowdown of the own car
              * @param velocity_distance_diff: the difference between the max velocity and current that is caused by the slower car ahead
              *
@@ -357,6 +342,12 @@ namespace psaf_local_planner {
              * https://www.bussgeldkatalog.org/anhalteweg/
              */
             double getTargetVelocityForDistance(double distance);
+
+
+            /**
+             * Helper function to publish data like stopsigns etc to rviz
+             */
+            void publishAdditionalInfoToRviz();
 
 
             /** Helper object for raytracing */
@@ -497,6 +488,11 @@ namespace psaf_local_planner {
              */
             const double LANELET_CHECK_RADIUS = 100;
 
+            /**
+             * Map of lanechanges; key is id of the lanelet; value is +1 for right, -1 for left
+             */
+            std::map<int, int> lanechange_direction_map;
+
     };
 
     /**
@@ -514,4 +510,13 @@ namespace psaf_local_planner {
     * @return whether the lanelet has a stop sign/mark
     */
     bool hasLaneletTrafficLight(psaf_messages::XLanelet lanelet);
+
+    /**
+     * Compute new speed to be able to stop in X meters
+     * @param wishedSpeed the originally desired speed (our max speed)
+     * @param stoppingDistance the distance (=X meters)
+     * @return the speed to be able to stop in x meters or the original speed
+     * if the computed value would exceed the wished speed
+     */
+    double computeSpeedToStopInXMeters(double wishedSpeed, double stoppingDistance);
 };

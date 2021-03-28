@@ -52,10 +52,12 @@
     <build_depend>rospy</build_depend>
     <build_depend>std_msgs</build_depend>
     <build_depend>psaf_abstraction_layer</build_depend>
+    <build_depend>psaf_sensor_preprocessing</build_depend>
 
     <build_export_depend>rospy</build_export_depend>
     <build_export_depend>std_msgs</build_export_depend>
     <build_export_depend>psaf_abstraction_layer</build_export_depend>
+    <build_export_depend>psaf_sensor_preprocessing</build_export_depend>
 
     <exec_depend>rospy</exec_depend>
     <exec_depend>python-rospkg</exec_depend>
@@ -65,6 +67,7 @@
     <exec_depend>python-seaborn</exec_depend>
     <exec_depend>std_msgs</exec_depend>
     <exec_depend>psaf_abstraction_layer</exec_depend>
+    <exec_depend>psaf_sensor_preprocessing</exec_depend>
 
 
 

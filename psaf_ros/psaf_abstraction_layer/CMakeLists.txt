@@ -38,7 +38,6 @@ catkin_python_setup()
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
         INCLUDE_DIRS include
-        LIBRARIES sensor_fusion_service_lib
         CATKIN_DEPENDS roscpp rospy std_msgs
 )
 
@@ -46,37 +45,6 @@ catkin_package(
 ## Build ##
 ###########
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-)
-set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
-
-## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/psaf_abstraction_layer.cpp
-# )
-
-add_library(sensor_fusion_service_lib
-        src/cpp/psaf_abstraction_layer/HelperAlgorithms.cpp
-        )
-add_dependencies(sensor_fusion_service_lib  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-add_executable(sensor_fusion_service 
-  src/cpp/psaf_abstraction_layer/CameraFusionService.cpp
-  src/cpp/psaf_abstraction_layer/HelperAlgorithms.cpp
-)
-
-add_dependencies(sensor_fusion_service  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} sensor_fusion_service_lib)
-target_link_libraries(sensor_fusion_service  ${catkin_LIBRARIES} sensor_fusion_service_lib)
-
-install(TARGETS sensor_fusion_service
-       ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-       LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-       RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
-)
 
 
 #############

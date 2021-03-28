@@ -39,6 +39,7 @@ namespace psaf_global_planner {
         if(init && ros::ok()){
             // everything ok -> just trigger the local planner
             plan.push_back(start);
+            return true;
         } else {
             ROS_ERROR("Planner not initialized");
             statusMsg.data= "planner not initialized";
