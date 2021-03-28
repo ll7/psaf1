@@ -15,8 +15,8 @@ Dieses Paket stellt einen Service *CameraFusionService* bereit, welcher
 aus den drei getrennten Bild-Daten der RGB-, der Tiefen- und der Segmentation-Kamera ein gesammeltes Bild zu erzeugen.
 
 
-Desweiteren wird der *SemanticLidarPreprocessor* Service bereit gestellt.
-Dieser spaltet den Semantic Lidar anhand der hinterlegten Tags in zwei neue PointClouds auf, die dann getrennt vom Obstacle Layer verwendet werden könnnen.
+Des Weiteren wird der *SemanticLidarPreprocessor* Service bereit gestellt.
+Dieser spaltet den Semantic Lidar anhand der hinterlegten Tags in zwei neue PointClouds auf, die dann getrennt im Obstacle Layer Modul verwendet werden könnnen.
 
 ### Topics
 #### Publish
@@ -46,9 +46,10 @@ Dieser spaltet den Semantic Lidar anhand der hinterlegten Tags in zwei neue Poin
 
 ## Funktionalität
 ### CameraFusionService
-Hier werden die Bilder der drei Kameras (RGB, Tiefen und Segmentation) und prüft zyklisch für
+Hier werden die Bilder der drei Kameras (RGB, Tiefen und Segmentation) verarbeitet. Dabei prüft der Service zyklisch für
 die empfangenen Daten, ob es bereits passenden Kameradaten im Speicher gibt. Sind ausreichend Kameradaten
-vorhanden, werden diese anhand ihrer Zeitstempel verknüpft und mittels der Nachricht *CombinedCameraImage* gesendet.
+vorhanden, werden diese anhand ihrer Zeitstempel verknüpft und mittels der Nachricht *CombinedCameraImage* gesendet. 
+Eine tierfergreifende Bearbeitung der Bilddaten findet nicht statt.
 
 ### SemanticLidarPreprocessor
 Hier wird die PointCloud2 des gewünschten Semantic Lidar analysiert. 
