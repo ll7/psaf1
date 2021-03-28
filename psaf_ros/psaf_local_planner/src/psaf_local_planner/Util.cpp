@@ -67,13 +67,22 @@ namespace psaf_local_planner
         if (state_machine->isInTrafficLightStates()){ // Use traffic light data only when in correct state
             // Use the traffic light distance if the perception already knows something
             if(this->traffic_light_state.state!=psaf_messages::TrafficLight::STATE_UNKNOWN){
-                // if the traffic light is on the other side of the intersection (american style)
-                if(this->traffic_light_state.x<0.8 && this->traffic_light_state.y<0.32 && traffic_light_state.distance>15.){
-                    // we keep 20 meters as distance
-                    return std::max(this->traffic_light_state.distance-30.,0.);
-                }else{
-                    // else the traffic_light is on the right hand side we want to stop 5 meters in front of it
+                // if the traffic_light is on the right hand side we want to stop 5 meters in front of it
+                if(this->traffic_light_state.x>0.6 && traffic_light_state.distance<15.){
                     return std::max(this->traffic_light_state.distance-5.,0.);
+                }else{
+                    // else the traffic light is on the other side of the intersection (american style)
+                    // -> keep 30 meters as distance
+                    double distance_to_traffic_light_lanelet = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
+                    double distance_to_traffic_light_perception = std::max(this->traffic_light_state.distance-30.,0.);
+                    // Respect lanelet data for american traffic lights because the distance we want to keep depends
+                    // on the road size -> take the min value
+                    // only use the lanelet data if it has data about a tl nearby
+                    if(distance_to_traffic_light_lanelet<1e6 &&
+                          std::abs(distance_to_traffic_light_lanelet-distance_to_traffic_light_perception)<40){
+                        return std::max(distance_to_traffic_light_lanelet-1,distance_to_traffic_light_perception);
+                    }
+                    return distance_to_traffic_light_perception;
                 }
             } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
                     double distance_to_traffic_light = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
