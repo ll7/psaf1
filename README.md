@@ -48,6 +48,8 @@ Die Aufgabe umfasst folgende Punkte:
 
 ## Übersicht der Ergebnisse
 
+![Module](docs/final3.gif)
+
 ### Abhängigkeiten zwischen Modulen
 ![Module](docs/modules_diagram.png)
 
