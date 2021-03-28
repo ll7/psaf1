@@ -49,8 +49,14 @@ namespace psaf_local_planner
         // Distance to stop can be determined in two the distance to the end of the lanelet,
         // the distance to the traffic light on the right hand side or the distance to the stop line
         if(msg->distanceToStopLine<1e6){ // abstraction for infinity
-            // Use the stop line distance
-            this->stop_distance_at_intersection = msg->distanceToStopLine;
+            // Use the stop line distance only of it is plausible (= diff to computed value is <=10m)
+            // and when we are inside a stop state
+            double theoriaticalValue = this->computeDistanceToStoppingPointWithoutStopLine();
+            if(std::abs(theoriaticalValue - msg->distanceToStopLine)>10 && this->state_machine->isInStopStates()) {
+                this->stop_distance_at_intersection = theoriaticalValue;
+            }else {
+                this->stop_distance_at_intersection = msg->distanceToStopLine;
+            }
         }else{
             this->stop_distance_at_intersection = this->computeDistanceToStoppingPointWithoutStopLine();
         }
