@@ -112,18 +112,22 @@ class LocalPerceptionEvaluation:
         Function that should be run periodically to update the local planner traffic situation topic
         :return: None
         """
-        msg = TrafficSituation()
-        most_common_state, _ = Counter(map(lambda x: x.state if x is not None else None, self.last_traffic_light_states)).most_common(1)[0]
-        majority_representative = next(iter(
-            sorted(
-                filter(lambda x: x.state == most_common_state if x is not None else False, self.last_traffic_light_states),
-                key=lambda x: x.distance)), None)
-        if majority_representative is not None:
-            msg.trafficLight.append(majority_representative)
-        msg.distanceToStopLine = self.distance_to_stop_line
-        msg.header.stamp = rospy.Time.now()
-        msg.header.frame_id = 'car'
-        self.traffic_situation_publisher.publish(msg)
+        try:
+            msg = TrafficSituation()
+            if len(self.last_traffic_light_states) > 0:
+                most_common_state, _ = Counter(map(lambda x: x.state if x is not None else None, self.last_traffic_light_states)).most_common(1)[0]
+                majority_representative = next(iter(
+                    sorted(
+                        filter(lambda x: x.state == most_common_state if x is not None else False, self.last_traffic_light_states),
+                        key=lambda x: x.distance)), None)
+                if majority_representative is not None:
+                    msg.trafficLight.append(majority_representative)
+            msg.distanceToStopLine = self.distance_to_stop_line
+            msg.header.stamp = rospy.Time.now()
+            msg.header.frame_id = 'car'
+            self.traffic_situation_publisher.publish(msg)
+        except IndexError as e:
+            rospy.logerr(f"Out of range error in local perception eval: {e}")
 
 
 if __name__ == '__main__':
