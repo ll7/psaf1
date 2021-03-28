@@ -274,8 +274,14 @@ class RoutePlanner:
                 from math import degrees
 
                 # more than one matching lanelet found -> search for lanelet with the correct orientation
-                matching_orientation = []
                 matching_candidates_id = []
+                # get start orientation as yaw angle
+                matching_yaw = degrees(or_start)
+                # mirror and get positive angle to match yaw direction of map provider
+                matching_yaw *= -1
+                if matching_yaw < 0:
+                    matching_yaw += 360
+
                 for lanelet_id in matching_lanelet[0]:
                     tmp_lanelet = self.lanelet_network.find_lanelet_by_id(lanelet_id)
                     tmp_index = PathProviderCommonRoads.find_nearest_path_index(tmp_lanelet.center_vertices,
@@ -283,24 +289,15 @@ class RoutePlanner:
                                                                                 prematured_stop=False,
                                                                                 use_xcenterline=False)
                     temp_orientation = MapSupervisorCommonRoads.get_lanelet_orientation_at_index(tmp_lanelet, tmp_index)
-                    matching_orientation.append(temp_orientation)
-                    matching_candidates_id.append(lanelet_id)
-
-                # get start orientation as yaw angle
-                start_yaw = degrees(or_start)
-                # mirror and get positive angle to match yaw direction of map provider
-                start_yaw *= -1
-                if start_yaw < 0:
-                    start_yaw += 360
-
-                # calculate orientation differences for every lanelet candidate
-                orientation_diffs = [abs(val - start_yaw) for val in matching_orientation]
+                    matching_candidates_id.append([lanelet_id, abs(temp_orientation - matching_yaw)])
 
                 # start_lanelet is a list of matching lanelet with the least orientation difference
-                start_lanelet_id = [matching_candidates_id[0]]
-                for index, diff in enumerate(orientation_diffs):
-                    if abs(diff < 10) and index != 0:
-                        start_lanelet_id.append(matching_candidates_id[index])
+                # calculate orientation differences for every lanelet candidate
+                matching_candidates_id.sort(key=lambda x: x[1])
+                start_lanelet_id = [matching_candidates_id[0][0]]
+                for index, candidates in enumerate(matching_candidates_id):
+                    if abs(candidates[1] < 10) and index != 0:
+                        start_lanelet_id.append(candidates[0])
             self.id_lanelets_start = list(self._filter_allowed_lanelet_ids(start_lanelet_id))
 
         elif hasattr(self.planning_problem.initial_state, 'position'):

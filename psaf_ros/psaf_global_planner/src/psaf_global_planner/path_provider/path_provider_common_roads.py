@@ -146,7 +146,7 @@ class PathProviderCommonRoads:
                  False if not and None
         """
         neighbour_found = False
-        if self.u_turn_distances[0] < self.turning_circle and self.u_turn_distances[1] < self.turning_circle / 2:
+        if self.u_turn_distances[0] < self.turning_circle or self.u_turn_distances[1] < self.turning_circle / 2:
             # if free space is smaller than our minimum turning_circle a u_turn is not possible
             return False, None
         # first check if start_lanelet has a left adjacent neighbour, which faces in the opposite direction
@@ -209,34 +209,29 @@ class PathProviderCommonRoads:
             res_lanelet = [self.manager.map.lanelet_network.find_lanelet_by_id(matching_lanelet[0][0])]
         else:
             # more than one matching lanelet found -> search for lanelet with the correct orientation
-
-            matching_orientation = []
             matching_candidates = []
+            # get start orientation as yaw angle
+            matching_yaw = math.degrees(euler_from_quaternion((pos.orientation.x, pos.orientation.y,
+                                                            pos.orientation.z, pos.orientation.w))[2])
+            # mirror and get positive angle to match yaw direction of map provider
+            matching_yaw *= -1
+            if matching_yaw < 0:
+                matching_yaw += 360
             for lanelet_id in matching_lanelet[0]:
                 temp_lanelet = self.manager.map.lanelet_network.find_lanelet_by_id(lanelet_id)
                 temp_index = PathProviderCommonRoads.find_nearest_path_index(temp_lanelet.center_vertices,
                                                                              pos.position, prematured_stop=False,
                                                                              use_xcenterline=False)
                 temp_orientation = self.map_provider.get_lanelet_orientation_at_index(temp_lanelet, temp_index)
-                matching_orientation.append(temp_orientation)
-                matching_candidates.append(temp_lanelet)
-
-            # get start orientation as yaw angle
-            start_yaw = math.degrees(euler_from_quaternion((pos.orientation.x, pos.orientation.y,
-                                                            pos.orientation.z, pos.orientation.w))[2])
-            # mirror and get positive angle to match yaw direction of map provider
-            start_yaw *= -1
-            if start_yaw < 0:
-                start_yaw += 360
+                matching_candidates.append([temp_lanelet, abs(temp_orientation - matching_yaw)])
 
             # calculate orientation differences for every lanelet candidate
-            orientation_diffs = [abs(val - start_yaw) for val in matching_orientation]
-            orientation_diffs.sort()
+            matching_candidates.sort(key=lambda x: x[1])
             # start_lanelet is a list of matching lanelet with the least orientation difference
-            res_lanelet = [matching_candidates[0]]
-            for index, diff in enumerate(orientation_diffs):
-                if abs(diff < 10) and index != 0:
-                    res_lanelet.append(matching_candidates[index])
+            res_lanelet = [matching_candidates[0][0]]
+            for index, candidate in enumerate(matching_candidates):
+                if abs(candidate[1] < 10) and index != 0:
+                    res_lanelet.append(candidate[0])
 
         return res_lanelet
 

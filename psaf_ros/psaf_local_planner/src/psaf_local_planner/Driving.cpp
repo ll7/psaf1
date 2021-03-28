@@ -305,14 +305,13 @@ namespace psaf_local_planner
             // Alawys hard stop 5m behind any vehicle as it is to the center of our vehicle
             if (distance < 5)
             {
-                ROS_INFO("attempting to stop");
                 velocity_distance_diff = target_vel;
             } else {
                 // slowly drive near the obstacle
                 velocity_distance_diff = target_vel - std::min(target_vel, getTargetVelocityForDistance(distance));
             }
 
-            ROS_INFO("distance forward: %f, max velocity: %f", distance, target_vel);
+            ROS_DEBUG("distance forward: %f, max velocity: %f", distance, target_vel);
         }
         
         // Check for slow car: Initiate a lanechange if it falls below a threshhold
@@ -327,9 +326,9 @@ namespace psaf_local_planner
     double PsafLocalPlanner::getDistanceToIntersection() {
         double distance = 0;
         // iterate over upcoming lanelets in the route
-        for (auto lanelet : global_route) {
+        for (auto &lanelet : global_route) {
             // sum up distance until lanelet is marked as intersection
-            distance += lanelet.route_portion[lanelet.route_portion.size() - 1].distance - lanelet.route_portion[0].distance;
+            distance += lanelet.route_portion.end()->distance - lanelet.route_portion.begin()->distance;
             if (lanelet.isAtIntersection)
                 return distance;
         }
@@ -343,7 +342,7 @@ namespace psaf_local_planner
         // distance treshold to lane change from where further needed calculation ist done
         double distance_begin_check_lane_change = 20;
         // radius of area to check for obstacles when lane changing
-        double check_distance_lanechange = 7;
+        double check_distance_lanechange = 5;
         // calc distance to next alne change
         double distance = getDistanceToLaneChange(distance_begin_check_lane_change);
 
@@ -358,13 +357,14 @@ namespace psaf_local_planner
             // calculate angles for ray tracing circle area
             double angle_from, angle_to;
             // right(1) or left(-1)
-            if (lane_change_direction > 0) {
+            if (lane_change_direction <= 0) {
                 angle_from = M_PI / 4.0;
                 angle_to = M_PI * (3.0/4.0);
             } else {
-                angle_to = -M_PI / 4.0;
-                angle_from = -M_PI * (3.0/4.0);
+                angle_from = 2 * M_PI - M_PI/4;
+                angle_to = M_PI + M_PI/4;
             }
+
             // raytrace area
             costmap_raytracer.raytraceSemiCircle(angle_from, angle_to, check_distance_lanechange, collisions);
             // set max velocity according to ANHALTEWEG if obstacle in area
@@ -375,6 +375,7 @@ namespace psaf_local_planner
 
         return target_velocity;
     }
+
     /**
      * function to calculate the distance to the next lanechange
      * */
@@ -391,54 +392,21 @@ namespace psaf_local_planner
             if (lanelet.isLaneChange) {
                 //LanneChange is closer than threshold
                 if (compute_direction_threshold >= distance) {
-                    // calculate direction only if not already calculated
-                    if (!lane_change_direction_calculated) {
-                        // check if succeeding lanelet is existant
-                        if (i + 1 < global_route.size()) {
-                            auto &next_lanelet = global_route[i + 1];
-                            // calculate direction of lanechange right(1) or left(-1)
-                            if (lanelet.route_portion.size() >= 2) {
-                                // last and second last point on lanelet before lanechange
-                                auto &last = lanelet.route_portion[lanelet.route_portion.size() - 1];
-                                auto &second_last = lanelet.route_portion[lanelet.route_portion.size() - 2];
-                                // first point on lanelet after lanechange
-                                auto &next = next_lanelet.route_portion[0];
-                                // compute vectors from points
-                                auto v_last = tf2::Vector3(last.x, last.y, last.z);
-                                auto v_second_last = tf2::Vector3(second_last.x, second_last.y, second_last.z);
-                                auto v_next = tf2::Vector3(next.x, next.y, next.z);
+                    lane_change_direction = lanechange_direction_map[lanelet.id];
+                    return distance;
 
-                                // calculate vectors needed for angle calculation
-                                // v1 equals current driving direction, v2 equals lane change direction
-                                auto v1 = v_last - v_second_last;
-                                auto v2 = v_next - v_last;
-                                // calculate the angle between v1 and v2
-                                double angle = atan2(v2.getY(), v2.getX()) - atan2(v1.getY(), v1.getX());
-
-                                // use the angle to determine direction of lanechange
-                                if (angle > 0) {
-                                    lane_change_direction = +1;
-                                } else {
-                                    lane_change_direction = -1;
-                                }
-                                lane_change_direction_calculated = true;
-                            } else
-                                ROS_WARN("Not enough points to use three point method");
-
-                            }
-                        } else {
-                            ROS_ERROR("LANECHANGE MARKED WITHOUT SUCCESING LANELET! CALL GLOBAL PLANNER SUPPORT!");
-                        }
+                    } else {
+                        // We are for enough away so that we don't care anymore;
+                        return INFINITY;
                     }
-                }
                 // recent LaneChang is terminated, reset flags
-                else{
+                } else {
                     lane_change_direction_calculated = false;
                     lane_change_direction = 0;
                 }
-
             }
-        return distance;
-        }
 
+        return distance;
     }
+
+}

@@ -4,6 +4,7 @@ import glob
 import os
 import sys
 from geometry_msgs.msg import Point
+import rospy
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -73,8 +74,11 @@ class LandMarkProvider:
         try:
             # First of all, we need to create the client that will send the requests
             # to the simulator. Here we'll assume the simulator is accepting
-            # requests in the localhost at port 2000.
-            client = carla.Client('localhost', 2000)
+
+            host = rospy.get_param('/carla/host', 'localhost')
+            port = rospy.get_param('/carla/port', 2000)
+
+            client = carla.Client(host, port)
             client.set_timeout(2.0)
 
             # Once we have a client we can retrieve the world that is currently

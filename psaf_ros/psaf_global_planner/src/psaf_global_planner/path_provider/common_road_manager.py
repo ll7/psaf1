@@ -100,6 +100,7 @@ class CommonRoadManager:
                                           pos_index=len(self.map.lanelet_network.find_lanelet_by_id(_id).center_vertices)-1,
                                           typ=TrafficSignIDGermany.STOP, cur_mark_id=_id)
                 self.message_by_lanelet[_id].hasStop = True
+            self.neighbourhood = self._analyze_neighbourhood(self.map)
 
     def _add_light_to_lanelet(self, lanelet_id: int, cur_mark_id=-1):
         """
@@ -139,7 +140,8 @@ class CommonRoadManager:
         """
         # add the new lanelets to the dict
         self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_front))
-        self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back))
+        front_speed = self.message_by_lanelet[lanelet_front].route_portion[-1].speed
+        self._generate_xlanelet(self.map.lanelet_network.find_lanelet_by_id(lanelet_back), start_speed=front_speed)
 
         # remove old lanelet from dict
         del self.message_by_lanelet[matching_lanelet_id]
@@ -168,7 +170,7 @@ class CommonRoadManager:
 
         return distance, time_spent
 
-    def _generate_xlanelet(self, lanelet: Lanelet):
+    def _generate_xlanelet(self, lanelet: Lanelet, start_speed: float = None):
         """
         Generate the XLanelet message of the given lanelet and store it in the message_by_lanelet dict for later use
         :param lanelet: the considered lanelet
@@ -181,7 +183,7 @@ class CommonRoadManager:
 
         light = len(lanelet.traffic_lights) > 0
         intersection = self._check_in_lanelet_for_intersection(lanelet)
-        center_line = self._generate_extended_centerline_by_lanelet(lanelet)
+        center_line = self._generate_extended_centerline_by_lanelet(lanelet, start_speed)
 
         # create message, isLaneChange is False by default
         message = XLanelet(id=lanelet.lanelet_id, hasLight=light, isAtIntersection=intersection, hasStop=stop,
@@ -189,7 +191,8 @@ class CommonRoadManager:
 
         self.message_by_lanelet[lanelet.lanelet_id] = message
 
-    def _generate_extended_centerline_by_lanelet(self, lanelet: Lanelet) -> List[CenterLineExtended]:
+    def _generate_extended_centerline_by_lanelet(self, lanelet: Lanelet, start_speed: float = None) -> \
+            List[CenterLineExtended]:
         """
         Generate the extended centerline Message based on the given lanelet
         Therefore check the current speed limit for every waypoint
@@ -197,6 +200,10 @@ class CommonRoadManager:
         :return: List of Waypoints and their corresponding speed. -> [[x,y,z, speed], ..]
         """
         from psaf_global_planner.path_provider.path_provider_common_roads import PathProviderCommonRoads as pp
+
+        if start_speed is None:
+            start_speed = self.default_speed
+
         # first get speed_signs in current lanelet
         speed_signs = []
         for sign_id in lanelet.traffic_signs:
@@ -212,7 +219,7 @@ class CommonRoadManager:
 
         # generate CenterLineExtended
         center_line_extended = []
-        speed = self.default_speed
+        speed = start_speed
         time = 0.0
         dist = 0.0
         prev_point = None
@@ -266,6 +273,7 @@ class CommonRoadManager:
         # if a lanelet can't be found -> exit
         lanelet_copy = self.map.lanelet_network.find_lanelet_by_id(lanelet_id)
         if lanelet_copy is None:
+            rospy.logerr("CommonRoadManager: Lanelet is None " + str(lanelet_id))
             return None, None
         # bounds lanelet1
         sep_index = 0
@@ -276,16 +284,48 @@ class CommonRoadManager:
             sep_index = end_index - (abs(end_index - start_index) // 2)
         else:
             sep_index = end_index + (abs(end_index - start_index) // 2)
-        if sep_index > 2 and (len(lanelet_center_list)-1) - sep_index > 3:
+        if sep_index > 1 and (len(lanelet_center_list)-1) - sep_index >= 1:
             # bound lanelet_1
-            left_1 = lanelet_copy.left_vertices[:sep_index + 1]
-            center_1 = lanelet_copy.center_vertices[:sep_index + 1]
-            right_1 = lanelet_copy.right_vertices[:sep_index + 1]
-
+            left_1 = lanelet_copy.left_vertices[:sep_index+1]
+            center_1 = lanelet_copy.center_vertices[:sep_index+1]
+            right_1 = lanelet_copy.right_vertices[:sep_index+1]
+            # add additional to lanelet_1
+            factor_x = (left_1[-1][0] - left_1[-2][0]) / 4
+            factor_y = (left_1[-1][1] - left_1[-2][1]) / 4
+            additional = np.array([[left_1[-2][0] + factor_x, left_1[-2][1] + factor_y],
+                        [left_1[-2][0] + factor_x*2, left_1[-2][1] + factor_y * 2]])
+            np.concatenate((left_1, additional), axis=0)
+            factor_x = (center_1[-1][0] - center_1[-2][0]) / 4
+            factor_y = (center_1[-1][1] - center_1[-2][1]) / 4
+            additional = np.array([[center_1[-2][0] + factor_x, center_1[-2][1] + factor_y],
+                        [center_1[-2][0] + factor_x*2, center_1[-2][1] + factor_y * 2]])
+            np.concatenate((center_1, additional), axis=0)
+            factor_x = (right_1[-1][0] - right_1[-2][0]) / 4
+            factor_y = (right_1[-1][1] - right_1[-2][1]) / 4
+            additional = np.array([[right_1[-2][0] + factor_x, right_1[-2][1] + factor_y],
+                        [right_1[-2][0] + factor_x*2, right_1[-2][1] + factor_y * 2]])
+            np.concatenate((right_1, additional), axis=0)
             # bounds lanelet_2
             left_2 = lanelet_copy.left_vertices[sep_index:]
             center_2 = lanelet_copy.center_vertices[sep_index:]
             right_2 = lanelet_copy.right_vertices[sep_index:]
+            # add additional to lanelet_1
+            factor_x = (left_2[-1][0] - left_2[-2][0]) / 4
+            factor_y = (left_2[-1][1] - left_2[-2][1]) / 4
+            additional = np.array([[left_2[-2][0] + factor_x, left_2[-2][1] + factor_y],
+                        [left_2[-2][0] + factor_x*2, left_2[-2][1] + factor_y * 2]])
+            np.concatenate((left_2, additional), axis=0)
+            factor_x = (center_2[-1][0] - center_2[-2][0]) / 4
+            factor_y = (center_2[-1][1] - center_2[-2][1]) / 4
+            additional = np.array([[center_2[-2][0] + factor_x, center_2[-2][1] + factor_y],
+                        [center_2[-2][0] + factor_x*2, center_2[-2][1] + factor_y * 2]])
+            np.concatenate((center_2, additional), axis=0)
+            factor_x = (right_2[-1][0] - right_2[-2][0]) / 4
+            factor_y = (right_2[-1][1] - right_2[-2][1]) / 4
+            additional = np.array([[right_2[-2][0] + factor_x, right_2[-2][1] + factor_y],
+                        [right_2[-2][0] + factor_x*2, right_2[-2][1] + factor_y * 2]])
+            np.concatenate((right_2, additional), axis=0)
+            # add additional to lanelet_2
             # add traffic signs to lanelet_2 / lanelet_1
             signs_1 = set()
             signs_2 = set()
@@ -347,7 +387,7 @@ class CommonRoadManager:
                 if self.map.lanelet_network.find_lanelet_by_id(pred) is None:
                     continue
                 self.map.lanelet_network.find_lanelet_by_id(pred)._successor.append(id_lane_1)
-            # update neigbourhood
+            # update neighbourhood
             self._add_to_neighbourhood(id_lane_1, list([[id_lane_2], lanelet_copy.predecessor]))
             self._add_to_neighbourhood(id_lane_2, list([lanelet_copy.successor, [id_lane_1]]))
             # then add "back" to the lanelet_network
@@ -357,6 +397,9 @@ class CommonRoadManager:
             self._fast_reference_cleanup(lanelet_id)
             self._update_message_dict(lanelet_copy.lanelet_id, id_lane_1, id_lane_2)
             return id_lane_1, id_lane_2
+
+        rospy.logerr("CommonRoadManager: Sep_index: {}, lanelet_length {}".format(sep_index, len(lanelet_center_list)))
+        rospy.logerr("CommonRoadManager: Not enough space for split")
         return None, None
 
     def _generate_lanelet_id(self, id_start=-1, exclude: int = -1) -> int:
@@ -398,7 +441,7 @@ class CommonRoadManager:
         neighbourhood = {}
         for lane in scenario_map.lanelet_network.lanelets:
             entry = list()
-            entry.append(list())  # successor alist
+            entry.append(list())  # successor list
             entry.append(list())  # predecessor list
             neighbourhood[lane.lanelet_id] = entry
         # document references
@@ -450,10 +493,14 @@ class CommonRoadManager:
             right_1, right_2 = self._modify_lanelet(
                 self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_right,
                 modify_point, start_point)
+            if right_1 is None or right_2 is None:
+                return None, None
         if self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_left is not None:
             left_1, left_2 = self._modify_lanelet(
                 self.map.lanelet_network.find_lanelet_by_id(matching_lanelet_id).adj_left,
                 modify_point, start_point)
+            if left_1 is None or left_2 is None:
+                return None, None
 
         # split obstacle lanelet
         matching_1, matching_2 = self._modify_lanelet(matching_lanelet_id, modify_point, start_point)
@@ -492,7 +539,7 @@ class CommonRoadManager:
                 else:
                     self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_left = right_1
                     self.map.lanelet_network.find_lanelet_by_id(right_2_old)._adj_left = right_2
-                    next_dir = self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_left_same_direction
+                    next_dir = not self.map.lanelet_network.find_lanelet_by_id(right_1_old)._adj_left_same_direction
 
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(right_1)._adj_left = right_1_old
@@ -534,7 +581,7 @@ class CommonRoadManager:
                 else:
                     self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right = left_1
                     self.map.lanelet_network.find_lanelet_by_id(left_2_old)._adj_right = left_2
-                    next_dir = self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right_same_direction
+                    next_dir = not self.map.lanelet_network.find_lanelet_by_id(left_1_old)._adj_right_same_direction
 
                 if next_dir:
                     self.map.lanelet_network.find_lanelet_by_id(left_1)._adj_right = left_1_old
