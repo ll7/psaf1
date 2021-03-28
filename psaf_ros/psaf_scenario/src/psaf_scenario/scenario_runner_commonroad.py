@@ -48,6 +48,7 @@ class ScenarioRunner:
         self.position_subscriber = rospy.Subscriber('/carla/ego_vehicle/odometry', Odometry, self._position_listener)
         self.finish_time_stamp: float = -1.0
         self.start_time_stamp: float = -1.0
+        self.global_diff: float = -1.0
         self.height = height
         self.rate = rospy.Rate(10)  # 10hz
 
@@ -144,6 +145,7 @@ class ScenarioRunner:
             y_actual.append(self._actual_route[i].position.y)
 
         plt.plot(x_actual, y_actual, label="actual")
+        plt.title("Time: {:10.2f}s\nDiff: {:10.2f}".format(self.finish_time_stamp-self.start_time_stamp, self.global_diff))
         plt.legend()
         plt.show()
 
@@ -179,6 +181,7 @@ class ScenarioRunner:
             cos_alpha = (a * a - b * b - c * c) / 2 * b * c
             diff += math.sin(math.acos(cos_alpha)) * b
         rospy.loginfo("ScenarioRunner: Global diff {}".format(str(diff)))
+        self.global_diff = diff
         return diff
 
     def _find_nearest_point(self, point: Pose) -> int:
@@ -256,6 +259,7 @@ class ScenarioRunner:
             current_acceleration = vehicle.get_status().acceleration
 
         # reset variables
+        self.global_diff: float = -1.0
         self.finish_time_stamp: float = -1.0
         self.start_time_stamp: float = -1.0
         self.scenario_running: bool = False
