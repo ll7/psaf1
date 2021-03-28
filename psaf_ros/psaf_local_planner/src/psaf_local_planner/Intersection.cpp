@@ -26,7 +26,7 @@ namespace psaf_local_planner {
             psaf_messages::CenterLineExtended firstWayPoint = global_route.front().route_portion.front();
             geometry_msgs::Point currentPos = this->current_pose.pose.position;
             double distanceToLanelet = std::hypot(currentPos.x - firstWayPoint.x, currentPos.y - firstWayPoint.y);
-            if(distanceToLanelet<2.) {
+            if(distanceToLanelet < MIN_DISTANCE_TO_CENTERLINE_FOR_ATTRIBUTE_CHECK) {
                 double distance = 0;
                 // iterate over upcoming lanelets in the route
                 for (auto lanelet : global_route) {
