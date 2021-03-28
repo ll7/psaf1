@@ -99,11 +99,15 @@ Dazu lässt sich auf den Message Typ des gepublishten Plans, der [XRoute](#messa
 
 
 ## Funktionalität
-Die Funktionalität dieses Packages ist grundsätzlich in drei Schritte aufzuteilen. Der [Map Provider](#map-provider) ist
-zusammen mit dem [Path Provider](#path-provider) für die Bereitstellung des globalen Plans zuständig. 
+Die Funktionalität dieses Packages ist grundsätzlich in mehrere Schritte aufzuteilen. Der [Map Provider](#map-provider) ist
+zusammen mit dem [Path Provider](#path-provider) für die Bereitstellung des globalen Plans zuständig.
+Notwendige Änderungen an dem der Planung zugrundeliegenden Straßennetzwerk werden dabei vom 
+[Map Manager](#map-manager-common_road_manager) geregelt.
 Der [Planning Preprocessor](#planning-preprocessor) ist für die Kommunikation mit dem Competition Manager verantwortlich
 und observiert vor der Weitergabe des Pfadziels an den eigentlichen Planungsvorgang die Umgebung des Fahrzeugs. 
 Letztere Information wird dann für die potenzielle Einplanung eines U-Turns im Path Provider genutzt. 
+
+![overview](doc/overview.png)
 
 ### Map Provider
 
