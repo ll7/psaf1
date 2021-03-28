@@ -150,4 +150,4 @@ Die entsprechenden Trainingsdaten liegen im Ordner *"training_data"* bei.
 Mithilfe der Skripte im *"util"*-Ordner können weitere Modelle trainiert werden.
 Die zum Training verwendeten Parameter und die erreichte Präzision sind bei jedem resultierenden Modell in der gleichnamigen Konfigurationsdatei hinterlegt.
 
-Die derzeit verwenden Modelle kommen jeweils auf eine Präzision von über 97 %.
+Die derzeit verwenden Modelle kommen jeweils auf eine Präzision von über 92 %.
