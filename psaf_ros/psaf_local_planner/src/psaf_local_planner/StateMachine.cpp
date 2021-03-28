@@ -291,7 +291,7 @@ namespace psaf_local_planner {
     }
 
     bool LocalPlannerStateMachineWithoutTrafficRules::isInTrafficLightStates() {
-        return LocalPlannerStateMachineWithoutTrafficRules::isInStopStates();
+        return false;
     }
 
 
