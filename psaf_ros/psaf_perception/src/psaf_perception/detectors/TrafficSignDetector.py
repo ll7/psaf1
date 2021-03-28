@@ -166,11 +166,11 @@ class TrafficSignDetector(AbstractDetector):
 
                     if self.data_collect_path is not None and distance < 25:
                         # get cropped rgb image
-                        x1,y1,w,h = boxes[i]
-                        x1 = int(x1 * h_scale)
-                        y1 = int(y1 * v_scale)
-                        x2 = min([width_rgb,int((x1+w) * h_scale + 1)])
-                        y2 = min([height_rgb,int((y1+h) * v_scale + 1)])
+                        x1, y1, w, h = boxes[i]
+                        x1 = int(x1 * width_rgb)
+                        y1 = int(y1 * height_rgb)
+                        x2 = x1 + int(w * width_rgb)
+                        y2 = y1 + int(h * height_rgb)
                         # get cropped rgb image
                         crop_rgb = rgb_image[y1:y2, x1:x2, :]
                         now = datetime.now().strftime("%H:%M:%S-%s")
