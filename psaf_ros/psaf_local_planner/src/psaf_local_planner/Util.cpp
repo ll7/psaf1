@@ -80,7 +80,7 @@ namespace psaf_local_planner
                     // only use the lanelet data if it has data about a tl nearby
                     if(distance_to_traffic_light_lanelet<1e6 &&
                           std::abs(distance_to_traffic_light_lanelet-distance_to_traffic_light_perception)<40){
-                        return std::max(distance_to_traffic_light_lanelet-1,distance_to_traffic_light_perception);
+                        return std::max(distance_to_traffic_light_lanelet-2,distance_to_traffic_light_perception);
                     }
                     return distance_to_traffic_light_perception;
                 }
