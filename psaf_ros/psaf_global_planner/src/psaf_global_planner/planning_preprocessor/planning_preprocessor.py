@@ -7,6 +7,7 @@
 # -----------------------------------------------------------
 
 import rospy
+from nav_msgs.msg import Odometry
 from psaf_messages.msg import PlanningInstruction
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import Pose, PoseWithCovarianceStamped
@@ -20,6 +21,8 @@ class PlanningPreprocessor:
         self.goal = None
         self.inner_sub = None
         self.outer_sub = None
+        self.odom_sub = None
+        self.start_pos = None
         self.instruction_pub = None
         self.plan_u_turn = False
         self.perception_area = [20, 15]  # Area we want to check to see if uTurn is possible (forward, right)
@@ -37,8 +40,8 @@ class PlanningPreprocessor:
         area = [0.0, 0.0]
         # slowly increase area and check if obstacles are found within
         while area[0] <= self.perception_area[0] and area[1] <= self.perception_area[1]:
-            area[0] += (bound_x/100)
-            area[1] += (bound_y/100)
+            area[0] += (bound_x / 100)
+            area[1] += (bound_y / 100)
 
             for point in self.points:
                 # check if obstacle is within area
@@ -81,10 +84,11 @@ class PlanningPreprocessor:
         out_data.goalPoint = self.goal  # relay goal position
         out_data.obstacleDistanceLeft = self.min_left  # distance to nearest obstacle
         out_data.obstacleDistanceForward = self.min_forward
-        out_data.planUTurn = self.plan_u_turn and (not self.vehicle_detected)  # if true, uTurn should be considered by global planner
+        out_data.planUTurn = self.plan_u_turn and (
+            not self.vehicle_detected)  # if true, uTurn should be considered by global planner
 
         self.instruction_pub.publish(out_data)
-        
+
         rospy.loginfo(f"Planning Preprocessor: uTurn-Area: %.2f x %.2f" % (self.min_left, self.min_forward))
         rospy.loginfo(f"Planning Preprocessor: Plan Turn: %r" % out_data.planUTurn)
         rospy.loginfo('Planning Preprocessor: Message sent!')
@@ -106,8 +110,9 @@ class PlanningPreprocessor:
             if p[5] not in [0, 6, 7, 13, 21]:  # check if point is of type wall, car, ...
                 # only consider points on the left side and forward
                 if (-4 < p[0] < self.perception_area[0]) and (1 < p[1] < self.perception_area[1]):
-                    self.points.append([abs(p[0]+4), abs(p[1])])  # save point
-                    if p[5] == 10:  # if a vehicle (tag 10)is detected within the perception_area we don't want to do a uTurn
+                    self.points.append([abs(p[0] + 4), abs(p[1])])  # save point
+                    if p[
+                        5] == 10:  # if a vehicle (tag 10)is detected within the perception_area we don't want to do a uTurn
                         self.vehicle_detected = True
                         break
         self.outer_sub.unregister()  # we only want data from one callback
@@ -126,7 +131,7 @@ class PlanningPreprocessor:
         for p in pc2.read_points(data, skip_nans=True):
             if p[5] not in [0, 6, 7, 13, 21]:
                 if (-4 < p[0] < self.perception_area[0]) and (1 < p[1] < self.perception_area[1]):
-                    self.points.append([abs(p[0]+4), abs(p[1])])
+                    self.points.append([abs(p[0] + 4), abs(p[1])])
                     if p[5] == 10:
                         self.vehicle_detected = True
                         break
@@ -159,13 +164,39 @@ class PlanningPreprocessor:
         else:
             self.publish_instruction()
 
-    def start_callback(self, data: PoseWithCovarianceStamped):
+    def comp_mngr_callback(self, data):
+        # read start position from Parameter Server
+
+        try:
+            position = Pose()
+            position.position.x = rospy.get_param('competition/start/position/x')
+            position.position.y = rospy.get_param('competition/start/position/y')
+            position.position.z = rospy.get_param('competition/start/position/z')
+            self.start_pos = position
+        except KeyError:
+            rospy.logerr('Planning Preprocessor: Could not find Competition Managers Start Position in Parameter Server')
+            return
+
+        # subscribe to vehicle position so we can check if we are at the start position
+        if self.odom_sub is None:
+            self.odom_sub = rospy.Subscriber('/carla/ego_vehicle/odometry', Odometry, self.odom_callback,
+                                             queue_size=1)
+
+        rospy.loginfo('Planning Preprocessor: waiting for vehicle to be spawned at start position')
+
+    def odom_callback(self, data: Odometry):
         """
         Callback if vehicle position was changed (e.g. by Competition Manager)
         """
+
+        # check if the vehicle is already at the start position
+        if not (abs(data.pose.pose.position.x - self.start_pos.position.x) < 2 and
+                abs(data.pose.pose.position.y - self.start_pos.position.y) < 2):
+            return
+
         try:
             goal = Pose()
-            # get goal position from Paramater Server
+            # get goal position from Parameter Server
             goal.position.x = rospy.get_param('competition/goal/position/x')
             goal.position.y = rospy.get_param('competition/goal/position/y')
             goal.position.z = rospy.get_param('competition/goal/position/z')
@@ -175,12 +206,14 @@ class PlanningPreprocessor:
             goal.orientation.z = rospy.get_param('competition/goal/orientation/z', 0)
             goal.orientation.w = rospy.get_param('competition/goal/orientation/w', 0)
 
-            rospy.sleep(2)  # wait for vehicle to be spawned and drop down
+            self.odom_sub.unregister()
+            self.odom_sub = None
 
             # continue like goal position was received by RVIZ goal panel
             self.goal_callback(goal)
         except KeyError:
-            rospy.logerr('Could not find Competition Managers Goal Position in Paramter Server')
+            rospy.logerr('Planning Preprocessor: Could not find Competition Managers Goal Position in Parameter Server')
+            return
 
     def main(self):
         try:
@@ -194,8 +227,10 @@ class PlanningPreprocessor:
             always_turn = rospy.get_param('always_u_turn', False)
             self.plan_u_turn = (not obey_rules) or always_turn
 
+            # subscribe to RVIZ goal panel
             rospy.Subscriber('/psaf/goal/set', Pose, self.goal_callback, queue_size=1)
-            rospy.Subscriber('/carla/ego_vehicle/initialpose', PoseWithCovarianceStamped, self.start_callback,
+            # subscribe to initialpose, this is published by competition manager
+            rospy.Subscriber('/carla/ego_vehicle/initialpose', PoseWithCovarianceStamped, self.comp_mngr_callback,
                              queue_size=1)
 
             self.instruction_pub = rospy.Publisher('/psaf/goal/set_instruction', PlanningInstruction,
