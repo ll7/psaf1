@@ -84,13 +84,14 @@ namespace psaf_local_planner
                     }
                     return distance_to_traffic_light_perception;
                 }
-            } else{ // if we don't have any other information we use the map data minus 10 meters as safety distance
-                    double distance_to_traffic_light = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
-                    if( distance_to_traffic_light <1e6){
-                        return std::max((distance_to_traffic_light-1),0.0);
-                    }
-                    // No success go to fallback return
-                }
+            }
+            // if we don't have any other information we use the map data minus 1 meter as safety distance
+            double distance_to_traffic_light = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletTrafficLight);
+            if( distance_to_traffic_light <1e6){
+                return std::max((distance_to_traffic_light-1),0.0);
+            }
+            // No success go to fallback return
+
         }else if (state_machine->isInStopStates()) {
             // because we don't have any other information we use the map data
             double distance_to_stop = this->computeDistanceToUpcomingLaneletAttribute(&hasLaneletStop);
