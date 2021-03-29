@@ -62,11 +62,6 @@ namespace psaf_local_planner
 
             double coll_x, coll_y;
 
-            ROS_INFO("xf: %f yf: %f", x_factor, y_factor);
-            ROS_INFO("min: %f max: %f", distance_from, distance_to);
-            ROS_INFO("x_from: %f y_from: %f", x_from, y_from);
-            ROS_INFO("x_to: %f y_to: %f", x_to, y_to);
-
             double dist = raytrace(x_from, y_from, x_to, y_to, coll_x, coll_y);
             if (dist < INFINITY) {
                 collisions.push_back(RaytraceCollisionData(coll_x, coll_y, actual_angle, dist, now));
