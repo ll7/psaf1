@@ -42,7 +42,7 @@ namespace psaf_local_planner {
              * @param coll_y: x position where the collision happend on the costmap in global map coordinates (in meters)
              * @return distance of the raytrace; returns infinity if there was no collision between those two points
              */
-            double raytrace(double m_target_x, double m_target_y, double &coll_x, double &coll_y);
+            double raytrace(double m_self_x, double m_self_y, double m_target_x, double m_target_y, double &coll_x, double &coll_y);
 
             /**
              * Sends out a bunch of raytraces around the car in a semi circle with the given angle
@@ -65,6 +65,18 @@ namespace psaf_local_planner {
             void raytraceSemiCircle(double angle_from, double angle_to, double distance, std::vector<RaytraceCollisionData> &collisions);
 
             /**
+             * Sends out a bunch of raytraces around the car in a semi circle with the given angles
+             * Allows greater controll over the semi circle due to using two angle
+             * 
+             * @param angle_from: the minimum angle in rad around the car; negative angles are to the left of the car
+             * @param angle_to: the maximum angle in rad around the car; positive angles are to the right of the car
+             * @param distance_from: min distance that should be looked at by the raytrace
+             * @param distance_to: max distance that should be looked at by the raytrace
+             * @param collisions: in case of collisions they are getting added to the vector
+             */
+            void raytraceSemiCircle(double angle_from, double angle_to, double distance_from, double distance_to, std::vector<RaytraceCollisionData> &collisions);
+
+            /**
              * Checks for no movement; has to be called multiple times to be expressive
              * 
              * @param angle: the angle in rad around the car; circle is open to the back of the car if it isn't a full circle
@@ -85,7 +97,7 @@ namespace psaf_local_planner {
             static constexpr int MOVEMENT_CHECK_MAX_ITERATION_PAUSE_SECONDS = 3;
 
             /** Min distance which the obstacle should be away to be included in the movement check */
-            static constexpr int MOVEMENT_CHECK_MIN_DISTANCE = 8;
+            static constexpr double MOVEMENT_CHECK_MIN_DISTANCE = 8;
 
             /** Ros Seconds to keep a raytracing result for distance  */
             static constexpr int MOVEMENT_CHECK_SECONDS_TO_KEEP = 2;
