@@ -156,43 +156,6 @@ class PlanningPreprocessor:
         """
         Callback from RVIZ goal panel
         """
-        self.goal = data  # goal Pose from RVIZ
-        # if uturn should be planned, acquire data from lidars
-        # otherwise dont check lidar, just relay goal to global planner
-        if self.plan_u_turn:
-            self.subscribe_lidar()
-        else:
-            self.publish_instruction()
-
-    def comp_mngr_callback(self, data):
-        # read start position from Parameter Server
-
-        try:
-            position = Pose()
-            position.position.x = rospy.get_param('competition/start/position/x')
-            position.position.y = rospy.get_param('competition/start/position/y')
-            position.position.z = rospy.get_param('competition/start/position/z')
-            self.start_pos = position
-        except KeyError:
-            rospy.logerr('Planning Preprocessor: Could not find Competition Managers Start Position in Parameter Server')
-            return
-
-        # subscribe to vehicle position so we can check if we are at the start position
-        if self.odom_sub is None:
-            self.odom_sub = rospy.Subscriber('/carla/ego_vehicle/odometry', Odometry, self.odom_callback,
-                                             queue_size=1)
-
-        rospy.loginfo('Planning Preprocessor: waiting for vehicle to be spawned at start position')
-
-    def odom_callback(self, data: Odometry):
-        """
-        Callback if vehicle position was changed (e.g. by Competition Manager)
-        """
-
-        # check if the vehicle is already at the start position
-        if not (abs(data.pose.pose.position.x - self.start_pos.position.x) < 2 and
-                abs(data.pose.pose.position.y - self.start_pos.position.y) < 2):
-            return
 
         try:
             goal = Pose()
@@ -206,14 +169,22 @@ class PlanningPreprocessor:
             goal.orientation.z = rospy.get_param('competition/goal/orientation/z', 0)
             goal.orientation.w = rospy.get_param('competition/goal/orientation/w', 0)
 
-            self.odom_sub.unregister()
-            self.odom_sub = None
-
-            # continue like goal position was received by RVIZ goal panel
-            self.goal_callback(goal)
+            # use goal coordinates from CM
+            self.goal = goal
+            rospy.loginfo('Planning Preprocessor: Using Competition Manager Goal Position')
         except KeyError:
-            rospy.logerr('Planning Preprocessor: Could not find Competition Managers Goal Position in Parameter Server')
-            return
+            rospy.logerr('Planning Preprocessor: Could not find Competition Managers Goal Position in Parameter Server, using RVIZ input')
+            # use goal coordinates from RVIZ Panel
+            self.goal = data
+
+        # if uturn should be planned, acquire data from lidars
+        # otherwise dont check lidar, just relay goal to global planner
+        if self.plan_u_turn:
+            self.subscribe_lidar()
+        else:
+            self.publish_instruction()
+
+
 
     def main(self):
         try:
@@ -229,9 +200,6 @@ class PlanningPreprocessor:
 
             # subscribe to RVIZ goal panel
             rospy.Subscriber('/psaf/goal/set', Pose, self.goal_callback, queue_size=1)
-            # subscribe to initialpose, this is published by competition manager
-            rospy.Subscriber('/carla/ego_vehicle/initialpose', PoseWithCovarianceStamped, self.comp_mngr_callback,
-                             queue_size=1)
 
             self.instruction_pub = rospy.Publisher('/psaf/goal/set_instruction', PlanningInstruction,
                                                    queue_size=1)
