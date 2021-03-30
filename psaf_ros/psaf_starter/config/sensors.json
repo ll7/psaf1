@@ -98,7 +98,7 @@
             "x": 0.0, "y": 0.0, "z": 3, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
             "range": 50,
             "channels": 32,
-            "points_per_second": 80000,
+            "points_per_second": 100000,
             "upper_fov": 0.0,
             "lower_fov": -10.0,
             "rotation_frequency": 20,
