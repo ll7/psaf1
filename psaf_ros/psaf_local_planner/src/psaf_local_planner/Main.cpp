@@ -11,7 +11,7 @@ namespace psaf_local_planner
                                             lookahead_factor(0.25), lookahead_factor_exp(1.4), lookahead_factor_const_additive(1.5), 
                                             goal_reached(false), estimate_curvature_distance(50), check_collision_max_distance(40),
                                             slow_car_ahead_counter(0), slow_car_ahead_published(false), obstacle_msg_id_counter(0), 
-                                            duration_factor(2.0), distance_factor(2.0), respect_traffic_rules(true), max_points_smoothing(10), 
+                                            duration_factor(1.5), distance_factor(1.5), respect_traffic_rules(true), max_points_smoothing(10),
                                             lane_change_direction(0), lane_change_direction_calculated(false), target_velocity(15), min_velocity(5)
     {
         std::cout << "Hi";
@@ -113,7 +113,7 @@ namespace psaf_local_planner
                     }
 
                     if (!respect_traffic_rules) {
-                        max_velocity *= 1.5;
+                        max_velocity = std::min(1.5 * max_velocity, 100.0 / 3.6);
                     }
                 }
 

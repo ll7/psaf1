@@ -18,22 +18,25 @@ namespace psaf_local_planner
             slow_car_ahead_counter = std::max(0, slow_car_ahead_counter - 2);
         }
 
-        // ROS_INFO("slow car counter: %d", slow_car_ahead_counter);
+        auto now = ros::Time::now();
+
+
+        ROS_INFO("slow car counter: %d; threshold: %f", slow_car_ahead_counter, velocity_distance_diff);
         // publish obstacle if counter is reached
         if (slow_car_ahead_counter > NUM_SLOW_CAR_PUB
             // if not published obstacle recently
-            && (ros::Time::now() - obstacle_last_published > ros::Duration(3.0)) 
-            && (!slow_car_ahead_published || ros::Time::now() - slow_car_last_published > ros::Duration(10.0)) 
-            && deleted_points - slow_car_last_published_deleted_points > 100
+            && (now - obstacle_last_published > ros::Duration(2.0)) 
+            && (!slow_car_ahead_published || now - slow_car_last_published > ros::Duration(5.0)) 
+            && deleted_points - slow_car_last_published_deleted_points > 75
             // if distance to intersection is higher than MIN_DISTANCE_INTERSECTION
             && getDistanceToIntersection() > MIN_DISTANCE_INTERSECTION
         ) {
             
             ROS_INFO("publishing obstacle ahead");
             slow_car_ahead_published = true;
-            slow_car_last_published = ros::Time::now();
+            slow_car_last_published = now;
             slow_car_last_published_deleted_points = deleted_points;
-            obstacle_last_published = ros::Time::now();
+            obstacle_last_published = now;
 
             // raytrace in set area -> detect obstacles in area
             std::vector<RaytraceCollisionData> collisions = {};

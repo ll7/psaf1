@@ -128,7 +128,7 @@ namespace psaf_local_planner {
             // number at which obstacle counts as lost when decreasing obstacle count
             static constexpr int NUM_SLOW_CAR_DEL = 10;
             // distance in front of intersection in which obstacles should not be published
-            static constexpr double MIN_DISTANCE_INTERSECTION = 30.0;
+            static constexpr double MIN_DISTANCE_INTERSECTION = 20.0;
             // threshold for min costmap value
             static constexpr unsigned char COSTMAP_THRESHOLD = 128;
 
