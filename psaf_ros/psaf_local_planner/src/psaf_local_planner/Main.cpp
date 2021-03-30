@@ -113,7 +113,7 @@ namespace psaf_local_planner
                     }
 
                     if (!respect_traffic_rules) {
-                        max_velocity *= 1.5;
+                        max_velocity = std::min(1.5 * max_velocity, 100.0 / 3.6);
                     }
                 }
 
